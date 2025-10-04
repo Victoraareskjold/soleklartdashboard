@@ -39,6 +39,18 @@ export default function AuthPage() {
             },
           });
         if (signUpError) throw signUpError;
+
+        if (signUpData.user) {
+          const userId = signUpData.user.id;
+
+          const { error: userError } = await supabase.from("users").insert({
+            id: userId,
+            email,
+            name: "",
+          });
+          if (userError) throw userError;
+        }
+
         toast.success("Please check your email to verify your account");
       }
     } catch (err) {
