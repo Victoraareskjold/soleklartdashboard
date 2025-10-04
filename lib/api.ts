@@ -29,6 +29,11 @@ export const getTeams = async (): Promise<Team[]> => {
   return apiGet<Team[]>("/api/teams");
 };
 
+// Single team
+export const getTeam = async (teamId: string): Promise<Team> => {
+  return apiGet<Team>(`/api/teams/${teamId}`);
+};
+
 // InstallerGroups
 export const getInstallerGroups = async (
   teamId: string

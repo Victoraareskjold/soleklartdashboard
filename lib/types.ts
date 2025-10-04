@@ -11,6 +11,14 @@ export interface Team {
   name: string;
   leader_id: string;
   created_at: string;
+  members?: TeamMember[];
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  created_at: string;
 }
 
 export interface InstallerGroup {
