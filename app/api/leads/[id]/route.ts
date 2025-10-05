@@ -33,15 +33,21 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json({ error: "Missing lead id" }, { status: 400 });
+    }
+    const leadId = resolvedParams.id;
+
     const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token)
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const client = createSupabaseClient(token);
-    const leadId = params.id;
     const body = await req.json();
 
     const { data, error } = await client

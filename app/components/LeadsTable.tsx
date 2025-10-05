@@ -1,5 +1,4 @@
 "use client";
-
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
 import { getLeads, updateLead } from "@/lib/api";
@@ -12,6 +11,7 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { toast } from "react-toastify";
+import LeadCard from "./LeadCard";
 
 export default function LeadsTable() {
   const { teamId } = useTeam();
@@ -38,20 +38,26 @@ export default function LeadsTable() {
     const sourceStatus = source.droppableId;
     const destStatus = destination.droppableId;
 
-    if (sourceStatus !== destStatus) {
-      const updatedLeads = leads.map((lead) =>
-        lead.id === draggableId
-          ? { ...lead, status: destStatus as Lead["status"] }
-          : lead
-      );
-      setLeads(updatedLeads);
+    // Kun oppdater hvis status faktisk endres
+    if (sourceStatus === destStatus) return;
 
-      try {
-        await updateLead(draggableId, { status: destStatus as Lead["status"] });
-      } catch (err) {
-        console.error("Failed to update lead status:", err);
-        toast.error("Failed to update lead statuss");
-      }
+    // Oppdater lokal state optimistisk
+    const updatedLeads = leads.map((lead) =>
+      lead.id === draggableId
+        ? { ...lead, status: destStatus as Lead["status"] }
+        : lead
+    );
+    setLeads(updatedLeads);
+
+    // Oppdater DB
+    try {
+      await updateLead(draggableId, { status: destStatus as Lead["status"] });
+    } catch (err) {
+      console.error("Failed to update lead status:", err);
+      toast.error("Failed to update lead status");
+
+      // Revert hvis DB feiler
+      setLeads(leads);
     }
   };
 
@@ -78,12 +84,7 @@ export default function LeadsTable() {
                         ref={provided.innerRef}
                         className="bg-white rounded shadow p-3 mb-2"
                       >
-                        <p className="font-medium text-sm">
-                          {lead.name ?? "Uten navn"}
-                        </p>
-                        {lead.email && (
-                          <p className="text-gray-500 text-xs">{lead.email}</p>
-                        )}
+                        <LeadCard lead={lead} />
                       </div>
                     )}
                   </Draggable>

@@ -41,6 +41,7 @@ export interface Lead {
   source?: string;
   created_at: string;
   updated_at?: string;
+  priority: string;
 }
 
 export const LEAD_STATUSES = [
