@@ -1,5 +1,12 @@
 import { supabase } from "./supabase";
-import { CreateLeadInput, InstallerGroup, Lead, Team } from "./types";
+import {
+  CreateEstimateInput,
+  CreateLeadInput,
+  Estimate,
+  InstallerGroup,
+  Lead,
+  Team,
+} from "./types";
 
 const getToken = async (): Promise<string> => {
   const session = await supabase.auth.getSession();
@@ -76,4 +83,9 @@ export const createLead = async (lead: CreateLeadInput) => {
 // Update lead
 export const updateLead = async (id: string, data: Partial<Lead>) => {
   return apiRequest<Lead>(`/api/leads/${id}`, "PATCH", data);
+};
+
+// Create estimate
+export const createEstimate = async (estimate: CreateEstimateInput) => {
+  return apiRequest<Estimate>(`/api/estimates`, "POST", estimate);
 };
