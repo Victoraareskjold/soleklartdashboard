@@ -2,22 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useTeam } from "@/context/TeamContext";
+import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { InstallerGroup } from "@/lib/types";
 import { getInstallerGroups } from "@/lib/api";
 import TeamSelector from "./TeamSelector";
 
-interface InstallerGroupSelectorProps {
-  selectedInstallerGroup?: string;
-  setSelectedInstallerGroup?: (id: string) => void;
-}
-
-export default function InstallerGroupSelector({
-  selectedInstallerGroup,
-  setSelectedInstallerGroup,
-}: InstallerGroupSelectorProps) {
+export default function InstallerGroupSelector() {
   const { teamId } = useTeam();
+  const { installerGroupId, setInstallerGroupId } = useInstallerGroup();
   const [groups, setGroups] = useState<InstallerGroup[]>([]);
-  const [selected, setSelected] = useState<string>("");
 
   useEffect(() => {
     if (!teamId) return;
@@ -25,32 +18,19 @@ export default function InstallerGroupSelector({
     getInstallerGroups(teamId)
       .then((fetched) => {
         setGroups(fetched);
-        if (!selected && fetched.length > 0) {
-          const firstId = fetched[0].id;
-          setSelected(firstId);
-          setSelectedInstallerGroup?.(firstId);
+        if (!installerGroupId && fetched.length > 0) {
+          setInstallerGroupId(fetched[0].id);
         }
       })
       .catch(console.error);
-  }, [teamId, selected, setSelectedInstallerGroup]);
+  }, [teamId, installerGroupId, setInstallerGroupId]);
 
-  useEffect(() => {
-    if (selectedInstallerGroup) {
-      setSelected(selectedInstallerGroup);
-    }
-  }, [selectedInstallerGroup]);
-
-  if (!teamId) {
-    return <TeamSelector />;
-  }
+  if (!teamId) return <TeamSelector />;
 
   return (
     <select
-      value={selected}
-      onChange={(e) => {
-        setSelected(e.target.value);
-        setSelectedInstallerGroup?.(e.target.value);
-      }}
+      value={installerGroupId ?? ""}
+      onChange={(e) => setInstallerGroupId(e.target.value)}
       className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
     >
       <option value="" disabled>

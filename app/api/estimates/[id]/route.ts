@@ -11,19 +11,19 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const client = createSupabaseClient(token);
-    const leadId = params.id;
+    const estimateId = params.id;
 
     const { data, error } = await client
-      .from("leads")
+      .from("estimates")
       .select("*")
-      .eq("id", leadId)
-      .single();
+      .eq("lead_id", estimateId)
+      .maybeSingle();
 
     if (error) throw error;
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("GET /api/leads/[id] error:", err);
+    console.error("GET /api/estimates/[id] error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -38,9 +38,12 @@ export async function PATCH(
   try {
     const resolvedParams = await params;
     if (!resolvedParams?.id) {
-      return NextResponse.json({ error: "Missing lead id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing estimate id" },
+        { status: 400 }
+      );
     }
-    const leadId = resolvedParams.id;
+    const estimateId = resolvedParams.id;
 
     const token = req.headers.get("Authorization")?.replace("Bearer ", "");
     if (!token) {
@@ -51,9 +54,9 @@ export async function PATCH(
     const body = await req.json();
 
     const { data, error } = await client
-      .from("leads")
+      .from("estimates")
       .update(body)
-      .eq("id", leadId)
+      .eq("id", estimateId)
       .select()
       .single();
 
@@ -61,7 +64,7 @@ export async function PATCH(
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("PATCH /api/leads/[id] error:", err);
+    console.error("PATCH /api/estimates/[id] error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

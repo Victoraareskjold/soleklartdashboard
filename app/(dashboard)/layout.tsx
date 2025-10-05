@@ -1,6 +1,7 @@
 import { TeamProvider } from "@/context/TeamContext";
 import "../globals.css";
 import Navbar from "../components/Navbar";
+import { InstallerGroupProvider } from "@/context/InstallerGroupContext";
 
 export default function DashboardLayout({
   children,
@@ -9,8 +10,10 @@ export default function DashboardLayout({
 }>) {
   return (
     <TeamProvider>
-      <Navbar />
-      {children}
+      <InstallerGroupProvider>
+        <Navbar />
+        {children}
+      </InstallerGroupProvider>
     </TeamProvider>
   );
 }
