@@ -18,7 +18,7 @@ export interface TeamMember {
   id: string;
   name: string;
   role: string;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface InstallerGroup {
@@ -43,6 +43,18 @@ export interface Lead {
   updated_at?: string;
   priority: string;
 }
+
+export type CreateLeadInput = {
+  team_id: string;
+  installer_group_id: string;
+  assigned_to?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  status: LeadStatus;
+  source?: string;
+  priority: string;
+};
 
 export const LEAD_STATUSES = [
   "new",

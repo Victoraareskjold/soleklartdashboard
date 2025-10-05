@@ -14,3 +14,18 @@ export async function getLeads(
   if (error) throw error;
   return data;
 }
+
+export async function createLead(
+  client: SupabaseClient,
+  teamId: string,
+  name: string,
+  managerId?: string
+) {
+  const { data: group, error } = await client
+    .from("installer_groups")
+    .insert({ team_id: teamId, name, manager_id: managerId || null })
+    .select()
+    .single();
+  if (error) throw error;
+  return group;
+}

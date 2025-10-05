@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { InstallerGroup, Lead, Team } from "./types";
+import { CreateLeadInput, InstallerGroup, Lead, Team } from "./types";
 
 const getToken = async (): Promise<string> => {
   const session = await supabase.auth.getSession();
@@ -69,7 +69,7 @@ export const getLead = async (id: string) => {
 };
 
 // Create lead
-export const createLead = async (lead: Lead) => {
+export const createLead = async (lead: CreateLeadInput) => {
   return apiRequest<Lead>(`/api/leads`, "POST", lead);
 };
 
