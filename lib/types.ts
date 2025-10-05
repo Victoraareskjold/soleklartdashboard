@@ -28,3 +28,26 @@ export interface InstallerGroup {
   manager_id?: string | null;
   created_at: string;
 }
+
+export interface Lead {
+  id: string;
+  team_id: string;
+  installer_group_id: string;
+  assigned_to?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  status?: LeadStatus;
+  source?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export const LEAD_STATUSES = [
+  "new",
+  "contacted",
+  "qualified",
+  "won",
+  "lost",
+] as const;
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
