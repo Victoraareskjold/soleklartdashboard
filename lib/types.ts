@@ -43,6 +43,7 @@ export interface Lead {
   updated_at?: string;
   priority: string;
   address?: string;
+  estimate?: Estimate;
 }
 
 export type CreateLeadInput = {

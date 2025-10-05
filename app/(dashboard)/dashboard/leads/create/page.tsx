@@ -1,10 +1,11 @@
 "use client";
 
-import SolarDataView, { Roof, SolarData } from "@/app/components/SolarDataView";
+import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
 import { createEstimate, createLead } from "@/lib/api";
 import { CLIENT_ROUTES } from "@/lib/constants";
+import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -54,17 +55,17 @@ export default function CreateLead() {
   const [address, setAddress] = useState("");
 
   const [solarData, setSolarData] = useState<SolarData>({
-    total_panels: 0,
-    selected_panel_type: "",
-    selected_roof_type: "",
-    checked_roof_data: [],
-    selected_el_price: 0,
-    yearly_cost: 0,
-    yearly_cost2: 0,
-    yearly_prod: 0,
-    desired_kwh: 0,
-    coverage_percentage: 0,
-    image_url: "",
+    totalPanels: 0,
+    selectedPanelType: "",
+    selectedRoofType: "",
+    checkedRoofData: [],
+    selectedElPrice: 0,
+    yearlyCost: 0,
+    yearlyCost2: 0,
+    yearlyProd: 0,
+    desiredKwh: 0,
+    coveragePercentage: 0,
+    imageUrl: "",
   });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -93,8 +94,7 @@ export default function CreateLead() {
       });
 
       await createEstimate({
-        ...solarData,
-        lead_id: lead.id,
+        ...mapSolarDataToEstimate(solarData, lead.id),
       });
       toast.success(
         <div>
@@ -119,29 +119,9 @@ export default function CreateLead() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === "PVMAP_DATA") {
-        setSolarData(event.data.payload);
         const payload = event.data.payload;
-        console.log(payload);
-
-        setSolarData({
-          total_panels: payload.totalPanels ?? 0,
-          selected_panel_type: payload.selectedPanelType ?? "",
-          selected_roof_type: payload.selectedRoofType ?? "",
-          checked_roof_data: payload.checkedRoofData.map((roof: Roof) => ({
-            roof_id: roof.roofId,
-            adjusted_panel_count: roof.adjustedPanelCount,
-            max_panels: roof.maxPanels,
-            direction: roof.direction,
-            angle: roof.angle,
-          })),
-          selected_el_price: payload.selectedElPrice ?? 0,
-          yearly_cost: Number(payload.yearlyCost ?? 0),
-          yearly_cost2: Number(payload.yearlyCost2 ?? 0),
-          yearly_prod: Number(payload.yearlyProd ?? 0),
-          desired_kwh: Number(payload.desiredKWh ?? 0),
-          coverage_percentage: Number(payload.coveragePercentage ?? 0),
-          image_url: payload.imageUrl ?? "",
-        });
+        console.log("api:", payload);
+        setSolarData(mapEstimateToSolarData(payload));
       }
     };
 

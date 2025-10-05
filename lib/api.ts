@@ -85,6 +85,11 @@ export const updateLead = async (id: string, data: Partial<Lead>) => {
   return apiRequest<Lead>(`/api/leads/${id}`, "PATCH", data);
 };
 
+// Signle estimate
+export const getEstimate = async (id: string) => {
+  return apiRequest<Estimate>(`/api/estimates/${id}`);
+};
+
 // Create estimate
 export const createEstimate = async (estimate: CreateEstimateInput) => {
   return apiRequest<Estimate>(`/api/estimates`, "POST", estimate);

@@ -1,4 +1,5 @@
 import { Lead } from "@/lib/types";
+import Link from "next/link";
 
 interface LeadCardProps {
   lead: Lead;
@@ -13,7 +14,7 @@ export default function LeadCard({ lead }: LeadCardProps) {
   };
 
   return (
-    <div>
+    <Link href={`/dashboard/leads/${lead.id}`}>
       <p className="font-medium text-sm">{lead.name ?? "Uten navn"}</p>
       <p className="text-gray-500 text-xs">{lead.email ?? "Ingen email"}</p>
       <p
@@ -23,6 +24,6 @@ export default function LeadCard({ lead }: LeadCardProps) {
       >
         {lead.priority}
       </p>
-    </div>
+    </Link>
   );
 }
