@@ -66,10 +66,6 @@ export default function SolarDataView({
   setSolarData,
   readOnly = true,
 }: SolarDataViewProps) {
-  if (!solarData) return null;
-
-  console.log(solarData);
-
   return (
     <div className="mt-4">
       <div className="gap-3 grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7">
