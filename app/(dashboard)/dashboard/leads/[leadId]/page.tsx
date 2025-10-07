@@ -67,21 +67,23 @@ export default function LeadPage() {
     if (!leadIdStr) return;
 
     setLoading(true);
-    getLead(leadIdStr)
-      .then((data) => {
+
+    Promise.all([
+      getLead(leadIdStr).then((data) => {
         setName(data.name ?? "");
         setEmail(data.email ?? "");
         setPhone(data.phone ?? "");
         setAddress(data.address ?? "");
-      })
-      .catch((err) => console.error("Failed to fetch lead:", err));
-    getEstimate(leadIdStr)
-      .then((data) => {
-        setSolarData(mapEstimateToSolarData(data));
-      })
-      .catch((err) => console.error("Failed to fetch estimate:", err));
-    setLoading(false);
+      }),
+      getEstimate(leadIdStr).then((data) => {
+        if (data) setSolarData(mapEstimateToSolarData(data));
+      }),
+    ])
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
   }, [leadIdStr]);
+
+  const handleUpdateLead = () => {};
 
   if (loading) return <LoadingScreen />;
 
@@ -114,10 +116,12 @@ export default function LeadPage() {
           placeholder="Lead address"
         />
 
-        <SolarDataView solarData={solarData} setSolarData={setSolarData} />
+        {solarData && (
+          <SolarDataView solarData={solarData} setSolarData={setSolarData} />
+        )}
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Creating..." : "Create Lead"}
+        <button onClick={handleUpdateLead} disabled={loading}>
+          {loading ? "Lagrer..." : "Lagre"}
         </button>
       </form>
     </div>

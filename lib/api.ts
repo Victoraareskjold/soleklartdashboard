@@ -18,7 +18,7 @@ const getToken = async (): Promise<string> => {
 const apiRequest = async <T>(
   url: string,
   method: string = "GET",
-  body?: any
+  body?: unknown
 ): Promise<T> => {
   const token = await getToken();
   const res = await fetch(url, {
