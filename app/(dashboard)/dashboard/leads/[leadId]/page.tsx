@@ -1,8 +1,8 @@
 "use client";
 import LoadingScreen from "@/app/components/LoadingScreen";
 import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
-import { getEstimate, getLead } from "@/lib/api";
-import { mapEstimateToSolarData } from "@/lib/mappers";
+import { getEstimate, getLead, updateEstimate, updateLead } from "@/lib/api";
+import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -42,6 +42,9 @@ export default function LeadPage() {
 
   // States
   const [loading, setLoading] = useState(true);
+  const [hasEstimate, setHasEstimate] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [estimateId, setEstimateId] = useState("");
 
   // Input
   const [name, setName] = useState("");
@@ -76,19 +79,78 @@ export default function LeadPage() {
         setAddress(data.address ?? "");
       }),
       getEstimate(leadIdStr).then((data) => {
-        if (data) setSolarData(mapEstimateToSolarData(data));
+        setEstimateId(data.id);
+        if (data) {
+          setSolarData(mapEstimateToSolarData(data));
+          setHasEstimate(true);
+        } else {
+          setHasEstimate(false);
+        }
       }),
     ])
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, [leadIdStr]);
 
-  const handleUpdateLead = () => {};
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await updateLead(leadIdStr!, {
+        name,
+        email,
+        phone,
+        address,
+      });
+      if (hasEstimate && estimateId && leadIdStr) {
+        const mappedSolarData = mapSolarDataToEstimate(solarData, leadIdStr);
+        await updateEstimate(estimateId, mappedSolarData);
+      }
+    } catch (err) {
+      console.error("Failed to update:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "PVMAP_DATA") {
+        const payload = event.data.payload;
+        console.log("api:", payload);
+        setSolarData(payload);
+        setHasEstimate(true);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  const handleToggleModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsModalOpen(!isModalOpen);
+  };
 
   if (loading) return <LoadingScreen />;
 
   return (
     <div>
+      {isModalOpen && (
+        <section className="flex h-full absolute inset-0 overflow-none">
+          <>
+            <div
+              className="flex h-full w-full absolute bg-black opacity-25"
+              onClick={handleToggleModal}
+            ></div>
+            <iframe
+              src="https://pvmap.vercel.app/?site=solarinstallationdashboard"
+              className="h-5/6 w-5/6 relative z-50 m-auto rounded-xl"
+            />
+          </>
+        </section>
+      )}
       <form>
         <Input
           label="Name"
@@ -115,14 +177,17 @@ export default function LeadPage() {
           onChange={setAddress}
           placeholder="Lead address"
         />
-
-        {solarData && (
+        {hasEstimate && (
           <SolarDataView solarData={solarData} setSolarData={setSolarData} />
         )}
-
-        <button onClick={handleUpdateLead} disabled={loading}>
-          {loading ? "Lagrer..." : "Lagre"}
-        </button>
+        <div className="flex gap-2">
+          {!hasEstimate && (
+            <button onClick={handleToggleModal}>Opprett estimat</button>
+          )}
+          <button onClick={handleUpdate} disabled={loading}>
+            {loading ? "Lagrer..." : "Lagre"}
+          </button>
+        </div>
       </form>
     </div>
   );

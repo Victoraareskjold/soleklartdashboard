@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
+import { updateEstimate } from "@/lib/db/estimates";
 
 export async function GET(
   req: Request,
@@ -28,7 +29,7 @@ export async function GET(
       .maybeSingle();
 
     if (error) throw error;
-
+    console.log(data);
     return NextResponse.json(data);
   } catch (err) {
     console.error("GET /api/estimates/[id] error:", err);
@@ -46,10 +47,7 @@ export async function PATCH(
   try {
     const resolvedParams = await params;
     if (!resolvedParams?.id) {
-      return NextResponse.json(
-        { error: "Missing estimate id" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing lead id" }, { status: 400 });
     }
     const estimateId = resolvedParams.id;
 
@@ -60,19 +58,16 @@ export async function PATCH(
 
     const client = createSupabaseClient(token);
     const body = await req.json();
+    if (!body)
+      return NextResponse.json(
+        { error: "Missing update payload" },
+        { status: 400 }
+      );
 
-    const { data, error } = await client
-      .from("estimates")
-      .update(body)
-      .eq("id", estimateId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json(data);
+    const updatedLead = await updateEstimate(client, estimateId, body);
+    return NextResponse.json(updatedLead);
   } catch (err) {
-    console.error("PATCH /api/estimates/[id] error:", err);
+    console.error("PATCH /api/leads/[id] error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

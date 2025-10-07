@@ -1,3 +1,4 @@
+import { PriceTable } from "@/types/priece";
 import { supabase } from "./supabase";
 import {
   CreateEstimateInput,
@@ -71,8 +72,8 @@ export const getLeads = async (
 };
 
 // Single lead
-export const getLead = async (id: string) => {
-  return apiRequest<Lead>(`/api/leads/${id}`);
+export const getLead = async (leadId: string) => {
+  return apiRequest<Lead>(`/api/leads/${leadId}`);
 };
 
 // Create lead
@@ -81,16 +82,40 @@ export const createLead = async (lead: CreateLeadInput) => {
 };
 
 // Update lead
-export const updateLead = async (id: string, data: Partial<Lead>) => {
-  return apiRequest<Lead>(`/api/leads/${id}`, "PATCH", data);
+export const updateLead = async (leadId: string, data: Partial<Lead>) => {
+  return apiRequest<Lead>(`/api/leads/${leadId}`, "PATCH", data);
 };
 
 // Signle estimate
-export const getEstimate = async (id: string) => {
-  return apiRequest<Estimate>(`/api/estimates/${id}`);
+export const getEstimate = async (estimateId: string) => {
+  return apiRequest<Estimate>(`/api/estimates/${estimateId}`);
 };
 
 // Create estimate
 export const createEstimate = async (estimate: CreateEstimateInput) => {
   return apiRequest<Estimate>(`/api/estimates`, "POST", estimate);
+};
+
+// Update estimate
+export const updateEstimate = async (estimateId: string, data: unknown) => {
+  return apiRequest<Lead>(`/api/estimates/${estimateId}`, "PATCH", data);
+};
+
+// Get pricetable
+export const getPriceTable = async (installerGroupId: string) => {
+  return apiRequest<PriceTable>(
+    `/api/price_table?installer_group_id=${installerGroupId}`
+  );
+};
+
+// Update pricetable
+export const updatePriceTable = async (
+  installerGroupId: string,
+  data: Partial<PriceTable>
+) => {
+  return apiRequest<PriceTable>(
+    `/api/price_table?installer_group_id=${installerGroupId}`,
+    "PATCH",
+    data
+  );
 };

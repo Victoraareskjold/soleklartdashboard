@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
+import { updateLead } from "@/lib/db/leads";
 
 export async function GET(
   req: Request,
@@ -55,18 +56,16 @@ export async function PATCH(
     }
 
     const client = createSupabaseClient(token);
+
     const body = await req.json();
+    if (!body)
+      return NextResponse.json(
+        { error: "Missing update payload" },
+        { status: 400 }
+      );
 
-    const { data, error } = await client
-      .from("leads")
-      .update(body)
-      .eq("id", leadId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json(data);
+    const updatedLead = await updateLead(client, leadId, body);
+    return NextResponse.json(updatedLead);
   } catch (err) {
     console.error("PATCH /api/leads/[id] error:", err);
     return NextResponse.json(

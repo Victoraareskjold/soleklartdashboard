@@ -15,8 +15,8 @@ export default function LeadCard({ lead }: LeadCardProps) {
 
   return (
     <Link href={`/dashboard/leads/${lead.id}`}>
-      <p className="font-medium text-sm">{lead.name ?? "Uten navn"}</p>
-      <p className="text-gray-500 text-xs">{lead.email ?? "Ingen email"}</p>
+      <p className="font-medium text-sm">{lead.name || "Uten navn"}</p>
+      <p className="text-gray-500 text-xs">{lead.email || "Ingen email"}</p>
       <p
         className={`${priorityColor(
           lead.priority

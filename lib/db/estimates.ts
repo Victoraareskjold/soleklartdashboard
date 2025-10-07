@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Lead } from "../types";
+import { Estimate } from "../types";
 
-export async function getLeads(
+export async function getEstimate(
   client: SupabaseClient,
   teamId: string,
   installerGroupId: string
@@ -16,22 +16,22 @@ export async function getLeads(
   return data;
 }
 
-export async function updateLead(
+export async function updateEstimate(
   client: SupabaseClient,
-  leadId: string,
-  updates: Partial<Lead>
+  estimateId: string,
+  updates: Partial<Estimate>
 ) {
   const { data, error } = await client
-    .from("leads")
+    .from("estimates")
     .update(updates)
-    .eq("id", leadId)
+    .eq("id", estimateId)
     .select()
     .single();
   if (error) throw error;
   return data;
 }
 
-export async function createLead(
+export async function createEstimate(
   client: SupabaseClient,
   teamId: string,
   name: string,

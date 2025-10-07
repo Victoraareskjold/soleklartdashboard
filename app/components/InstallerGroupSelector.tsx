@@ -31,7 +31,7 @@ export default function InstallerGroupSelector() {
     <select
       value={installerGroupId ?? ""}
       onChange={(e) => setInstallerGroupId(e.target.value)}
-      className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+      className="text-xl rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
     >
       <option value="" disabled>
         Select group
