@@ -1,8 +1,8 @@
 "use client";
 import LoadingScreen from "@/app/components/LoadingScreen";
 import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
-import { getEstimate, getLead } from "@/lib/api";
-import { mapEstimateToSolarData } from "@/lib/mappers";
+import { getEstimate, getLead, updateEstimate, updateLead } from "@/lib/api";
+import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -44,6 +44,7 @@ export default function LeadPage() {
   const [loading, setLoading] = useState(true);
   const [hasEstimate, setHasEstimate] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [estimateId, setEstimateId] = useState("");
 
   // Input
   const [name, setName] = useState("");
@@ -78,6 +79,7 @@ export default function LeadPage() {
         setAddress(data.address ?? "");
       }),
       getEstimate(leadIdStr).then((data) => {
+        setEstimateId(data.id);
         if (data) {
           setSolarData(mapEstimateToSolarData(data));
           setHasEstimate(true);
@@ -90,7 +92,27 @@ export default function LeadPage() {
       .finally(() => setLoading(false));
   }, [leadIdStr]);
 
-  const handleUpdateLead = () => {};
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await updateLead(leadIdStr!, {
+        name,
+        email,
+        phone,
+        address,
+      });
+      if (hasEstimate && estimateId && leadIdStr) {
+        const mappedSolarData = mapSolarDataToEstimate(solarData, leadIdStr);
+        await updateEstimate(estimateId, mappedSolarData);
+      }
+    } catch (err) {
+      console.error("Failed to update:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -162,7 +184,7 @@ export default function LeadPage() {
           {!hasEstimate && (
             <button onClick={handleToggleModal}>Opprett estimat</button>
           )}
-          <button onClick={handleUpdateLead} disabled={loading}>
+          <button onClick={handleUpdate} disabled={loading}>
             {loading ? "Lagrer..." : "Lagre"}
           </button>
         </div>
