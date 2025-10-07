@@ -56,6 +56,7 @@ export async function PATCH(
     }
 
     const client = createSupabaseClient(token);
+
     const body = await req.json();
     if (!body)
       return NextResponse.json(

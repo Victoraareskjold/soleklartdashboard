@@ -18,8 +18,6 @@ export default function TeamPage() {
 
   if (!teamData) return null;
 
-  console.log(teamData);
-
   return (
     <div>
       <h1>{teamData.name}</h1>

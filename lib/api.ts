@@ -1,3 +1,4 @@
+import { PriceTable } from "@/types/priece";
 import { supabase } from "./supabase";
 import {
   CreateEstimateInput,
@@ -98,4 +99,23 @@ export const createEstimate = async (estimate: CreateEstimateInput) => {
 // Update estimate
 export const updateEstimate = async (estimateId: string, data: unknown) => {
   return apiRequest<Lead>(`/api/estimates/${estimateId}`, "PATCH", data);
+};
+
+// Get pricetable
+export const getPriceTable = async (installerGroupId: string) => {
+  return apiRequest<PriceTable>(
+    `/api/price_table?installer_group_id=${installerGroupId}`
+  );
+};
+
+// Update pricetable
+export const updatePriceTable = async (
+  installerGroupId: string,
+  data: Partial<PriceTable>
+) => {
+  return apiRequest<PriceTable>(
+    `/api/price_table?installer_group_id=${installerGroupId}`,
+    "PATCH",
+    data
+  );
 };
