@@ -5,7 +5,7 @@ import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
 import { createEstimate, createLead } from "@/lib/api";
 import { CLIENT_ROUTES } from "@/lib/constants";
-import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
+import { mapSolarDataToEstimate } from "@/lib/mappers";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -121,7 +121,7 @@ export default function CreateLead() {
       if (event.data?.type === "PVMAP_DATA") {
         const payload = event.data.payload;
         console.log("api:", payload);
-        setSolarData(mapEstimateToSolarData(payload));
+        setSolarData(payload);
       }
     };
 

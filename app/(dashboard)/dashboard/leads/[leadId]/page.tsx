@@ -42,6 +42,8 @@ export default function LeadPage() {
 
   // States
   const [loading, setLoading] = useState(true);
+  const [hasEstimate, setHasEstimate] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Input
   const [name, setName] = useState("");
@@ -76,7 +78,12 @@ export default function LeadPage() {
         setAddress(data.address ?? "");
       }),
       getEstimate(leadIdStr).then((data) => {
-        if (data) setSolarData(mapEstimateToSolarData(data));
+        if (data) {
+          setSolarData(mapEstimateToSolarData(data));
+          setHasEstimate(true);
+        } else {
+          setHasEstimate(false);
+        }
       }),
     ])
       .catch((err) => console.error(err))
@@ -85,10 +92,43 @@ export default function LeadPage() {
 
   const handleUpdateLead = () => {};
 
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "PVMAP_DATA") {
+        const payload = event.data.payload;
+        console.log("api:", payload);
+        setSolarData(payload);
+        setHasEstimate(true);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  const handleToggleModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsModalOpen(!isModalOpen);
+  };
+
   if (loading) return <LoadingScreen />;
 
   return (
     <div>
+      {isModalOpen && (
+        <section className="flex h-full absolute inset-0 overflow-none">
+          <>
+            <div
+              className="flex h-full w-full absolute bg-black opacity-25"
+              onClick={handleToggleModal}
+            ></div>
+            <iframe
+              src="https://pvmap.vercel.app/?site=solarinstallationdashboard"
+              className="h-5/6 w-5/6 relative z-50 m-auto rounded-xl"
+            />
+          </>
+        </section>
+      )}
       <form>
         <Input
           label="Name"
@@ -115,14 +155,17 @@ export default function LeadPage() {
           onChange={setAddress}
           placeholder="Lead address"
         />
-
-        {solarData && (
+        {hasEstimate && (
           <SolarDataView solarData={solarData} setSolarData={setSolarData} />
         )}
-
-        <button onClick={handleUpdateLead} disabled={loading}>
-          {loading ? "Lagrer..." : "Lagre"}
-        </button>
+        <div className="flex gap-2">
+          {!hasEstimate && (
+            <button onClick={handleToggleModal}>Opprett estimat</button>
+          )}
+          <button onClick={handleUpdateLead} disabled={loading}>
+            {loading ? "Lagrer..." : "Lagre"}
+          </button>
+        </div>
       </form>
     </div>
   );

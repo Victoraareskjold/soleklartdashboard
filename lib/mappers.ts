@@ -1,48 +1,5 @@
-import { Roof, SolarData } from "@/app/components/SolarDataView";
+import { SolarData } from "@/app/components/SolarDataView";
 import { Estimate } from "./types";
-
-interface PVMapPayload {
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  site: string;
-  checked: string;
-  selectedRoofType: string;
-  selectedPanelType: string;
-  selectedElPrice: string | number;
-  totalPanels: string | number;
-  yearlyCost?: string | number;
-  yearlyCost2?: string | number;
-  yearlyProd?: string | number;
-  desiredKwh?: string | number;
-  coveragePercentage?: string | number;
-  roofs?: Roof[];
-}
-
-export function mapPVMapPayloadToSolarData(payload: PVMapPayload): SolarData {
-  return {
-    totalPanels: Number(payload.totalPanels) || 0,
-    selectedPanelType: payload.selectedPanelType,
-    selectedRoofType: payload.selectedRoofType,
-    selectedElPrice: Number(payload.selectedElPrice) || 0,
-    yearlyCost: Number(payload.yearlyCost) || 0,
-    yearlyCost2: Number(payload.yearlyCost2) || 0,
-    yearlyProd: Number(payload.yearlyProd) || 0,
-    desiredKwh: Number(payload.desiredKwh) || 0,
-    coveragePercentage: Number(payload.coveragePercentage) || 0,
-    imageUrl: "", // hvis du har url fra payloaden
-    checkedRoofData: (payload.roofs || []).map(
-      (r): Roof => ({
-        roofId: r.roofId || "",
-        adjustedPanelCount: Number(r.adjustedPanelCount) || 0,
-        maxPanels: Number(r.maxPanels) || 0,
-        direction: r.direction || "",
-        angle: Number(r.angle) || 0,
-      })
-    ),
-  };
-}
 
 export function mapEstimateToSolarData(estimate: Estimate): SolarData {
   return {
