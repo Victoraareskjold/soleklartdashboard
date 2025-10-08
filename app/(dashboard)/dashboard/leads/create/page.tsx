@@ -1,10 +1,11 @@
 "use client";
 
 import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
+import { CLIENT_ROUTES } from "@/constants/routes";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
 import { createEstimate, createLead } from "@/lib/api";
-import { CLIENT_ROUTES } from "@/lib/constants";
+
 import { mapSolarDataToEstimate } from "@/lib/mappers";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
