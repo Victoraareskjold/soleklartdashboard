@@ -1,4 +1,4 @@
-import { PriceTable } from "@/types/priece";
+import { PriceTable } from "@/types/price";
 import { supabase } from "./supabase";
 import {
   CreateEstimateInput,

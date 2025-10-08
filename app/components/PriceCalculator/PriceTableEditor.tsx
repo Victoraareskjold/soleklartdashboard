@@ -1,11 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
 
-import { PriceTable } from "@/types/priece";
+import { PriceTable } from "@/types/price";
 import { getPriceTable, updatePriceTable } from "@/lib/api";
 import { toast } from "react-toastify";
 import LoadingScreen from "../LoadingScreen";
 import { PriceCategoryTable } from "./PriceCategoryTable";
+import { priceCategoryConfig } from "@/lib/config/priceCategories";
 
 type Props = {
   installerGroupId: string;
@@ -52,35 +53,39 @@ export default function PriceTableEditor({ installerGroupId }: Props) {
 
   return (
     <div>
-      {Object.entries(items).map(([category, rows]) => (
-        <PriceCategoryTable
-          key={category}
-          category={category}
-          rows={rows}
-          onChange={(updatedRows) =>
-            setItems((prev) => ({ ...prev, [category]: updatedRows }))
-          }
-          onAdd={() =>
-            setItems((prev) => ({
-              ...prev,
-              [category]: [
-                ...(prev[category] ?? []),
-                {
-                  name: "Ny rad",
-                  carpenterCostPerPanel: 0,
-                  installerGroupMarkupPercent: 20,
-                },
-              ],
-            }))
-          }
-          onRemove={(idx) =>
-            setItems((prev) => ({
-              ...prev,
-              [category]: (prev[category] ?? []).filter((_, i) => i !== idx),
-            }))
-          }
-        />
-      ))}
+      {Object.entries(priceCategoryConfig).map(([category]) => {
+        const rows = items[category] ?? [];
+
+        return (
+          <PriceCategoryTable
+            key={category}
+            category={category as keyof typeof priceCategoryConfig}
+            rows={rows}
+            onChange={(updatedRows) =>
+              setItems((prev) => ({ ...prev, [category]: updatedRows }))
+            }
+            onAdd={() =>
+              setItems((prev) => ({
+                ...prev,
+                [category]: [
+                  ...(prev[category] ?? []),
+                  {
+                    name: "Ny rad",
+                    carpenterCostPerPanel: 0,
+                    installerGroupMarkupPercent: 20,
+                  },
+                ],
+              }))
+            }
+            onRemove={(idx) =>
+              setItems((prev) => ({
+                ...prev,
+                [category]: (prev[category] ?? []).filter((_, i) => i !== idx),
+              }))
+            }
+          />
+        );
+      })}
 
       <div className="mt-4 flex gap-2">
         <button onClick={handleSave} disabled={saving}>
