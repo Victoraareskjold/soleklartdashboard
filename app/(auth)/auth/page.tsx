@@ -1,5 +1,6 @@
 "use client";
-import { CLIENT_ROUTES } from "@/lib/constants";
+
+import { CLIENT_ROUTES } from "@/constants/routes";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

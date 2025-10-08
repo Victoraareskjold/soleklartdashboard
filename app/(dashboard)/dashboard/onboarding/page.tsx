@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { createTeam } from "@/lib/db/teams";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import { CLIENT_ROUTES } from "@/lib/constants";
+import { CLIENT_ROUTES } from "@/constants/routes";
 
 export default function OnboardingPage() {
   const [teamName, setTeamName] = useState("");
