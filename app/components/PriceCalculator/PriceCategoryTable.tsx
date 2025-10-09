@@ -43,7 +43,7 @@ export function PriceCategoryTable({
 
   return (
     <div className="mb-8">
-      <table className="min-w-full border-collapse border border-gray-300">
+      <table className="min-w-full border-collapse">
         <thead>
           <tr className="bg-gray-100">
             {config.columns.map((col) => (
@@ -54,7 +54,7 @@ export function PriceCategoryTable({
                 {col.label}
               </th>
             ))}
-            <th className="border p-2"></th>
+            {/* <th className="border p-2"></th> */}
           </tr>
         </thead>
         <tbody>

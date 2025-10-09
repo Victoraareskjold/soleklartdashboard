@@ -1,37 +1,31 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 import { PriceTable } from "@/types/price";
-import { getPriceTable, updatePriceTable } from "@/lib/api";
+import { updatePriceTable } from "@/lib/api";
 import { toast } from "react-toastify";
-import LoadingScreen from "../LoadingScreen";
 import { PriceCategoryTable } from "./PriceCategoryTable";
 import { priceCategoryConfig } from "@/lib/config/priceCategories";
 
 type Props = {
   installerGroupId: string;
+  table: PriceTable;
+  items: PriceTable["items"];
+  setItems: React.Dispatch<React.SetStateAction<PriceTable["items"]>>;
+  setTable: React.Dispatch<React.SetStateAction<PriceTable | null>>;
+  saving: boolean;
+  setSaving: React.Dispatch<React.SetStateAction<true | false>>;
 };
-export default function PriceTableEditor({ installerGroupId }: Props) {
-  const [loading, setLoading] = useState(true);
-  const [table, setTable] = useState<PriceTable | null>(null);
-  const [items, setItems] = useState<PriceTable["items"]>({});
-  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const fetchTable = async () => {
-      try {
-        const table = await getPriceTable(installerGroupId);
-        setTable(table);
-        setItems(table?.items ?? {});
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTable();
-  }, [installerGroupId]);
-
+export default function PriceTableEditor({
+  installerGroupId,
+  table,
+  items,
+  setItems,
+  setTable,
+  saving,
+  setSaving,
+}: Props) {
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -48,8 +42,6 @@ export default function PriceTableEditor({ installerGroupId }: Props) {
       setSaving(false);
     }
   };
-
-  if (loading) return <LoadingScreen />;
 
   return (
     <div>
