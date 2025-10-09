@@ -1,8 +1,17 @@
 "use client";
 import LoadingScreen from "@/app/components/LoadingScreen";
+import PriceCalculatorTable from "@/app/components/PriceCalculator/PriceCalculatorTable";
 import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
-import { getEstimate, getLead, updateEstimate, updateLead } from "@/lib/api";
+import { useInstallerGroup } from "@/context/InstallerGroupContext";
+import {
+  getEstimate,
+  getLead,
+  getPriceTable,
+  updateEstimate,
+  updateLead,
+} from "@/lib/api";
 import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
+import { PriceTable } from "@/types/price";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -38,7 +47,10 @@ const Input = ({
 
 export default function LeadPage() {
   const { leadId } = useParams();
+  const { installerGroupId } = useInstallerGroup();
   const leadIdStr = Array.isArray(leadId) ? leadId[0] : leadId;
+
+  const [priceTable, setPriceTable] = useState<PriceTable | null>(null);
 
   // States
   const [loading, setLoading] = useState(true);
@@ -67,7 +79,7 @@ export default function LeadPage() {
   });
 
   useEffect(() => {
-    if (!leadIdStr) return;
+    if (!leadIdStr || !installerGroupId) return;
 
     setLoading(true);
 
@@ -87,10 +99,13 @@ export default function LeadPage() {
           setHasEstimate(false);
         }
       }),
+      getPriceTable(installerGroupId).then((data) => {
+        setPriceTable(data);
+      }),
     ])
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [leadIdStr]);
+  }, [leadIdStr, installerGroupId]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,7 +193,17 @@ export default function LeadPage() {
           placeholder="Lead address"
         />
         {hasEstimate && (
-          <SolarDataView solarData={solarData} setSolarData={setSolarData} />
+          <>
+            <SolarDataView solarData={solarData} setSolarData={setSolarData} />
+
+            {priceTable && (
+              <PriceCalculatorTable
+                table={priceTable}
+                items={priceTable.items}
+                totalPanels={solarData.totalPanels}
+              />
+            )}
+          </>
         )}
         <div className="flex gap-2">
           {!hasEstimate && (
