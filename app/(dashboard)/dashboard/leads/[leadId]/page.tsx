@@ -47,9 +47,9 @@ const Input = ({
 
 export default function LeadPage() {
   const { leadId } = useParams();
+  const { installerGroupId } = useInstallerGroup();
   const leadIdStr = Array.isArray(leadId) ? leadId[0] : leadId;
 
-  const { installerGroupId } = useInstallerGroup();
   const [priceTable, setPriceTable] = useState<PriceTable | null>(null);
 
   // States
