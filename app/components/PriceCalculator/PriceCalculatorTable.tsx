@@ -4,7 +4,7 @@ import RoofSection from "./sections/RoofSection";
 
 type Props = {
   table: PriceTable;
-  items: PriceTable["items"];
+  items: PriceTable["prices"];
   totalPanels?: number;
 };
 
