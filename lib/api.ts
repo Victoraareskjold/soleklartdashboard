@@ -9,7 +9,7 @@ import {
   Team,
 } from "./types";
 
-const getToken = async (): Promise<string> => {
+export const getToken = async (): Promise<string> => {
   const session = await supabase.auth.getSession();
   const token = session.data.session?.access_token;
   if (!token) throw new Error("No token found. User not authenticated.");

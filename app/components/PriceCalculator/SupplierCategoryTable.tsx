@@ -1,6 +1,10 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { supplierCategoryConfig } from "@/lib/config/supplierCategories";
 import { SupplierRow } from "@/types/price";
+import { createSupabaseClient } from "@/utils/supabase/client";
+import { getToken } from "@/lib/api";
 
 type Props = {
   category: keyof typeof supplierCategoryConfig;
@@ -18,7 +22,54 @@ export function SupplierCategoryTable({
   onRemove,
 }: Props) {
   const config = supplierCategoryConfig[category];
+  const [uploading, setUploading] = useState(false);
   if (!config) return null;
+
+  const handleUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    sectionKey: string,
+    idx: number
+  ) => {
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.type !== "application/pdf") {
+        alert("Kun PDF-filer er tillatt.");
+        return;
+      }
+
+      setUploading(true);
+
+      const token = await getToken();
+      const supabase = createSupabaseClient(token);
+
+      // Unik filsti
+      const filePath = `attachments/${Date.now()}_${file.name}`;
+
+      const { error } = await supabase.storage
+        .from("attachments")
+        .upload(filePath, file);
+
+      if (error) throw error;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("attachments")
+        .getPublicUrl(filePath);
+
+      const rows = data[sectionKey] ?? [];
+      const updated = [...rows];
+      updated[idx] = {
+        ...updated[idx],
+        attachment: publicUrlData.publicUrl,
+      };
+      onChange(sectionKey, updated);
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Kunne ikke laste opp PDF-filen.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="border rounded-md mb-8 overflow-hidden">
@@ -52,18 +103,41 @@ export function SupplierCategoryTable({
                 {rows.map((row, idx) => (
                   <tr key={idx}>
                     <td className="border p-2">
-                      <input
-                        value={row.attachment || ""}
-                        onChange={(e) => {
-                          const updated = [...rows];
-                          updated[idx] = {
-                            ...updated[idx],
-                            attachment: e.target.value,
-                          };
-                          onChange(section.key, updated);
-                        }}
-                        className="w-full"
-                      />
+                      {row.attachment ? (
+                        <div className="flex items-center justify-between">
+                          <a
+                            href={row.attachment}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 underline truncate max-w-[200px]"
+                          >
+                            PDF
+                          </a>
+                          {/* <button
+                            onClick={() => {
+                              const updated = [...rows];
+                              updated[idx] = {
+                                ...updated[idx],
+                                attachment: "",
+                              };
+                              onChange(section.key, updated);
+                            }}
+                            className="text-red-500 text-sm ml-2"
+                          >
+                            Fjern
+                          </button> */}
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer text-blue-600 underline">
+                          {uploading ? "Laster opp..." : "Last opp PDF"}
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="hidden"
+                            onChange={(e) => handleUpload(e, section.key, idx)}
+                          />
+                        </label>
+                      )}
                     </td>
 
                     <td className="border p-2">
