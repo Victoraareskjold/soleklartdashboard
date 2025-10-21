@@ -80,15 +80,18 @@ export default function LeadNotesSection({ leadId }: Props) {
       <ul className="space-y-3">
         {notes.map((note) => (
           <li key={note.id} className="border p-2 rounded-md">
-            <p className="text-sm">{note.content}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              {new Date(note.created_at ?? "").toLocaleString()}
-            </p>
+            <div className="flex flex-row justify-between items-center text-lg">
+              <p>Merknad av {note.user?.name}</p>
+              <p className="text-sm">
+                {new Date(note.created_at ?? "").toLocaleString("no")}
+              </p>
+            </div>
+            <p className="text-sm text-slate-700">{note.content}</p>
 
             <div className="mt-2 ml-3 border-l pl-2 space-y-1">
               {(comments[note.id] ?? []).map((c) => (
                 <p key={c.id} className="text-xs text-gray-700">
-                  {c.content}
+                  {c.user?.name}: {c.content}
                 </p>
               ))}
               <div className="flex gap-2 mt-1">

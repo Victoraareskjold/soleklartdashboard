@@ -3,7 +3,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 export async function getLeadNotes(client: SupabaseClient, leadId: string) {
   const { data, error } = await client
     .from("lead_notes")
-    .select("*, users(name)")
+    .select("*, user:user_id(name)")
     .eq("lead_id", leadId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -46,7 +46,7 @@ export async function getLeadNoteComments(
 ) {
   const { data, error } = await client
     .from("lead_note_comments")
-    .select("*, users(name)")
+    .select("*, user:user_id(name)")
     .eq("note_id", noteId)
     .order("created_at", { ascending: true });
   if (error) throw error;
