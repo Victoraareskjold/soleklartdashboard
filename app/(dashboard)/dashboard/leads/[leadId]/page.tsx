@@ -15,6 +15,7 @@ import { PriceTable } from "@/types/price";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 
 interface InputProps {
   label: string;
@@ -133,7 +134,6 @@ export default function LeadPage() {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === "PVMAP_DATA") {
         const payload = event.data.payload;
-        console.log("api:", payload);
         setSolarData(payload);
         setHasEstimate(true);
       }
@@ -214,6 +214,7 @@ export default function LeadPage() {
           </button>
         </div>
       </form>
+      <LeadNotesSection leadId={leadIdStr!} />
     </div>
   );
 }

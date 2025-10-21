@@ -6,6 +6,8 @@ import {
   Estimate,
   InstallerGroup,
   Lead,
+  Note,
+  NoteComment,
   Team,
 } from "./types";
 
@@ -106,6 +108,38 @@ export const getPriceTable = async (installerGroupId: string) => {
   return apiRequest<PriceTable>(
     `/api/price_table?installer_group_id=${installerGroupId}`
   );
+};
+
+// Lead Notes
+export const getLeadNotes = async (leadId: string) => {
+  return apiRequest<Note[]>(`/api/leadNotes?lead_id=${leadId}`);
+};
+
+export const createLeadNote = async (
+  leadId: string,
+  userId: string,
+  content: string
+): Promise<Note> => {
+  return apiRequest<Note>(`/api/leadNotes`, "POST", {
+    leadId,
+    userId,
+    content,
+  });
+};
+
+export const getLeadNoteComments = async (noteId: string) => {
+  return apiRequest<NoteComment[]>(`/api/leadNotes/${noteId}/comments`);
+};
+
+export const createLeadNoteComment = async (
+  noteId: string,
+  userId: string,
+  content: string
+): Promise<NoteComment> => {
+  return apiRequest<NoteComment>(`/api/leadNotes/${noteId}/comments`, "POST", {
+    userId,
+    content,
+  });
 };
 
 // Update pricetable
