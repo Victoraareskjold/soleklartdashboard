@@ -128,7 +128,7 @@ export const createLeadNote = async (
 };
 
 export const getLeadNoteComments = async (noteId: string) => {
-  return apiRequest<NoteComment[]>(`/api/leadNotes/${noteId}/comments`);
+  return apiRequest<NoteComment[]>(`/api/leadNoteComments/${noteId}`);
 };
 
 export const createLeadNoteComment = async (
@@ -136,10 +136,14 @@ export const createLeadNoteComment = async (
   userId: string,
   content: string
 ): Promise<NoteComment> => {
-  return apiRequest<NoteComment>(`/api/leadNotes/${noteId}/comments`, "POST", {
+  return apiRequest<NoteComment>(`/api/leadNoteComments/${noteId}`, "POST", {
     userId,
     content,
   });
+};
+
+export const getTaggableUsers = async (leadId: string) => {
+  return apiRequest(`/api/leadNotes/${leadId}/taggableUsers`);
 };
 
 // Update pricetable

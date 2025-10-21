@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   getLeadNotes,
   createLeadNote,
   getLeadNoteComments,
   createLeadNoteComment,
+  getTaggableUsers,
 } from "@/lib/api";
 import { Note, NoteComment } from "@/lib/types";
-import { supabase } from "@/lib/supabase";
 
 interface Props {
   leadId: string;
@@ -19,6 +20,12 @@ export default function LeadNotesSection({ leadId }: Props) {
   const [comments, setComments] = useState<Record<string, NoteComment[]>>({});
   const [newNote, setNewNote] = useState("");
   const [newComments, setNewComments] = useState<Record<string, string>>({});
+  const [taggableUsers, setTaggableUsers] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [mentionSuggestions, setMentionSuggestions] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   useEffect(() => {
     if (!leadId) return;
@@ -31,18 +38,21 @@ export default function LeadNotesSection({ leadId }: Props) {
         allComments[n.id] = c ?? [];
       }
       setComments(allComments);
+
+      const users = await getTaggableUsers(leadId);
+      setTaggableUsers(users);
     })();
   }, [leadId]);
 
   const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
-    e.preventDefault();
     if (!newNote.trim() || !user?.id) return;
+
     const note = await createLeadNote(leadId, user.id, newNote.trim());
     setNotes([note, ...notes]);
     setNewNote("");
-    console.log(note);
   };
 
   const handleAddComment = async (noteId: string) => {
@@ -50,6 +60,7 @@ export default function LeadNotesSection({ leadId }: Props) {
     const user = sessionData?.session?.user;
     const text = newComments[noteId]?.trim();
     if (!text || !user?.id) return;
+
     const comment = await createLeadNoteComment(noteId, user.id, text);
     setComments({
       ...comments,
@@ -58,17 +69,54 @@ export default function LeadNotesSection({ leadId }: Props) {
     setNewComments({ ...newComments, [noteId]: "" });
   };
 
+  const handleNoteChange = (text: string) => {
+    setNewNote(text);
+    const atIndex = text.lastIndexOf("@");
+    if (atIndex >= 0) {
+      const query = text.slice(atIndex + 1).toLowerCase();
+      setMentionSuggestions(
+        taggableUsers.filter((u) => u.name.toLowerCase().startsWith(query))
+      );
+    } else {
+      setMentionSuggestions([]);
+    }
+  };
+
+  const handleSelectMention = (name: string) => {
+    const atIndex = newNote.lastIndexOf("@");
+    if (atIndex >= 0) {
+      const newText = newNote.slice(0, atIndex) + "@" + name + " ";
+      setNewNote(newText);
+      setMentionSuggestions([]);
+    }
+  };
+
   return (
     <section className="mt-8 border-t pt-4">
       <h2 className="text-lg font-semibold mb-2">Merknader</h2>
 
-      <form onSubmit={handleAddNote} className="mb-3 flex gap-2">
-        <input
-          value={newNote}
-          onChange={(e) => setNewNote(e.target.value)}
-          placeholder="Skriv en ny merknad..."
-          className="flex-1 border border-gray-300 rounded-md px-2 py-1 text-sm"
-        />
+      <form onSubmit={handleAddNote} className="mb-3 flex flex-col gap-2">
+        <div className="relative">
+          <input
+            value={newNote}
+            onChange={(e) => handleNoteChange(e.target.value)}
+            placeholder="Skriv en ny merknad..."
+            className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm"
+          />
+          {mentionSuggestions.length > 0 && (
+            <ul className="absolute bg-white border mt-1 w-full max-h-32 overflow-auto z-10">
+              {mentionSuggestions.map((u) => (
+                <li
+                  key={u.id}
+                  className="px-2 py-1 cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSelectMention(u.name)}
+                >
+                  {u.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <button
           type="submit"
           className="bg-indigo-600 text-white px-3 py-1 rounded-md text-sm"
@@ -80,13 +128,11 @@ export default function LeadNotesSection({ leadId }: Props) {
       <ul className="space-y-3">
         {notes.map((note) => (
           <li key={note.id} className="border p-2 rounded-md">
-            <div className="flex flex-row justify-between items-center text-lg">
-              <p>Merknad av {note.user?.name}</p>
-              <p className="text-sm">
-                {new Date(note.created_at ?? "").toLocaleString("no")}
-              </p>
-            </div>
-            <p className="text-sm text-slate-700">{note.content}</p>
+            <p className="text-sm">{note.content}</p>
+            <p className="text-xs text-gray-500 mt-1">{note.user?.name}</p>
+            <p className="text-xs text-gray-400 mt-1">
+              {new Date(note.created_at ?? "").toLocaleString()}
+            </p>
 
             <div className="mt-2 ml-3 border-l pl-2 space-y-1">
               {(comments[note.id] ?? []).map((c) => (
