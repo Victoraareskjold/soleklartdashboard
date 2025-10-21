@@ -11,7 +11,11 @@ export default function Navbar() {
       </div>
       <div className="flex gap-2">
         {NAVBAR_ROUTES.map((route) => (
-          <Link href={route.href} key={route.href}>
+          <Link
+            className="bg-slate-100 rounded px-3 py-1 text-slate-700 font-medium text-sm"
+            href={route.href}
+            key={route.href}
+          >
             {route.name}
           </Link>
         ))}

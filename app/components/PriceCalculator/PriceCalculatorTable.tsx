@@ -18,7 +18,7 @@ export default function PriceCalculatorTable({
   return (
     <div>
       <RoofSection
-        roofTypes={items.roofTypes ?? []}
+        roofTypes={items?.roofTypes ?? []}
         totalPanels={totalPanels}
       />
     </div>

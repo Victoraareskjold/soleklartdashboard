@@ -199,7 +199,7 @@ export default function LeadPage() {
             {priceTable && (
               <PriceCalculatorTable
                 table={priceTable}
-                items={priceTable.items}
+                items={priceTable.prices}
                 totalPanels={solarData.totalPanels}
               />
             )}
