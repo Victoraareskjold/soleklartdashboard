@@ -4,7 +4,7 @@ import RoofSection from "./sections/RoofSection";
 
 type Props = {
   table: PriceTable;
-  items: PriceTable["items"];
+  items: PriceTable["prices"];
   totalPanels?: number;
 };
 
@@ -18,7 +18,7 @@ export default function PriceCalculatorTable({
   return (
     <div>
       <RoofSection
-        roofTypes={items.roofTypes ?? []}
+        roofTypes={items?.roofTypes ?? []}
         totalPanels={totalPanels}
       />
     </div>

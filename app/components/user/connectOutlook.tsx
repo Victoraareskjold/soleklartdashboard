@@ -18,11 +18,13 @@ export default function ConnectOutlook() {
   };
 
   return (
-    <button
-      onClick={connectOutlook}
-      className="bg-blue-600 text-white p-2 rounded"
-    >
-      Koble til Outlook
-    </button>
+    <div>
+      <button
+        onClick={connectOutlook}
+        className="bg-blue-600 text-white p-2 rounded"
+      >
+        Koble til Outlook
+      </button>
+    </div>
   );
 }

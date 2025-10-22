@@ -10,8 +10,8 @@ import { priceCategoryConfig } from "@/lib/config/priceCategories";
 type Props = {
   installerGroupId: string;
   table: PriceTable;
-  items: PriceTable["items"];
-  setItems: React.Dispatch<React.SetStateAction<PriceTable["items"]>>;
+  prices: PriceTable["prices"];
+  setPrices: React.Dispatch<React.SetStateAction<PriceTable["prices"]>>;
   setTable: React.Dispatch<React.SetStateAction<PriceTable | null>>;
   saving: boolean;
   setSaving: React.Dispatch<React.SetStateAction<true | false>>;
@@ -20,8 +20,8 @@ type Props = {
 export default function PriceTableEditor({
   installerGroupId,
   table,
-  items,
-  setItems,
+  prices,
+  setPrices,
   setTable,
   saving,
   setSaving,
@@ -31,7 +31,7 @@ export default function PriceTableEditor({
     try {
       const updated = await updatePriceTable(installerGroupId, {
         ...table,
-        items,
+        prices,
       });
       setTable(updated);
       toast.success("Successfully updated!");
@@ -46,7 +46,7 @@ export default function PriceTableEditor({
   return (
     <div>
       {Object.entries(priceCategoryConfig).map(([category]) => {
-        const rows = items[category] ?? [];
+        const rows = prices[category] ?? [];
 
         return (
           <PriceCategoryTable
@@ -54,10 +54,10 @@ export default function PriceTableEditor({
             category={category as keyof typeof priceCategoryConfig}
             rows={rows}
             onChange={(updatedRows) =>
-              setItems((prev) => ({ ...prev, [category]: updatedRows }))
+              setPrices((prev) => ({ ...prev, [category]: updatedRows }))
             }
             onAdd={() =>
-              setItems((prev) => ({
+              setPrices((prev) => ({
                 ...prev,
                 [category]: [
                   ...(prev[category] ?? []),
@@ -70,7 +70,7 @@ export default function PriceTableEditor({
               }))
             }
             onRemove={(idx) =>
-              setItems((prev) => ({
+              setPrices((prev) => ({
                 ...prev,
                 [category]: (prev[category] ?? []).filter((_, i) => i !== idx),
               }))

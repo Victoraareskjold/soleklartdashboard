@@ -6,10 +6,11 @@ import {
   Estimate,
   InstallerGroup,
   Lead,
+  Note,
   Team,
 } from "./types";
 
-const getToken = async (): Promise<string> => {
+export const getToken = async (): Promise<string> => {
   const session = await supabase.auth.getSession();
   const token = session.data.session?.access_token;
   if (!token) throw new Error("No token found. User not authenticated.");
@@ -105,6 +106,35 @@ export const updateEstimate = async (estimateId: string, data: unknown) => {
 export const getPriceTable = async (installerGroupId: string) => {
   return apiRequest<PriceTable>(
     `/api/price_table?installer_group_id=${installerGroupId}`
+  );
+};
+
+// Lead Notes
+export const getLeadNotes = async (leadId: string) => {
+  return apiRequest<Note[]>(`/api/leadNotes?lead_id=${leadId}`);
+};
+
+export const createLeadNote = async (
+  leadId: string,
+  userId: string,
+  content: string,
+  source: string,
+  noteId?: string
+): Promise<Note> => {
+  return apiRequest<Note>(`/api/leadNotes`, "POST", {
+    leadId,
+    userId,
+    content,
+    source,
+    noteId,
+  });
+};
+
+export const getTaggableUsers = async (
+  leadId: string
+): Promise<{ id: string; name: string }[]> => {
+  return apiRequest<{ id: string; name: string }[]>(
+    `/api/leadNotes/${leadId}/taggableUsers`
   );
 };
 

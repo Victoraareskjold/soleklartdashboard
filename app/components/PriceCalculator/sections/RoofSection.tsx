@@ -4,11 +4,11 @@ import CalculatorSection from "./CalculatorSection";
 import { PriceTable } from "@/types/price";
 
 type Props = {
-  roofTypes: PriceTable["items"]["roofTypes"];
+  roofTypes: PriceTable["prices"]["roofTypes"];
   totalPanels: number;
 };
 
-type RoofType = PriceTable["items"]["roofTypes"][number];
+type RoofType = PriceTable["prices"]["roofTypes"][number];
 
 export default function RoofSection({ roofTypes = [], totalPanels }: Props) {
   const [selected, setSelected] = useState<RoofType | null>(

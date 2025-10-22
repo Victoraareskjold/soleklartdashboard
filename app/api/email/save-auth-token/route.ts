@@ -43,16 +43,19 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from("email_accounts")
-      .upsert({
-        user_id: userId,
-        installer_group_id: installerGroupId,
-        provider: "outlook",
-        email: tokens.id_token ? parseJwt(tokens.id_token)?.email : null,
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        scope: tokens.scope,
-        expires_at: expiresAt,
-      })
+      .upsert(
+        {
+          user_id: userId,
+          installer_group_id: installerGroupId,
+          provider: "outlook",
+          email: tokens.id_token ? parseJwt(tokens.id_token)?.email : null,
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          scope: tokens.scope,
+          expires_at: expiresAt,
+        },
+        { onConflict: "user_id,installer_group_id" }
+      )
       .select();
 
     if (error) throw error;

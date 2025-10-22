@@ -204,7 +204,7 @@ export default function CreateLead() {
 
         <PriceCalculatorTable
           table={priceTable}
-          items={priceTable.items}
+          items={priceTable.prices}
           totalPanels={solarData.totalPanels}
         />
 
