@@ -7,7 +7,6 @@ import {
   InstallerGroup,
   Lead,
   Note,
-  NoteComment,
   Team,
 } from "./types";
 
@@ -118,32 +117,25 @@ export const getLeadNotes = async (leadId: string) => {
 export const createLeadNote = async (
   leadId: string,
   userId: string,
-  content: string
+  content: string,
+  source: string,
+  noteId?: string
 ): Promise<Note> => {
   return apiRequest<Note>(`/api/leadNotes`, "POST", {
     leadId,
     userId,
     content,
+    source,
+    noteId,
   });
 };
 
-export const getLeadNoteComments = async (noteId: string) => {
-  return apiRequest<NoteComment[]>(`/api/leadNoteComments/${noteId}`);
-};
-
-export const createLeadNoteComment = async (
-  noteId: string,
-  userId: string,
-  content: string
-): Promise<NoteComment> => {
-  return apiRequest<NoteComment>(`/api/leadNoteComments/${noteId}`, "POST", {
-    userId,
-    content,
-  });
-};
-
-export const getTaggableUsers = async (leadId: string) => {
-  return apiRequest(`/api/leadNotes/${leadId}/taggableUsers`);
+export const getTaggableUsers = async (
+  leadId: string
+): Promise<{ id: string; name: string }[]> => {
+  return apiRequest<{ id: string; name: string }[]>(
+    `/api/leadNotes/${leadId}/taggableUsers`
+  );
 };
 
 // Update pricetable

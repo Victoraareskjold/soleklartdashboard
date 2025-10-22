@@ -32,12 +32,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { leadId, userId, content } = body;
-    if (!leadId || !userId || !content)
+    const { leadId, userId, content, source, noteId } = body;
+    if (!leadId || !userId || !content || !source)
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
     const client = createSupabaseClient(token);
-    const note = await createLeadNote(client, leadId, userId, content);
+    const note = await createLeadNote(
+      client,
+      leadId,
+      userId,
+      content,
+      source,
+      noteId
+    );
     return NextResponse.json(note);
   } catch (err) {
     console.error("POST /api/leadNotes error:", err);
