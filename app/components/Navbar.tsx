@@ -14,7 +14,7 @@ export default function Navbar() {
   const closeMentions = () => setIsMentionsOpen(false);
 
   return (
-    <nav className="flex gap-4 items-center p-2 justify-between">
+    <nav className="flex gap-4 items-center px-2 h-12 items-center justify-between">
       <div className="flex gap-2">
         <InstallerGroupSelector />
       </div>

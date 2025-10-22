@@ -32,15 +32,6 @@ export async function GET(req: Request) {
       );
     }
 
-    /* const now = new Date();
-    const expires = new Date(account.expires_at);
-    if (expires < now) {
-      return Response.json(
-        { error: "Access token har utløpt, må fornyes" },
-        { status: 401 }
-      );
-    } */
-
     const url = `https://graph.microsoft.com/v1.0/me/messages?$top=20&$orderby=receivedDateTime desc`;
 
     const graphRes = await fetch(url, {

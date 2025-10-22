@@ -67,7 +67,7 @@ export default function SolarDataView({
   readOnly = true,
 }: SolarDataViewProps) {
   return (
-    <div className="mt-4">
+    <div>
       <div className="gap-3 grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7">
         <Input
           label="Årlig produksjon (kWh)"

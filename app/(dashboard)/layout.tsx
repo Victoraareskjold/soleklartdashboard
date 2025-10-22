@@ -12,7 +12,7 @@ export default function DashboardLayout({
     <TeamProvider>
       <InstallerGroupProvider>
         <Navbar />
-        <div className="p-2">{children}</div>
+        <div>{children}</div>
       </InstallerGroupProvider>
     </TeamProvider>
   );
