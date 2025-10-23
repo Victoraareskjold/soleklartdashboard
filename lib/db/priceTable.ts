@@ -1,4 +1,4 @@
-import { PriceTable } from "@/types/price";
+import { PriceTable } from "@/types/price_table";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export async function getPriceTable(

@@ -1,5 +1,5 @@
 import LoadingScreen from "../LoadingScreen";
-import { PriceTable } from "@/types/price";
+import { PriceTable } from "@/types/price_table";
 import RoofSection from "./sections/RoofSection";
 
 type Props = {

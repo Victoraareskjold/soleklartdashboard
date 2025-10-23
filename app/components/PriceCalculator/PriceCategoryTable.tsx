@@ -1,6 +1,6 @@
 import { calculateRow } from "@/lib/calc/price";
 import { priceCategoryConfig } from "@/lib/config/priceCategories";
-import { PriceRow, PriceTableRowComputed } from "@/types/price";
+import { PriceRow, PriceTableRowComputed } from "@/types/price_table";
 
 type ColumnConfig = {
   key: keyof PriceTableRowComputed | keyof PriceRow | string;

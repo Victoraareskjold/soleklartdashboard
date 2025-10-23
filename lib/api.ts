@@ -1,4 +1,4 @@
-import { PriceTable } from "@/types/price";
+import { PriceTable, SupplierWithProducts } from "@/types/price_table";
 import { supabase } from "./supabase";
 import {
   CreateEstimateInput,
@@ -147,5 +147,11 @@ export const updatePriceTable = async (
     `/api/price_table?installer_group_id=${installerGroupId}`,
     "PATCH",
     data
+  );
+};
+
+export const getSuppliersWithProducts = async () => {
+  return apiRequest<SupplierWithProducts[]>(
+    "/api/price_table/suppliers/products"
   );
 };

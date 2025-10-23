@@ -10,7 +10,7 @@ import { createEstimate, createLead, getPriceTable } from "@/lib/api";
 
 import { mapSolarDataToEstimate } from "@/lib/mappers";
 import { supabase } from "@/lib/supabase";
-import { PriceTable } from "@/types/price";
+import { PriceTable } from "@/types/price_table";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";

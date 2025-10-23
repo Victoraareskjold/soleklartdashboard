@@ -2,7 +2,7 @@
 import React from "react";
 import { SupplierCategoryTable } from "./SupplierCategoryTable";
 import { supplierCategoryConfig } from "@/lib/config/supplierCategories";
-import { PriceTable, SupplierData } from "@/types/price";
+import { PriceTable, SupplierData } from "@/types/price_table";
 import { updatePriceTable } from "@/lib/api";
 import { toast } from "react-toastify";
 

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useMemo } from "react";
 import CalculatorSection from "./CalculatorSection";
-import { PriceTable } from "@/types/price";
+import { PriceTable } from "@/types/price_table";
 
 type Props = {
   roofTypes: PriceTable["prices"]["roofTypes"];

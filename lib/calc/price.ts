@@ -1,4 +1,4 @@
-import { PriceRow, PriceTableRowComputed } from "@/types/price";
+import { PriceRow, PriceTableRowComputed } from "@/types/price_table";
 
 type ExtendedRow = PriceRow & {
   costPer?: number;

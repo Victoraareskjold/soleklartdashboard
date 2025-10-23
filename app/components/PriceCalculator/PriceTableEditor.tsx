@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 
-import { PriceTable } from "@/types/price";
+import { PriceTable } from "@/types/price_table";
 import { updatePriceTable } from "@/lib/api";
 import { toast } from "react-toastify";
 import { PriceCategoryTable } from "./PriceCategoryTable";

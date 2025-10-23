@@ -11,7 +11,7 @@ import {
   updateLead,
 } from "@/lib/api";
 import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
-import { PriceTable } from "@/types/price";
+import { PriceTable } from "@/types/price_table";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { supplierCategoryConfig } from "@/lib/config/supplierCategories";
-import { SupplierRow } from "@/types/price";
+import { SupplierRow } from "@/types/price_table";
 import { createSupabaseClient } from "@/utils/supabase/client";
 import { getToken } from "@/lib/api";
 
