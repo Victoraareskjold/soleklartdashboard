@@ -1,16 +1,14 @@
 "use client";
 
 import LoadingScreen from "@/app/components/LoadingScreen";
-import PriceCalculatorTable from "@/app/components/PriceCalculator/PriceCalculatorTable";
 import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
 import { CLIENT_ROUTES } from "@/constants/routes";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import { createEstimate, createLead, getPriceTable } from "@/lib/api";
+import { createEstimate, createLead } from "@/lib/api";
 
 import { mapSolarDataToEstimate } from "@/lib/mappers";
 import { supabase } from "@/lib/supabase";
-import { PriceTable } from "@/types/price_table";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -47,8 +45,6 @@ const Input = ({
 export default function CreateLead() {
   const { teamId } = useTeam();
   const { installerGroupId } = useInstallerGroup();
-
-  const [priceTable, setPriceTable] = useState<PriceTable | null>(null);
 
   // States
   const [loading, setLoading] = useState(false);
@@ -126,7 +122,6 @@ export default function CreateLead() {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === "PVMAP_DATA") {
         const payload = event.data.payload;
-        console.log("api:", payload);
         setSolarData(payload);
       }
     };
@@ -140,19 +135,7 @@ export default function CreateLead() {
     setIsModalOpen(!isModalOpen);
   };
 
-  useEffect(() => {
-    if (!installerGroupId) return;
-    setLoading(true);
-
-    getPriceTable(installerGroupId)
-      .then((data) => {
-        setPriceTable(data);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  }, [installerGroupId]);
-
-  if (loading || !priceTable) return <LoadingScreen />;
+  if (loading) return <LoadingScreen />;
 
   return (
     <div>
@@ -201,12 +184,6 @@ export default function CreateLead() {
         />
 
         <SolarDataView solarData={solarData} setSolarData={setSolarData} />
-
-        <PriceCalculatorTable
-          table={priceTable}
-          items={priceTable.prices}
-          totalPanels={solarData.totalPanels}
-        />
 
         <button type="submit" disabled={loading}>
           {loading ? "Creating..." : "Create Lead"}

@@ -15,15 +15,20 @@ export interface Supplier {
 
 export interface ProductCategory {
   id: string;
-  supplier_id: string;
   name: string;
+}
+
+export interface ProductSubcategory {
+  id: string;
+  name: string;
+  category_id: string;
 }
 
 export interface Product {
   id: string;
   name: string;
-  category: string;
-  subcategory: string;
+  category: ProductCategory;
+  subcategory?: ProductSubcategory | null;
   price_ex_vat: number;
   attachment?: string;
   updated_at: string;

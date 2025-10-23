@@ -1,17 +1,9 @@
 "use client";
 import LoadingScreen from "@/app/components/LoadingScreen";
-import PriceCalculatorTable from "@/app/components/PriceCalculator/PriceCalculatorTable";
 import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
-import {
-  getEstimate,
-  getLead,
-  getPriceTable,
-  updateEstimate,
-  updateLead,
-} from "@/lib/api";
+import { getEstimate, getLead, updateEstimate, updateLead } from "@/lib/api";
 import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
-import { PriceTable } from "@/types/price_table";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -50,8 +42,6 @@ export default function LeadPage() {
   const { leadId } = useParams();
   const { installerGroupId } = useInstallerGroup();
   const leadIdStr = Array.isArray(leadId) ? leadId[0] : leadId;
-
-  const [priceTable, setPriceTable] = useState<PriceTable | null>(null);
 
   // States
   const [loading, setLoading] = useState(true);
@@ -102,9 +92,6 @@ export default function LeadPage() {
         } else {
           setHasEstimate(false);
         }
-      }),
-      getPriceTable(installerGroupId).then((data) => {
-        setPriceTable(data);
       }),
     ])
       .catch((err) => console.error(err))
@@ -210,13 +197,6 @@ export default function LeadPage() {
         {activeRoute === "Estimat" && hasEstimate && (
           <>
             <SolarDataView solarData={solarData} setSolarData={setSolarData} />
-            {priceTable && (
-              <PriceCalculatorTable
-                table={priceTable}
-                items={priceTable.prices}
-                totalPanels={solarData.totalPanels}
-              />
-            )}
             <button onClick={handleUpdate} disabled={loading}>
               {loading ? "Lagrer..." : "Lagre"}
             </button>

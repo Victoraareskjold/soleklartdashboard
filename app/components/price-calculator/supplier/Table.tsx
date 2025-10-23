@@ -1,11 +1,10 @@
 import { SupplierWithProducts, Product } from "@/types/price_table";
-import React from "react";
 
 interface SupplierTableProps {
-  suppliers: SupplierWithProducts[] | null;
+  suppliersAndProducts: SupplierWithProducts[] | null;
 }
 
-const MASTER_PRODUCTS = [
+const CATEGORIES = [
   {
     name: "SOLCELLEPANEL",
   },
@@ -23,16 +22,19 @@ const MASTER_PRODUCTS = [
   },
 ];
 
-export default function SupplierTable({ suppliers }: SupplierTableProps) {
-  if (!suppliers || suppliers.length === 0) return <p>Ingen suppliers</p>;
+export default function SupplierTable({
+  suppliersAndProducts,
+}: SupplierTableProps) {
+  if (!suppliersAndProducts || suppliersAndProducts.length === 0)
+    return <p>Ingen supplierdata</p>;
 
   return (
     <div className="overflow-auto p-2">
-      {suppliers.map((supplier) => (
+      {suppliersAndProducts.map((supplier) => (
         <div key={supplier.id}>
           <h2 className="text-xl font-bold mb-8">{supplier.name}</h2>
 
-          {MASTER_PRODUCTS.map((cat) => (
+          {CATEGORIES.map((cat) => (
             <div key={cat.name} className="mb-4">
               <h2 className="text-xl font-bold">{cat.name}</h2>
 
@@ -40,8 +42,9 @@ export default function SupplierTable({ suppliers }: SupplierTableProps) {
                 cat.subcategories.map((subcat) => {
                   const productsInSubcat = supplier.products.filter(
                     (p: Product) =>
-                      p.category?.toUpperCase() === cat.name.toUpperCase() &&
-                      p.subcategory?.toLowerCase() === subcat.toLowerCase()
+                      p.category?.name.toUpperCase() ===
+                        cat.name.toUpperCase() &&
+                      p.subcategory?.name.toLowerCase() === subcat.toLowerCase()
                   );
 
                   return (
@@ -58,7 +61,7 @@ export default function SupplierTable({ suppliers }: SupplierTableProps) {
                 <ProductTable
                   products={supplier.products.filter(
                     (p: Product) =>
-                      p.category?.toUpperCase() === cat.name.toUpperCase()
+                      p.category?.name.toUpperCase() === cat.name.toUpperCase()
                   )}
                 />
               )}

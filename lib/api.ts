@@ -1,4 +1,4 @@
-import { PriceTable, SupplierWithProducts } from "@/types/price_table";
+import { Supplier, SupplierWithProducts } from "@/types/price_table";
 import { supabase } from "./supabase";
 import {
   CreateEstimateInput,
@@ -102,13 +102,6 @@ export const updateEstimate = async (estimateId: string, data: unknown) => {
   return apiRequest<Lead>(`/api/estimates/${estimateId}`, "PATCH", data);
 };
 
-// Get pricetable
-export const getPriceTable = async (installerGroupId: string) => {
-  return apiRequest<PriceTable>(
-    `/api/price_table?installer_group_id=${installerGroupId}`
-  );
-};
-
 // Lead Notes
 export const getLeadNotes = async (leadId: string) => {
   return apiRequest<Note[]>(`/api/leadNotes?lead_id=${leadId}`);
@@ -138,16 +131,8 @@ export const getTaggableUsers = async (
   );
 };
 
-// Update pricetable
-export const updatePriceTable = async (
-  installerGroupId: string,
-  data: Partial<PriceTable>
-) => {
-  return apiRequest<PriceTable>(
-    `/api/price_table?installer_group_id=${installerGroupId}`,
-    "PATCH",
-    data
-  );
+export const getSuppliers = async () => {
+  return apiRequest<Supplier[]>("/api/price_table/suppliers");
 };
 
 export const getSuppliersWithProducts = async () => {

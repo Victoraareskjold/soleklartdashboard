@@ -29,7 +29,6 @@ export async function GET(
       .maybeSingle();
 
     if (error) throw error;
-    console.log(data);
     return NextResponse.json(data);
   } catch (err) {
     console.error("GET /api/estimates/[id] error:", err);
