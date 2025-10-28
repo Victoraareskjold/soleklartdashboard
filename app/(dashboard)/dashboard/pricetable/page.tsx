@@ -27,7 +27,7 @@ export default function PriceTablePage() {
   if (loading || !suppliers || !suppliersAndProducts) return <LoadingScreen />;
 
   return (
-    <div>
+    <div className="flex flex-col gap-2 p-2">
       <CalculatorResults
         suppliers={suppliers}
         suppliersAndProducts={suppliersAndProducts}

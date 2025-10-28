@@ -9,6 +9,7 @@ import {
   Note,
   Team,
 } from "./types";
+import { CategoryWithSubcategories } from "@/app/components/price-calculator/supplier/Table";
 
 export const getToken = async (): Promise<string> => {
   const session = await supabase.auth.getSession();
@@ -166,11 +167,16 @@ export const deleteSupplierProduct = async (productId: string) => {
   );
 };
 
+export const getCategories = async () => {
+  return apiRequest<CategoryWithSubcategories[]>("/api/price_table/categories");
+};
+
 // Lead Emails
 export const getLeadEmails = async (leadId: string) => {
-  return apiRequest<{ success: boolean; emails: import("./types").LeadEmail[] }>(
-    `/api/leads/${leadId}/emails`
-  );
+  return apiRequest<{
+    success: boolean;
+    emails: import("./types").LeadEmail[];
+  }>(`/api/leads/${leadId}/emails`);
 };
 
 export const syncLeadEmails = async (

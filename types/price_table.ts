@@ -27,8 +27,8 @@ export interface ProductSubcategory {
 export interface Product {
   id: string;
   name: string;
-  category: ProductCategory;
-  subcategory?: ProductSubcategory | null;
+  category: ProductCategory | null;
+  subcategory?: ProductSubcategory | null | null;
   price_ex_vat: number;
   attachment?: string;
   updated_at: string;

@@ -25,3 +25,17 @@ export async function getSuppliersWithProducts(client: SupabaseClient) {
   if (error) throw error;
   return data as unknown as (Supplier & { products: Product[] })[];
 }
+
+export async function getCategories(client: SupabaseClient) {
+  const { data, error } = await client
+    .from("product_categories")
+    .select(
+      `
+      *,
+      subcategories:product_subcategories(*)
+      `
+    )
+    .order("name");
+  if (error) throw error;
+  return data;
+}
