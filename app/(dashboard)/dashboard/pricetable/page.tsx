@@ -1,5 +1,6 @@
 "use client";
 
+import LoadingScreen from "@/app/components/LoadingScreen";
 import CalculatorResults from "@/app/components/price-calculator/result/CalculatorResults";
 import SupplierTable from "@/app/components/price-calculator/supplier/Table";
 import { getSuppliersWithProducts, getSuppliers } from "@/lib/api";
@@ -11,6 +12,7 @@ export default function PriceTablePage() {
   const [suppliersAndProducts, setSuppliersAndProducts] = useState<
     SupplierWithProducts[] | null
   >(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getSuppliers().then((data) => {
@@ -19,7 +21,10 @@ export default function PriceTablePage() {
     getSuppliersWithProducts().then((data) => {
       setSuppliersAndProducts(data);
     });
+    setLoading(false);
   }, []);
+
+  if (loading || !suppliers || !suppliersAndProducts) return <LoadingScreen />;
 
   return (
     <div>
@@ -27,7 +32,7 @@ export default function PriceTablePage() {
         suppliers={suppliers}
         suppliersAndProducts={suppliersAndProducts}
       />
-      {/* <SupplierTable suppliersAndProducts={suppliersAndProducts} /> */}
+      <SupplierTable suppliersAndProducts={suppliersAndProducts} />
     </div>
   );
 }

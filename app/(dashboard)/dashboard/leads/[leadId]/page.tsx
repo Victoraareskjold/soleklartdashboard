@@ -8,6 +8,7 @@ import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
+import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
 
 interface InputProps {
   label: string;
@@ -192,6 +193,10 @@ export default function LeadPage() {
 
         {activeRoute === "Merknader" && (
           <LeadNotesSection leadId={leadIdStr!} />
+        )}
+
+        {activeRoute === "E-poster" && (
+          <LeadEmailSection leadId={leadIdStr!} leadEmail={email} />
         )}
 
         {activeRoute === "Estimat" && hasEstimate && (
