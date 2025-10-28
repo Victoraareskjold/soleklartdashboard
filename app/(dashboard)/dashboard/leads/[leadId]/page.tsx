@@ -1,21 +1,14 @@
 "use client";
 import LoadingScreen from "@/app/components/LoadingScreen";
-import PriceCalculatorTable from "@/app/components/PriceCalculator/PriceCalculatorTable";
 import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
-import {
-  getEstimate,
-  getLead,
-  getPriceTable,
-  updateEstimate,
-  updateLead,
-} from "@/lib/api";
+import { getEstimate, getLead, updateEstimate, updateLead } from "@/lib/api";
 import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
-import { PriceTable } from "@/types/price";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
+import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
 
 interface InputProps {
   label: string;
@@ -51,8 +44,6 @@ export default function LeadPage() {
   const { installerGroupId } = useInstallerGroup();
   const leadIdStr = Array.isArray(leadId) ? leadId[0] : leadId;
 
-  const [priceTable, setPriceTable] = useState<PriceTable | null>(null);
-
   // States
   const [loading, setLoading] = useState(true);
   const [hasEstimate, setHasEstimate] = useState(false);
@@ -79,6 +70,9 @@ export default function LeadPage() {
     imageUrl: "",
   });
 
+  const [activeRoute, setActiveRoute] = useState("Aktivitet");
+  const routes = ["Aktivitet", "Merknader", "E-poster"];
+
   useEffect(() => {
     if (!leadIdStr || !installerGroupId) return;
 
@@ -99,9 +93,6 @@ export default function LeadPage() {
         } else {
           setHasEstimate(false);
         }
-      }),
-      getPriceTable(installerGroupId).then((data) => {
-        setPriceTable(data);
       }),
     ])
       .catch((err) => console.error(err))
@@ -151,7 +142,87 @@ export default function LeadPage() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <div>
+    <div className="flex flex-row">
+      {/* Contact information */}
+      <section className="w-1/4 p-2">
+        <form>
+          <Input
+            label="Navn"
+            value={name}
+            onChange={setName}
+            placeholder="Navn"
+          />
+          <Input
+            label="E-post"
+            value={email}
+            onChange={setEmail}
+            type="email"
+            placeholder="E-postaddresse"
+          />
+          <Input
+            label="Telefon"
+            value={phone}
+            onChange={setPhone}
+            placeholder="Telefonnummer"
+          />
+          <Input
+            label="Addresse"
+            value={address}
+            onChange={setAddress}
+            placeholder="Addresse"
+          />
+        </form>
+      </section>
+      {/* Center section */}
+      <section className="w-full bg-blue-100 p-2 [min-height:calc(100vh-3rem)]">
+        <div className="w-full gap-2 flex mb-4">
+          {routes.map((route) => (
+            <button
+              key={route}
+              className={`px-3 py-1 rounded-md font-medium ${
+                activeRoute === route
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-300"
+              }`}
+              onClick={() => setActiveRoute(route)}
+            >
+              {route}
+            </button>
+          ))}
+        </div>
+
+        {activeRoute === "Merknader" && (
+          <LeadNotesSection leadId={leadIdStr!} />
+        )}
+
+        {activeRoute === "E-poster" && (
+          <LeadEmailSection leadId={leadIdStr!} leadEmail={email} />
+        )}
+
+        {activeRoute === "Estimat" && hasEstimate && (
+          <>
+            <SolarDataView solarData={solarData} setSolarData={setSolarData} />
+            <button onClick={handleUpdate} disabled={loading}>
+              {loading ? "Lagrer..." : "Lagre"}
+            </button>
+            <button onClick={handleToggleModal} disabled={loading}>
+              Åpne
+            </button>
+          </>
+        )}
+      </section>
+      <section className="w-1/4 p-2">
+        <h1>Noe tekst osv</h1>
+        <div className="flex gap-2">
+          <button
+            className="bg-[#FF8E4C] text-white rounded p-2 px-3 w-46"
+            onClick={() => setActiveRoute("Estimat")}
+          >
+            {hasEstimate ? "Vis tilbud" : "Opprett nytt tilbud"}
+          </button>
+        </div>
+      </section>
+      {/* Modals */}
       {isModalOpen && (
         <section className="flex h-full absolute inset-0 overflow-none">
           <>
@@ -161,60 +232,11 @@ export default function LeadPage() {
             ></div>
             <iframe
               src="https://pvmap.vercel.app/?site=solarinstallationdashboard"
-              className="h-5/6 w-5/6 relative z-50 m-auto rounded-xl"
+              className="h-5/6 w-5/6 relative z-100 m-auto rounded-xl"
             />
           </>
         </section>
       )}
-      <form>
-        <Input
-          label="Name"
-          value={name}
-          onChange={setName}
-          placeholder="Lead name"
-        />
-        <Input
-          label="Email"
-          value={email}
-          onChange={setEmail}
-          type="email"
-          placeholder="Lead email"
-        />
-        <Input
-          label="Phone"
-          value={phone}
-          onChange={setPhone}
-          placeholder="Lead phone"
-        />
-        <Input
-          label="Address"
-          value={address}
-          onChange={setAddress}
-          placeholder="Lead address"
-        />
-        {hasEstimate && (
-          <>
-            <SolarDataView solarData={solarData} setSolarData={setSolarData} />
-
-            {priceTable && (
-              <PriceCalculatorTable
-                table={priceTable}
-                items={priceTable.prices}
-                totalPanels={solarData.totalPanels}
-              />
-            )}
-          </>
-        )}
-        <div className="flex gap-2">
-          {!hasEstimate && (
-            <button onClick={handleToggleModal}>Opprett estimat</button>
-          )}
-          <button onClick={handleUpdate} disabled={loading}>
-            {loading ? "Lagrer..." : "Lagre"}
-          </button>
-        </div>
-      </form>
-      <LeadNotesSection leadId={leadIdStr!} />
     </div>
   );
 }

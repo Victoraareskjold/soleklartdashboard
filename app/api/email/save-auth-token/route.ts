@@ -27,8 +27,6 @@ export async function POST(req: NextRequest) {
       body: params,
     });
 
-    console.log(response);
-
     const tokens = await response.json();
 
     if (!tokens.access_token)

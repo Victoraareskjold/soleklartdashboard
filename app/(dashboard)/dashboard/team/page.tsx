@@ -20,17 +20,17 @@ export default function TeamPage() {
 
   return (
     <div>
-      <h1>{teamData.name}</h1>
-      <p>{teamData.id}</p>
+      <h1 className="text-lg mb-4">{teamData.name}</h1>
       <div>
-        <p>Team member</p>
+        <p>Team members</p>
         {teamData.members?.map((member) => (
           <div
-            key={member.id + member.name}
-            className="flex flex-row gap-2 bg-slate-100"
+            key={member.user_id}
+            className="flex flex-col gap-1 mb-2 bg-slate-100 p-2 rounded-md"
           >
-            <p>{member.role || "Ukjent"}</p>
-            <p>{member.name || "Ukjent"}</p>
+            <p className="w-full">{member.name || "Ingen navn satt"}</p>
+            <p>{member.role || "Ingen rolle satt"}</p>
+            <p>{member.user_id || "Ingen id"}</p>
           </div>
         ))}
       </div>

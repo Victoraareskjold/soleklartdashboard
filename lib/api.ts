@@ -1,4 +1,4 @@
-import { PriceTable } from "@/types/price";
+import { Product, Supplier, SupplierWithProducts } from "@/types/price_table";
 import { supabase } from "./supabase";
 import {
   CreateEstimateInput,
@@ -102,13 +102,6 @@ export const updateEstimate = async (estimateId: string, data: unknown) => {
   return apiRequest<Lead>(`/api/estimates/${estimateId}`, "PATCH", data);
 };
 
-// Get pricetable
-export const getPriceTable = async (installerGroupId: string) => {
-  return apiRequest<PriceTable>(
-    `/api/price_table?installer_group_id=${installerGroupId}`
-  );
-};
-
 // Lead Notes
 export const getLeadNotes = async (leadId: string) => {
   return apiRequest<Note[]>(`/api/leadNotes?lead_id=${leadId}`);
@@ -138,14 +131,80 @@ export const getTaggableUsers = async (
   );
 };
 
-// Update pricetable
-export const updatePriceTable = async (
-  installerGroupId: string,
-  data: Partial<PriceTable>
-) => {
-  return apiRequest<PriceTable>(
-    `/api/price_table?installer_group_id=${installerGroupId}`,
-    "PATCH",
-    data
+export const getSuppliers = async () => {
+  return apiRequest<Supplier[]>("/api/price_table/suppliers");
+};
+
+export const getSuppliersWithProducts = async () => {
+  return apiRequest<SupplierWithProducts[]>(
+    "/api/price_table/suppliers/products"
   );
+};
+
+export const addSupplierProduct = async (
+  newProduct: unknown
+): Promise<Product> => {
+  return apiRequest<Product>(
+    `/api/price_table/suppliers/products`,
+    "POST",
+    newProduct
+  );
+};
+
+export const updateSupplierPrice = async (productId: string, price: number) => {
+  return apiRequest(
+    `/api/price_table/suppliers/products/${productId}`,
+    "PATCH",
+    price
+  );
+};
+
+export const deleteSupplierProduct = async (productId: string) => {
+  return apiRequest(
+    `/api/price_table/suppliers/products/${productId}`,
+    "DELETE"
+  );
+};
+
+// Lead Emails
+export const getLeadEmails = async (leadId: string) => {
+  return apiRequest<{ success: boolean; emails: import("./types").LeadEmail[] }>(
+    `/api/leads/${leadId}/emails`
+  );
+};
+
+export const syncLeadEmails = async (
+  leadId: string,
+  userId: string,
+  installerGroupId: string
+) => {
+  return apiRequest<{
+    success: boolean;
+    count: number;
+    emails: import("./types").LeadEmail[];
+  }>(`/api/leads/${leadId}/emails/sync`, "POST", {
+    userId,
+    installerGroupId,
+  });
+};
+
+export const sendLeadEmail = async (
+  leadId: string,
+  userId: string,
+  installerGroupId: string,
+  subject: string,
+  body: string,
+  conversationId?: string
+) => {
+  return apiRequest<{
+    success: boolean;
+    email: import("./types").LeadEmail;
+    message: string;
+  }>(`/api/leads/${leadId}/emails/send`, "POST", {
+    userId,
+    installerGroupId,
+    subject,
+    body,
+    conversationId,
+  });
 };

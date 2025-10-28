@@ -44,7 +44,6 @@ export default function EmailTest() {
         const data = await res.json();
 
         if (data.success) {
-          console.log("Eposter hentet:", data.mails);
           setEmails(data.mails);
         } else {
           console.error(

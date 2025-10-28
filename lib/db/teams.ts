@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { TeamMember } from "../types";
 
 export async function getTeamsForUser(client: SupabaseClient, userId: string) {
   const { data: memberships, error } = await client
@@ -31,11 +32,17 @@ export async function getTeam(client: SupabaseClient, teamId: string) {
 
   const { data: members, error: membersError } = await client
     .from("team_members")
-    .select("user_id, role")
+    .select("user_id, role, users(name)")
     .eq("team_id", teamId);
   if (membersError) throw membersError;
 
-  return { ...team, members };
+  const formattedMembers: TeamMember[] = (members ?? []).map((m) => ({
+    user_id: m.user_id,
+    role: m.role,
+    name: (m.users as unknown as { name: string } | null)?.name ?? "Ukjent",
+  }));
+
+  return { ...team, members: formattedMembers };
 }
 
 export async function createTeam(
