@@ -10,6 +10,7 @@ import {
   ProductCategory,
   ProductSubcategory,
 } from "@/types/price_table";
+import { createSupabaseAdminClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -35,6 +36,7 @@ export default function SupplierTable({
   const [allCategories, setAllCategories] = useState<
     CategoryWithSubcategories[]
   >([]);
+
   const [modal, setModal] = useState<AddProductModal>({
     isOpen: false,
     supplierId: "",
@@ -48,15 +50,88 @@ export default function SupplierTable({
     attachment: "",
   });
 
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const supabase = createSupabaseAdminClient();
+
   useEffect(() => {
     getCategories().then(setAllCategories);
   }, []);
 
   if (!suppliers || suppliers.length === 0) return <p>Ingen supplierdata</p>;
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast.error("Kun PDF-filer er tillatt!");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Filen er for stor (maks 10MB)");
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const uploadFile = async (file: File): Promise<string | null> => {
+    try {
+      setUploadingFile(true);
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(7)}.${fileExt}`;
+      const filePath = `attachments/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from("attachments")
+        .upload(filePath, file);
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from("attachments")
+        .getPublicUrl(filePath);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Kunne ikke laste opp fil");
+      return null;
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const deleteFile = async (fileUrl: string) => {
+    try {
+      const urlParts = fileUrl.split("/attachments/");
+      if (urlParts.length < 2) return;
+
+      const filePath = `${urlParts[1].split("?")[0]}`;
+
+      const { error } = await supabase.storage
+        .from("attachments")
+        .remove([filePath]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error deleting file:", error);
+    }
+  };
+
   const handleDeleteProduct = async (supplierId: string, productId: string) => {
     try {
+      const supplier = suppliers.find((s) => s.id === supplierId);
+      const product = supplier?.products.find((p) => p.id === productId);
+
       await deleteSupplierProduct(productId);
+
+      if (product?.attachment) {
+        await deleteFile(product.attachment);
+      }
 
       setSuppliers(
         suppliers.map((supplier) =>
@@ -107,6 +182,7 @@ export default function SupplierTable({
       price_ex_vat: "",
       attachment: "",
     });
+    setSelectedFile(null);
   };
 
   const closeModal = () => {
@@ -118,6 +194,7 @@ export default function SupplierTable({
       price_ex_vat: "",
       attachment: "",
     });
+    setSelectedFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,13 +206,23 @@ export default function SupplierTable({
     }
 
     try {
+      let attachmentUrl = formData.attachment;
+      if (selectedFile) {
+        const uploadedUrl = await uploadFile(selectedFile);
+        if (!uploadedUrl) {
+          toast.error("Kunne ikke laste opp fil");
+          return;
+        }
+        attachmentUrl = uploadedUrl;
+      }
+
       const newProduct = {
         supplier_id: modal.supplierId,
         category_id: formData.categoryId,
         subcategory_id: formData.subcategoryId || null,
         name: formData.name,
         price_ex_vat: parseFloat(formData.price_ex_vat) || 0,
-        attachment: formData.attachment || null,
+        attachment: attachmentUrl || null,
       };
 
       const created = await addSupplierProduct(newProduct);
@@ -174,7 +261,6 @@ export default function SupplierTable({
     }
   };
 
-  // Get selected category for showing subcategories
   const selectedCategory = allCategories.find(
     (c) => c.id === formData.categoryId
   );
@@ -264,7 +350,7 @@ export default function SupplierTable({
                     setFormData({
                       ...formData,
                       categoryId: e.target.value,
-                      subcategoryId: "", // Reset subcategory when category changes
+                      subcategoryId: "",
                     })
                   }
                   className="w-full border rounded p-2"
@@ -339,20 +425,22 @@ export default function SupplierTable({
                 />
               </div>
 
-              {/* Attachment */}
+              {/* File upload */}
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">
-                  Vedlegg (URL)
+                  Last opp PDF
                 </label>
                 <input
-                  type="text"
-                  value={formData.attachment}
-                  onChange={(e) =>
-                    setFormData({ ...formData, attachment: e.target.value })
-                  }
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileSelect}
                   className="w-full border rounded p-2"
-                  placeholder="https://..."
                 />
+                {selectedFile && (
+                  <p className="text-sm text-green-600 mt-1">
+                    ✓ {selectedFile.name}
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end gap-2">
@@ -360,14 +448,16 @@ export default function SupplierTable({
                   type="button"
                   onClick={closeModal}
                   className="px-4 py-2 border rounded hover:bg-gray-100"
+                  disabled={uploadingFile}
                 >
                   Avbryt
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
+                  disabled={uploadingFile}
                 >
-                  Legg til
+                  {uploadingFile ? "Laster opp..." : "Legg til"}
                 </button>
               </div>
             </form>
@@ -468,16 +558,12 @@ function ProductTable({
         {products.map((product) => (
           <tr key={product.id}>
             <td className="border p-1">
-              {product.attachment ? (
-                <Link
-                  href={product.attachment}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  📎 Åpne PDF
-                </Link>
+              {!product.attachment ? (
+                <p className="text-gray-400">Ingen PDF</p>
               ) : (
-                <span className="text-gray-400">Ingen vedlegg</span>
+                <Link href={product.attachment} target="_blank">
+                  Åpne pdf
+                </Link>
               )}
             </td>
             <td className="border">
