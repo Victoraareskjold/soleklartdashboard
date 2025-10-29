@@ -103,43 +103,28 @@ export async function POST(
     }
 
     // Filter and transform emails related to this lead
+    // Only store references (message_id, conversation_id, lead_id)
     const leadEmailLower = lead.email.toLowerCase();
     const emailsToSync: Omit<LeadEmail, "id" | "created_at">[] =
       graphData.value
         ?.filter((email: MicrosoftGraphEmail) => {
           // Check if lead email is in FROM or any TO recipients
           const fromAddress = email.from.emailAddress.address.toLowerCase();
-          const toAddresses = email.toRecipients?.map((r) =>
-            r.emailAddress.address.toLowerCase()
-          ) || [];
+          const toAddresses =
+            email.toRecipients?.map((r) =>
+              r.emailAddress.address.toLowerCase()
+            ) || [];
 
           return (
             fromAddress === leadEmailLower ||
             toAddresses.includes(leadEmailLower)
           );
         })
-        .map((email: MicrosoftGraphEmail) => {
-          const isSentByUs =
-            email.from.emailAddress.address.toLowerCase() ===
-            account.email.toLowerCase();
-
-          return {
-            lead_id: leadId,
-            message_id: email.id,
-            conversation_id: email.conversationId,
-            subject: email.subject,
-            from_address: email.from.emailAddress.address,
-            from_name: email.from.emailAddress.name,
-            to_address: email.toRecipients[0]?.emailAddress.address || "",
-            to_name: email.toRecipients[0]?.emailAddress.name,
-            body_preview: email.bodyPreview,
-            body_content: email.body?.content,
-            received_date: email.receivedDateTime,
-            sent_date: isSentByUs ? email.receivedDateTime : null,
-            is_sent: isSentByUs,
-            has_attachments: email.hasAttachments || false,
-          };
-        }) || [];
+        .map((email: MicrosoftGraphEmail) => ({
+          lead_id: leadId,
+          message_id: email.id,
+          conversation_id: email.conversationId,
+        })) || [];
 
     // Sync emails to database (upsert based on message_id)
     const syncedEmails = await syncLeadEmails(client, leadId, emailsToSync);

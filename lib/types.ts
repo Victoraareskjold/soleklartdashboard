@@ -108,21 +108,40 @@ export type Note = {
   note_id?: string | null;
 };
 
+// LeadEmail now only stores references to emails in Microsoft Graph
+// All content is fetched on-demand from the Graph API
 export interface LeadEmail {
   id: string;
   lead_id: string;
   message_id: string; // Microsoft Graph message ID
   conversation_id: string; // Thread ID from Microsoft Graph
-  subject: string;
-  from_address: string;
-  from_name?: string;
-  to_address: string;
-  to_name?: string;
-  body_preview: string;
-  body_content?: string; // Full HTML body
-  received_date?: string;
-  sent_date?: string;
-  is_sent: boolean; // true if sent by us, false if received
-  has_attachments?: boolean;
   created_at?: string;
+}
+
+// Type for email content fetched from Microsoft Graph API
+export interface EmailContent {
+  id: string;
+  conversationId: string;
+  subject: string;
+  from: {
+    emailAddress: {
+      name?: string;
+      address: string;
+    };
+  };
+  toRecipients: Array<{
+    emailAddress: {
+      name?: string;
+      address: string;
+    };
+  }>;
+  bodyPreview: string;
+  body?: {
+    contentType: string;
+    content: string;
+  };
+  receivedDateTime: string;
+  sentDateTime?: string;
+  hasAttachments?: boolean;
+  isDraft?: boolean;
 }

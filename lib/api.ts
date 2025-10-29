@@ -200,17 +200,32 @@ export const sendLeadEmail = async (
   installerGroupId: string,
   subject: string,
   body: string,
-  conversationId?: string
+  messageId?: string
 ) => {
   return apiRequest<{
     success: boolean;
-    email: import("./types").LeadEmail;
     message: string;
   }>(`/api/leads/${leadId}/emails/send`, "POST", {
     userId,
     installerGroupId,
     subject,
     body,
-    conversationId,
+    messageId,
+  });
+};
+
+export const fetchEmailThreads = async (
+  leadId: string,
+  userId: string,
+  installerGroupId: string,
+  messageIds: string[]
+) => {
+  return apiRequest<{
+    success: boolean;
+    emails: import("./types").EmailContent[];
+  }>(`/api/leads/${leadId}/emails/threads`, "POST", {
+    userId,
+    installerGroupId,
+    messageIds,
   });
 };
