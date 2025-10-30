@@ -1,4 +1,9 @@
-import { Product, Supplier, SupplierWithProducts } from "@/types/price_table";
+import {
+  Product,
+  Supplier,
+  SupplierWithProducts,
+  WorkItem,
+} from "@/types/price_table";
 import { supabase } from "./supabase";
 import {
   CreateEstimateInput,
@@ -228,4 +233,17 @@ export const fetchEmailThreads = async (
     installerGroupId,
     messageIds,
   });
+};
+
+export const getWorkItems = async (
+  category: string,
+  installerGroupId: string
+) => {
+  return apiRequest<WorkItem[]>(
+    `/api/price_table/work?category=${category}&installerGroupId=${installerGroupId}`
+  );
+};
+
+export const updateWorkItemPrice = async (id: string, price: number) => {
+  return apiRequest(`/api/price_table/work/${id}`, "PATCH", price);
 };

@@ -3,6 +3,7 @@
 import LoadingScreen from "@/app/components/LoadingScreen";
 import CalculatorResults from "@/app/components/price-calculator/result/CalculatorResults";
 import SupplierTable from "@/app/components/price-calculator/supplier/Table";
+import WorkTables from "@/app/components/price-calculator/work/WorkTables";
 import { getSuppliersWithProducts, getSuppliers } from "@/lib/api";
 import { Supplier, SupplierWithProducts } from "@/types/price_table";
 import { useEffect, useState } from "react";
@@ -32,6 +33,7 @@ export default function PriceTablePage() {
         suppliers={suppliers}
         suppliersAndProducts={suppliersAndProducts}
       />
+      <WorkTables suppliersAndProducts={suppliersAndProducts} />
       <SupplierTable suppliersAndProducts={suppliersAndProducts} />
     </div>
   );
