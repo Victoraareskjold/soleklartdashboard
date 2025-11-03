@@ -1,40 +1,60 @@
-import { getWorkItems } from "@/lib/api";
-import { SupplierWithProducts, WorkItem } from "@/types/price_table";
+import { getRoofTypes, getMountItems, updateMountItems } from "@/lib/api";
+import { RoofType } from "@/lib/types";
+import { MountItem, SupplierWithProducts } from "@/types/price_table";
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
 interface MountingTableProps {
   suppliersAndProducts: SupplierWithProducts[];
   installerGroupId: string;
 }
 
+interface LocalMountData {
+  supplierId: string;
+  productId: string;
+  pricePer: string;
+}
+
 export default function MountingTable({
   suppliersAndProducts,
   installerGroupId,
 }: MountingTableProps) {
-  const [workItems, setWorkItems] = useState<WorkItem[]>([]);
-  const [selectedSuppliers, setSelectedSuppliers] = useState<
-    Record<string, string>
-  >({});
-  const [selectedMounts, setSelectedMounts] = useState<Record<string, string>>(
+  const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
+  const [mountItems, setMountItems] = useState<MountItem[]>([]);
+  const [localData, setLocalData] = useState<Record<string, LocalMountData>>(
     {}
   );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getWorkItems("mounting", installerGroupId).then((data) => {
-      setWorkItems(data);
-    });
-    setLoading(false);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([
+          getMountItems(installerGroupId).then(setMountItems),
+          getRoofTypes().then(setRoofTypes),
+        ]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [installerGroupId]);
 
-  const handleSupplierChange = (workItemId: string, supplierId: string) => {
-    setSelectedSuppliers((prev) => ({ ...prev, [workItemId]: supplierId }));
-    setSelectedMounts((prev) => ({ ...prev, [workItemId]: "" }));
-  };
-
-  const handleMountChange = (workItemId: string, mountId: string) => {
-    setSelectedMounts((prev) => ({ ...prev, [workItemId]: mountId }));
-  };
+  useEffect(() => {
+    const initialData: Record<string, LocalMountData> = {};
+    mountItems.forEach((item) => {
+      initialData[item.roof_type_id] = {
+        supplierId: item.product?.supplier?.id || "",
+        productId: item.product?.id || "",
+        pricePer: item.price_per?.toString() || "0",
+      };
+    });
+    setLocalData(initialData);
+  }, [mountItems]);
 
   const getMountOptions = (supplierId: string) => {
     const supplier = suppliersAndProducts.find((s) => s.id === supplierId);
@@ -44,14 +64,92 @@ export default function MountingTable({
     );
   };
 
-  const calcPricePerPanel = (item: WorkItem): number => {
-    const supplierId = selectedSuppliers[item.id];
-    const mountId = selectedMounts[item.id];
-    if (!supplierId || !mountId) return item.cost_per;
-    const supplier = suppliersAndProducts.find((s) => s.id === supplierId);
-    const mount = supplier?.products.find((p) => p.id === mountId);
-    if (!mount) return item.cost_per;
-    return item.cost_per * mount.price_ex_vat;
+  const updateLocalData = (
+    roofTypeId: string,
+    field: keyof LocalMountData,
+    value: string
+  ) => {
+    setLocalData((prev) => ({
+      ...prev,
+      [roofTypeId]: {
+        ...prev[roofTypeId],
+        supplierId: prev[roofTypeId]?.supplierId || "",
+        productId: prev[roofTypeId]?.productId || "",
+        pricePer: prev[roofTypeId]?.pricePer || "0",
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSupplierChange = (roofTypeId: string, supplierId: string) => {
+    updateLocalData(roofTypeId, "supplierId", supplierId);
+    updateLocalData(roofTypeId, "productId", "");
+    updateLocalData(roofTypeId, "pricePer", "0");
+  };
+  const handleProductChange = async (roofTypeId: string, productId: string) => {
+    const currentSupplier = localData[roofTypeId]?.supplierId || "";
+    const currentPricePer = localData[roofTypeId]?.pricePer || "0";
+
+    updateLocalData(roofTypeId, "productId", productId);
+
+    if (currentSupplier && productId) {
+      try {
+        const updated = await updateMountItems(roofTypeId, installerGroupId, {
+          product_id: productId,
+          price_per: parseFloat(currentPricePer) || 0,
+          supplier_id: currentSupplier,
+        });
+
+        setMountItems((prev) => {
+          const index = prev.findIndex((m) => m.roof_type_id === roofTypeId);
+          if (index >= 0) {
+            const newItems = [...prev];
+            newItems[index] = updated;
+            return newItems;
+          } else {
+            return [...prev, updated];
+          }
+        });
+
+        toast.success("Lagret!");
+      } catch (error) {
+        console.error("Error saving mount item:", error);
+        toast.error("Kunne ikke lagre");
+      }
+    }
+  };
+
+  const handleSave = async (roofTypeId: string) => {
+    const local = localData[roofTypeId];
+
+    if (!local?.supplierId || !local?.productId) {
+      toast.error("Velg leverandør og produkt først");
+      return;
+    }
+
+    try {
+      const updated = await updateMountItems(roofTypeId, installerGroupId, {
+        product_id: local.productId,
+        price_per: parseFloat(local.pricePer) || 0,
+        supplier_id: local.supplierId,
+      });
+
+      setMountItems((prev) => {
+        const index = prev.findIndex((m) => m.roof_type_id === roofTypeId);
+        if (index >= 0) {
+          const newItems = [...prev];
+          newItems[index] = updated;
+          return newItems;
+        } else {
+          return [...prev, updated];
+        }
+      });
+
+      toast.success("Lagret!");
+    } catch (error) {
+      console.error("Error saving mount item:", error);
+      toast.error("Kunne ikke lagre");
+    }
   };
 
   if (loading) return <div>Laster...</div>;
@@ -60,9 +158,6 @@ export default function MountingTable({
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Montering</h2>
-        <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-          + Legg til rad
-        </button>
       </div>
 
       <table className="w-full border-collapse border border-gray-300">
@@ -70,29 +165,35 @@ export default function MountingTable({
           <tr className="bg-gray-100">
             <th className="border p-2">Leverandør</th>
             <th className="border p-2">Taktype</th>
-            <th className="border p-2">Arbeid per panel</th>
-            <th className="border p-2">Pris per panel</th>
-            <th className="border p-2 w-12">🗑️</th>
+            <th className="border p-2">Arbeid pr. panel</th>
+            <th className="border p-2">Total pris inkl. mva</th>
           </tr>
         </thead>
         <tbody>
-          {workItems.map((item) => {
-            const supplierId = selectedSuppliers[item.id];
-            const mountOptions = getMountOptions(supplierId);
-            const totalPrice = calcPricePerPanel(item);
+          {roofTypes.map((roof) => {
+            const local = localData[roof.id] || {
+              supplierId: "",
+              productId: "",
+              pricePer: "0",
+            };
+            const mountOptions = getMountOptions(local.supplierId);
+            const selectedProduct = mountOptions.find(
+              (p) => p.id === local.productId
+            );
 
             return (
-              <tr key={item.id}>
-                {/* leverandør */}
+              <tr key={roof.id}>
                 <td className="border p-1">
-                  {/* Leverandør */}
                   <select
                     className="w-full mb-1 p-1 rounded"
+                    value={local.supplierId}
                     onChange={(e) =>
-                      handleSupplierChange(item.id, e.target.value)
+                      handleSupplierChange(roof.id, e.target.value)
                     }
                   >
-                    <option>Velg leverandør...</option>
+                    <option value="" disabled>
+                      Velg leverandør...
+                    </option>
                     {suppliersAndProducts.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -101,18 +202,20 @@ export default function MountingTable({
                   </select>
                 </td>
 
-                {/* Takfeste */}
                 <td className="border p-1">
-                  {item.name}
-                  {supplierId ? (
+                  <div className="font-medium mb-1">{roof.name}</div>
+                  {local.supplierId ? (
                     <select
                       className="w-full p-1 rounded"
+                      value={local.productId}
                       onChange={(e) =>
-                        handleMountChange(item.id, e.target.value)
+                        handleProductChange(roof.id, e.target.value)
                       }
-                      disabled={!supplierId}
+                      disabled={!local.supplierId}
                     >
-                      <option>Velg takfeste...</option>
+                      <option value="" disabled>
+                        Velg takfeste...
+                      </option>
                       {mountOptions.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -120,46 +223,43 @@ export default function MountingTable({
                       ))}
                     </select>
                   ) : (
-                    <p className="text-gray-500">Ingen leverandør valgt</p>
+                    <p className="text-gray-500 text-sm">
+                      Ingen leverandør valgt
+                    </p>
                   )}
                 </td>
 
-                {/* Arbeid per panel */}
                 <td className="border p-1">
                   <input
-                    type="text"
-                    value={Number(item.cost_per).toFixed(2)}
-                    readOnly
+                    type="number"
+                    step="1"
+                    value={local.pricePer}
+                    onChange={(e) =>
+                      updateLocalData(roof.id, "pricePer", e.target.value)
+                    }
+                    onBlur={() => handleSave(roof.id)}
                     className="w-full p-1 rounded"
                   />
                 </td>
 
-                {/* Total pris */}
                 <td className="border p-1">
                   <input
                     type="text"
-                    value={totalPrice.toFixed(2)}
+                    value={
+                      selectedProduct?.price_ex_vat
+                        ? (parseFloat(local.pricePer) * 1.25).toFixed(2)
+                        : 0
+                    }
                     readOnly
+                    disabled
                     className="w-full p-1 rounded"
                   />
-                </td>
-
-                <td className="border">
-                  <button className="w-full aspect-square hover:bg-red-100">
-                    x
-                  </button>
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
-
-      {workItems.length === 0 && (
-        <p className="text-gray-500 text-center py-8">
-          Ingen rader. Klikk Legg til rad for å starte.
-        </p>
-      )}
     </div>
   );
 }

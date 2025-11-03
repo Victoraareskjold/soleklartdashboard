@@ -145,3 +145,8 @@ export interface EmailContent {
   hasAttachments?: boolean;
   isDraft?: boolean;
 }
+
+export interface RoofType {
+  id: string;
+  name: string;
+}

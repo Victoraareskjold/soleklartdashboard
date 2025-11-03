@@ -36,3 +36,29 @@ export interface Product {
 }
 
 export type SupplierWithProducts = Supplier & { products: Product[] };
+
+export interface MountItem {
+  id: string;
+  supplier_id: string;
+  roof_type_id: string;
+  price_per: number;
+  product: MountProduct;
+  roof_type: RoofType;
+}
+
+interface MountProduct {
+  id: string;
+  name: string;
+  supplier: MountSupplier;
+  price_ex_vat: number;
+}
+
+interface MountSupplier {
+  id: string;
+  name: string;
+}
+
+interface RoofType {
+  id: string;
+  name: string;
+}

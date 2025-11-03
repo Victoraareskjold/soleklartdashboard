@@ -123,6 +123,8 @@ export default function SupplierTable({
   };
 
   const handleDeleteProduct = async (supplierId: string, productId: string) => {
+    const confirmDelete = window.confirm("Er du sikker på at du vil slette?");
+    if (!confirmDelete) return;
     try {
       const supplier = suppliers.find((s) => s.id === supplierId);
       const product = supplier?.products.find((p) => p.id === productId);

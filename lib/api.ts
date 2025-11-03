@@ -1,8 +1,8 @@
 import {
+  MountItem,
   Product,
   Supplier,
   SupplierWithProducts,
-  WorkItem,
 } from "@/types/price_table";
 import { supabase } from "./supabase";
 import {
@@ -12,6 +12,7 @@ import {
   InstallerGroup,
   Lead,
   Note,
+  RoofType,
   Team,
 } from "./types";
 import { CategoryWithSubcategories } from "@/app/components/price-calculator/supplier/Table";
@@ -235,15 +236,28 @@ export const fetchEmailThreads = async (
   });
 };
 
-export const getWorkItems = async (
-  category: string,
-  installerGroupId: string
-) => {
-  return apiRequest<WorkItem[]>(
-    `/api/price_table/work?category=${category}&installerGroupId=${installerGroupId}`
+export const getRoofTypes = async () => {
+  return apiRequest<RoofType[]>(`/api/price_table/roof_types`);
+};
+
+export const getMountItems = async (installerGroupId: string) => {
+  return apiRequest<MountItem[]>(
+    `/api/price_table/mount_items?installerGroupId=${installerGroupId}`
   );
 };
 
-export const updateWorkItemPrice = async (id: string, price: number) => {
-  return apiRequest(`/api/price_table/work/${id}`, "PATCH", price);
+export const updateMountItems = async (
+  roofTypeId: string,
+  installerGroupId: string,
+  data: {
+    supplier_id: string | null;
+    product_id: string | null;
+    price_per: number;
+  }
+) => {
+  return apiRequest<MountItem>(`/api/price_table/mount_items`, "PATCH", {
+    roof_type_id: roofTypeId,
+    installer_group_id: installerGroupId,
+    ...data,
+  });
 };
