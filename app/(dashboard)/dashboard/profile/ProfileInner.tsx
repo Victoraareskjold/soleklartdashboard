@@ -54,6 +54,7 @@ export default function ProfilePageInner() {
 
   return (
     <div>
+      <p>{user?.id}</p>
       <ConnectOutlook />
     </div>
   );

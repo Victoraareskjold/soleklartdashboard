@@ -1,71 +1,499 @@
 import { Supplier, SupplierWithProducts } from "@/types/price_table";
+import { useState, useMemo, useEffect } from "react";
+import { getCategories } from "@/lib/api";
+import CalculationSheet from "./CalculationSheet";
 
 interface CalculatorResultsProps {
   suppliers: Supplier[] | null;
   suppliersAndProducts: SupplierWithProducts[] | null;
+  initialPanelCount?: number;
 }
+
+interface CalculatorItem {
+  id: string;
+  displayName: string;
+  dbName: string;
+  categoryId: string;
+  subcategoryId?: string;
+  quantity: number;
+  supplierId: string;
+  productId: string;
+  defaultSupplier?: string;
+}
+
+export interface CalculatorState {
+  items: CalculatorItem[];
+  totalPrice: number;
+}
+
+export interface CategoryWithSubcategories {
+  id: string;
+  name: string;
+  subcategories?: {
+    id: string;
+    name: string;
+    category_id: string;
+  }[];
+}
+
+type CalculatorItemUpdate = Partial<CalculatorItem> & { _delete?: boolean };
 
 export default function CalculatorResults({
   suppliers,
   suppliersAndProducts,
+  initialPanelCount = 1,
 }: CalculatorResultsProps) {
+  const [allCategories, setAllCategories] = useState<
+    CategoryWithSubcategories[]
+  >([]);
+
+  useEffect(() => {
+    getCategories().then(setAllCategories);
+  }, []);
+  const [showModal, setShowModal] = useState(false);
+
+  const [calculatorState, setCalculatorState] = useState<CalculatorState>({
+    items: [
+      {
+        id: "panel",
+        displayName: "Panel",
+        dbName: "SOLCELLEPANEL",
+        categoryId: "",
+        quantity: initialPanelCount,
+        supplierId: "",
+        productId: "",
+        defaultSupplier: "Solar Technologies Scandinavia AS",
+      },
+      {
+        id: "feste",
+        displayName: "Feste",
+        dbName: "FESTEMATERIELL LØSNING",
+        categoryId: "",
+        quantity: initialPanelCount,
+        supplierId: "",
+        productId: "",
+      },
+      {
+        id: "inverter",
+        displayName: "Inverter",
+        dbName: "INVERTER",
+        categoryId: "",
+        quantity: 1,
+        supplierId: "",
+        productId: "",
+      },
+      {
+        id: "stillase",
+        displayName: "Stillase",
+        dbName: "STILLASE",
+        categoryId: "",
+        quantity: 1,
+        supplierId: "",
+        productId: "",
+      },
+      {
+        id: "frakt",
+        displayName: "Frakt",
+        dbName: "FRAKT",
+        categoryId: "",
+        quantity: 1,
+        supplierId: "",
+        productId: "",
+      },
+      {
+        id: "battery",
+        displayName: "Batteri",
+        dbName: "BATTERI",
+        categoryId: "",
+        quantity: 1,
+        supplierId: "",
+        productId: "",
+      },
+      {
+        id: "ballastein",
+        displayName: "Ballastein",
+        dbName: "BALLASTEIN",
+        categoryId: "",
+        quantity: 1,
+        supplierId: "",
+        productId: "",
+      },
+      {
+        id: "solcellekran",
+        displayName: "Solcellekran",
+        dbName: "SOLCELLEKRAN",
+        categoryId: "",
+        quantity: 1,
+        supplierId: "",
+        productId: "",
+      },
+    ],
+    totalPrice: 0,
+  });
+
+  const [newItem, setNewItem] = useState<Partial<CalculatorItem>>({
+    displayName: "",
+    dbName: "",
+    quantity: 1,
+    supplierId: "",
+    productId: "",
+  });
+
+  useEffect(() => {
+    if (allCategories.length === 0) return;
+
+    setCalculatorState((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (item.categoryId) return item;
+        const cat = allCategories.find((c) => c.name === item.dbName);
+        return {
+          ...item,
+          categoryId: cat?.id || "",
+          subcategoryId: undefined,
+        };
+      }),
+    }));
+  }, [allCategories]);
+
+  useEffect(() => {
+    if (!suppliers || suppliers.length === 0) return;
+
+    setCalculatorState((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (item.supplierId) return item;
+        if (!item.defaultSupplier) return item;
+
+        const found = suppliers.find(
+          (s) => s.name.toLowerCase() === item.defaultSupplier!.toLowerCase()
+        );
+
+        return found ? { ...item, supplierId: found.id } : item;
+      }),
+    }));
+  }, [suppliers]);
+
+  const handleAddItem = () => {
+    if (!newItem.categoryId) return;
+
+    const category = allCategories.find((c) => c.id === newItem.categoryId);
+    const id = `${category?.name || "item"}-${Date.now()}`;
+
+    setCalculatorState((prev) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          id,
+          displayName: category?.name || "Nytt utstyr",
+          dbName: category?.name?.toUpperCase() || "UKJENT",
+          categoryId: newItem.categoryId!,
+          quantity: newItem.quantity || 1,
+          supplierId: newItem.supplierId || "",
+          productId: newItem.productId || "",
+        },
+      ],
+    }));
+
+    setNewItem({
+      displayName: "",
+      dbName: "",
+      quantity: 1,
+      supplierId: "",
+      productId: "",
+    });
+    setShowModal(false);
+  };
+
+  const updateItem = (itemId: string, updates: CalculatorItemUpdate) => {
+    if (updates._delete) {
+      setCalculatorState((prev) => ({
+        ...prev,
+        items: prev.items.filter((i) => i.id !== itemId),
+      }));
+      return;
+    }
+
+    setCalculatorState((prev) => ({
+      ...prev,
+      items: prev.items.map((item) =>
+        item.id === itemId ? { ...item, ...updates } : item
+      ),
+    }));
+  };
+
+  useMemo(() => {
+    if (!suppliersAndProducts) return;
+
+    const total = calculatorState.items.reduce((sum, item) => {
+      if (!item.productId || !item.supplierId) return sum;
+
+      const supplier = suppliersAndProducts.find(
+        (s) => s.id === item.supplierId
+      );
+      const product = supplier?.products.find((p) => p.id === item.productId);
+
+      if (!product) return sum;
+
+      return sum + product.price_ex_vat * item.quantity;
+    }, 0);
+
+    setCalculatorState((prev) => ({ ...prev, totalPrice: total }));
+  }, [calculatorState.items, suppliersAndProducts]);
+
   if (!suppliers || suppliers.length === 0) return <p>Ingen suppliers</p>;
   if (!suppliersAndProducts || suppliersAndProducts.length === 0)
     return <p>Ingen supplierdata</p>;
+  if (allCategories.length === 0) return <p>Laster kategorier...</p>;
 
   return (
     <div>
-      <table>
+      <table className="w-full">
         <thead>
           <tr>
-            <td colSpan={2}>
-              <select className="bg-red-300 p-2">
-                {suppliers.map((supplier) => {
-                  return (
-                    <option key={supplier.id}>
-                      Leverandør {supplier.name}
-                    </option>
-                  );
-                })}
-              </select>
-            </td>
+            <th colSpan={4} className="border p-2 bg-gray-100">
+              SOLCELLE ANLEGG
+            </th>
+          </tr>
+          <tr className="bg-gray-100">
+            <th className="border p-2">Antall</th>
+            <th className="border p-2">Utstyr</th>
+            <th className="border p-2">Leverandør</th>
+            <th className="border p-2">Pris eks. mva</th>
+            <th>🗑️</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Solcellepanel</td>
+          {calculatorState.items.map((item) => (
+            <CalculatorRow
+              key={item.id}
+              item={item}
+              suppliers={suppliers}
+              suppliersAndProducts={suppliersAndProducts}
+              allCategories={allCategories}
+              onUpdate={(updates) => updateItem(item.id, updates)}
+            />
+          ))}
+          <tr className="bg-gray-50 font-bold">
             <td>
-              <select className="bg-gray-100 p-2">
-                {suppliersAndProducts
-                  .flatMap((supplier) => supplier.products)
-                  .filter(
-                    (product) =>
-                      product.category?.name.toUpperCase() === "SOLCELLEPANEL"
-                  )
-                  .map((product) => (
-                    <option key={product.id}>{product.name}</option>
-                  ))}
-              </select>
-            </td>
-          </tr>
-          <tr>
-            <td>Inverter</td>
-            <td>
-              <select className="bg-gray-100 p-2">
-                {suppliersAndProducts
-                  .flatMap((supplier) => supplier.products)
-                  .filter(
-                    (product) =>
-                      product.category?.name.toUpperCase() === "INVERTER"
-                  )
-                  .map((product) => (
-                    <option key={product.id}>{product.name}</option>
-                  ))}
-              </select>
+              <div className="mt-4 flex justify-between">
+                <button
+                  className="bg-green-600 text-white px-3 py-2 rounded"
+                  onClick={() => setShowModal(true)}
+                >
+                  + Legg til utstyr
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
+      <CalculationSheet
+        calculatorState={calculatorState}
+        suppliersAndProducts={suppliersAndProducts}
+      />
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="bg-white p-6 rounded-lg w-96 shadow"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-3">Legg til utstyr</h3>
+
+            <select
+              className="border w-full p-2 mb-2"
+              value={newItem.categoryId || ""}
+              onChange={(e) =>
+                setNewItem({
+                  ...newItem,
+                  categoryId: e.target.value,
+                  subcategoryId: "",
+                })
+              }
+            >
+              <option value="">Velg kategori...</option>
+              {allCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-3 py-2 bg-gray-300 rounded"
+                onClick={() => setShowModal(false)}
+              >
+                Avbryt
+              </button>
+              <button
+                className="px-3 py-2 bg-green-600 text-white rounded"
+                onClick={handleAddItem}
+              >
+                Legg til
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+interface CalculatorRowProps {
+  item: CalculatorItem;
+  suppliers: Supplier[];
+  suppliersAndProducts: SupplierWithProducts[];
+  allCategories: CategoryWithSubcategories[];
+  onUpdate: (updates: CalculatorItemUpdate) => void;
+}
+
+function CalculatorRow({
+  item,
+  suppliers,
+  suppliersAndProducts,
+  allCategories,
+  onUpdate,
+}: CalculatorRowProps) {
+  const category = allCategories.find((c) => c.id === item.categoryId);
+  const subcategory = item.subcategoryId
+    ? category?.subcategories?.find((s) => s.id === item.subcategoryId)
+    : null;
+
+  const availableProducts = useMemo(() => {
+    if (!item.supplierId) return [];
+
+    const supplier = suppliersAndProducts.find((s) => s.id === item.supplierId);
+    if (!supplier) return [];
+
+    return supplier.products.filter((product) => {
+      const categoryMatch = product.category?.id === item.categoryId;
+
+      if (item.subcategoryId) {
+        return categoryMatch && product.subcategory?.id === item.subcategoryId;
+      }
+      return categoryMatch;
+    });
+  }, [
+    item.supplierId,
+    item.categoryId,
+    item.subcategoryId,
+    suppliersAndProducts,
+  ]);
+
+  const selectedProduct = useMemo(() => {
+    if (!item.productId || !availableProducts.length) return null;
+    return availableProducts.find((p) => p.id === item.productId);
+  }, [item.productId, availableProducts]);
+
+  const handleQuantityChange = (value: string) => {
+    const num = parseInt(value) || 0;
+    onUpdate({ quantity: num });
+  };
+
+  const handleSupplierChange = (supplierId: string) => {
+    onUpdate({ supplierId, productId: "" });
+  };
+
+  const handleProductChange = (productId: string) => {
+    onUpdate({ productId });
+  };
+
+  const displayName = subcategory?.name || category?.name || "produkt";
+
+  return (
+    <tr>
+      <td className="border p-2 text-center">
+        <input
+          type="number"
+          min="0"
+          value={item.quantity}
+          onChange={(e) => handleQuantityChange(e.target.value)}
+          className="w-full text-center"
+        />
+      </td>
+      <td className="border p-2 flex items-center">
+        <p className="w-42">{item.displayName}</p>
+        <select
+          className="bg-gray-100 p-2 w-full"
+          value={item.productId}
+          onChange={(e) => handleProductChange(e.target.value)}
+          disabled={!item.supplierId || availableProducts.length === 0}
+        >
+          <option value="" disabled>
+            {!item.supplierId
+              ? "Velg leverandør først..."
+              : availableProducts.length === 0
+              ? `Ingen ${displayName.toLowerCase()} tilgjengelig`
+              : `Velg ${displayName.toLowerCase()}...`}
+          </option>
+          {(() => {
+            if (!category) return null;
+
+            const grouped: Record<string, typeof availableProducts> = {};
+            for (const product of availableProducts) {
+              const subName = product.subcategory?.name || "";
+              if (!grouped[subName]) grouped[subName] = [];
+              grouped[subName].push(product);
+            }
+
+            const sortedGroups = Object.entries(grouped).sort(([a], [b]) => {
+              if (a === "") return -1;
+              if (b === "") return 1;
+              return a.localeCompare(b);
+            });
+
+            return sortedGroups.map(([subName, products]) =>
+              subName ? (
+                <optgroup key={subName} label={subName}>
+                  {products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : (
+                products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}
+                  </option>
+                ))
+              )
+            );
+          })()}
+        </select>
+      </td>
+      <td className="border p-2">
+        <select
+          className="bg-gray-100 p-2 w-full"
+          value={item.supplierId}
+          onChange={(e) => handleSupplierChange(e.target.value)}
+        >
+          <option value="">Velg leverandør...</option>
+          {suppliers.map((sup) => (
+            <option key={sup.id} value={sup.id}>
+              {sup.name}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="border p-2 text-right">
+        {selectedProduct && item.quantity > 0
+          ? `${(selectedProduct.price_ex_vat * item.quantity).toFixed(2)} kr`
+          : "0.00 kr"}
+      </td>
+      <td className="border p-2 text-right">
+        <button
+          className="ml-2 text-red-600 hover:text-red-800"
+          onClick={() => onUpdate({ _delete: true })}
+        >
+          ✕
+        </button>
+      </td>
+    </tr>
   );
 }

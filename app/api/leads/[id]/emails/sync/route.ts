@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
 import { supabase } from "@/lib/supabase";
-import { syncLeadEmails } from "@/lib/db/leadEmails";
-import { LeadEmail } from "@/lib/types";
 
 interface MicrosoftGraphEmail {
   id: string;
@@ -26,6 +24,7 @@ interface MicrosoftGraphEmail {
     content: string;
   };
   receivedDateTime: string;
+  sentDateTime?: string;
   hasAttachments?: boolean;
 }
 
@@ -50,7 +49,7 @@ export async function POST(
       );
     }
 
-    // Get lead details to get the email address
+    // Get lead details
     const { data: lead, error: leadError } = await client
       .from("leads")
       .select("email")
@@ -81,8 +80,6 @@ export async function POST(
     }
 
     // Fetch emails from Microsoft Graph API
-    // Note: We'll fetch recent emails and filter by lead email address client-side
-    // Complex OData filters with toRecipients/any() can be unreliable
     const url = `https://graph.microsoft.com/v1.0/me/messages?$top=100&$orderby=receivedDateTime desc`;
 
     const graphRes = await fetch(url, {
@@ -92,9 +89,8 @@ export async function POST(
       },
     });
 
-    const graphData = await graphRes.json();
-
     if (!graphRes.ok) {
+      const graphData = await graphRes.json();
       console.error("Graph API error:", graphData);
       return NextResponse.json(
         { error: "Failed to fetch emails from Outlook", details: graphData },
@@ -102,52 +98,66 @@ export async function POST(
       );
     }
 
-    // Filter and transform emails related to this lead
+    const graphData = await graphRes.json();
+
+    // Filter emails related to this lead
     const leadEmailLower = lead.email.toLowerCase();
-    const emailsToSync: Omit<LeadEmail, "id" | "created_at">[] =
-      graphData.value
-        ?.filter((email: MicrosoftGraphEmail) => {
-          // Check if lead email is in FROM or any TO recipients
-          const fromAddress = email.from.emailAddress.address.toLowerCase();
-          const toAddresses = email.toRecipients?.map((r) =>
+    const relevantEmails =
+      graphData.value?.filter((email: MicrosoftGraphEmail) => {
+        const fromAddress = email.from.emailAddress.address.toLowerCase();
+        const toAddresses =
+          email.toRecipients?.map((r) =>
             r.emailAddress.address.toLowerCase()
           ) || [];
 
-          return (
-            fromAddress === leadEmailLower ||
-            toAddresses.includes(leadEmailLower)
-          );
-        })
-        .map((email: MicrosoftGraphEmail) => {
-          const isSentByUs =
-            email.from.emailAddress.address.toLowerCase() ===
-            account.email.toLowerCase();
+        return (
+          fromAddress === leadEmailLower || toAddresses.includes(leadEmailLower)
+        );
+      }) || [];
 
-          return {
-            lead_id: leadId,
-            message_id: email.id,
-            conversation_id: email.conversationId,
-            subject: email.subject,
-            from_address: email.from.emailAddress.address,
-            from_name: email.from.emailAddress.name,
-            to_address: email.toRecipients[0]?.emailAddress.address || "",
-            to_name: email.toRecipients[0]?.emailAddress.name,
-            body_preview: email.bodyPreview,
-            body_content: email.body?.content,
-            received_date: email.receivedDateTime,
-            sent_date: isSentByUs ? email.receivedDateTime : null,
-            is_sent: isSentByUs,
-            has_attachments: email.hasAttachments || false,
-          };
-        }) || [];
+    // Transform to database format
+    const emailsToStore = relevantEmails.map((email: MicrosoftGraphEmail) => ({
+      installer_group_id: installerGroupId,
+      lead_id: leadId,
+      message_id: email.id,
+      conversation_id: email.conversationId,
+      subject: email.subject || "(Ingen emne)",
+      from_address: email.from.emailAddress.address,
+      to_addresses:
+        email.toRecipients?.map((r) => r.emailAddress.address) || [],
+      body_preview: email.bodyPreview || "",
+      body: email.body?.content || "",
+      received_at: email.receivedDateTime || email.sentDateTime,
+      has_attachments: email.hasAttachments || false,
+    }));
 
-    // Sync emails to database (upsert based on message_id)
-    const syncedEmails = await syncLeadEmails(client, leadId, emailsToSync);
+    if (emailsToStore.length === 0) {
+      return NextResponse.json({
+        success: true,
+        count: 0,
+      });
+    }
+
+    // Upsert to database (avoids duplicates based on message_id unique constraint)
+    const { data, error: upsertError } = await client
+      .from("email_messages")
+      .upsert(emailsToStore, {
+        onConflict: "message_id",
+        ignoreDuplicates: false,
+      })
+      .select();
+
+    if (upsertError) {
+      console.error("Error upserting emails:", upsertError);
+      return NextResponse.json(
+        { error: "Failed to store emails in database" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      count: syncedEmails.length,
-      emails: syncedEmails,
+      count: data?.length || 0,
     });
   } catch (error) {
     console.error("Error syncing lead emails:", error);

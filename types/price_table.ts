@@ -11,6 +11,7 @@ export interface WorkItem {
 export interface Supplier {
   id: string;
   name: string;
+  category: string;
 }
 
 export interface ProductCategory {
@@ -27,8 +28,8 @@ export interface ProductSubcategory {
 export interface Product {
   id: string;
   name: string;
-  category: ProductCategory;
-  subcategory?: ProductSubcategory | null;
+  category: ProductCategory | null;
+  subcategory?: ProductSubcategory | null | null;
   price_ex_vat: number;
   attachment?: string;
   updated_at: string;
@@ -36,3 +37,29 @@ export interface Product {
 }
 
 export type SupplierWithProducts = Supplier & { products: Product[] };
+
+export interface MountItem {
+  id: string;
+  supplier_id: string;
+  roof_type_id: string;
+  price_per: number;
+  product: MountProduct;
+  roof_type: RoofType;
+}
+
+interface MountProduct {
+  id: string;
+  name: string;
+  supplier: MountSupplier;
+  price_ex_vat: number;
+}
+
+interface MountSupplier {
+  id: string;
+  name: string;
+}
+
+interface RoofType {
+  id: string;
+  name: string;
+}
