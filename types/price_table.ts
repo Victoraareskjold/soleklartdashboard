@@ -14,6 +14,11 @@ export interface Supplier {
   category: string;
 }
 
+export interface SupplierCategory {
+  name: string;
+  markup_percentage: number;
+}
+
 export interface ProductCategory {
   id: string;
   name: string;
