@@ -2,6 +2,7 @@ import {
   MountItem,
   Product,
   Supplier,
+  SupplierCategory,
   SupplierWithProducts,
 } from "@/types/price_table";
 import { supabase } from "./supabase";
@@ -11,11 +12,15 @@ import {
   Estimate,
   InstallerGroup,
   Lead,
+  MountVolumeReductionType,
   Note,
   RoofType,
   Team,
 } from "./types";
-import { CategoryWithSubcategories } from "@/app/components/price-calculator/supplier/Table";
+import {
+  CategoryWithSubcategories,
+  ElectricalInstallationItem,
+} from "@/app/components/price-calculator/supplier/Table";
 
 export const getToken = async (): Promise<string> => {
   const session = await supabase.auth.getSession();
@@ -142,6 +147,24 @@ export const getSuppliers = async () => {
   return apiRequest<Supplier[]>("/api/price_table/suppliers");
 };
 
+export const getSuppliersWithCategories = async (installerGroupId: string) => {
+  return apiRequest<SupplierCategory[]>(
+    `/api/price_table/suppliers/categories?installerGroupId=${installerGroupId}`
+  );
+};
+
+export const updateSuppliersWithCategories = async (
+  installerGroupId: string,
+  name: string,
+  markup_percentage: number
+) => {
+  return apiRequest<SupplierCategory>(
+    `/api/price_table/suppliers/categories?installerGroupId=${installerGroupId}`,
+    "PATCH",
+    { name, markup_percentage }
+  );
+};
+
 export const getSuppliersWithProducts = async () => {
   return apiRequest<SupplierWithProducts[]>(
     "/api/price_table/suppliers/products"
@@ -177,14 +200,36 @@ export const getCategories = async () => {
   return apiRequest<CategoryWithSubcategories[]>("/api/price_table/categories");
 };
 
-// Lead Emails
-export const getLeadEmails = async (leadId: string) => {
-  return apiRequest<{
-    success: boolean;
-    emails: import("./types").LeadEmail[];
-  }>(`/api/leads/${leadId}/emails`);
+export const getElectricalInstallationCategories = async (
+  installerGroupId: string
+) => {
+  return apiRequest<CategoryWithSubcategories[]>(
+    `/api/price_table/categories/electrical?installerGroupId=${installerGroupId}`
+  );
 };
 
+export const getElectricalInstallationItems = async (
+  installerGroupId: string
+) => {
+  return apiRequest<ElectricalInstallationItem[]>(
+    `/api/price_table/electrical_items?installerGroupId=${installerGroupId}`
+  );
+};
+
+// Add these new functions to your existing api.ts
+
+// Get stored emails from database (no Outlook auth needed)
+export const getStoredLeadEmails = async (
+  leadId: string,
+  installerGroupId: string
+) => {
+  return apiRequest<{
+    success: boolean;
+    emails: import("./types").EmailContent[];
+  }>(`/api/leads/${leadId}/emails/stored?installerGroupId=${installerGroupId}`);
+};
+
+// Sync emails from Outlook to database (requires Outlook auth)
 export const syncLeadEmails = async (
   leadId: string,
   userId: string,
@@ -193,13 +238,13 @@ export const syncLeadEmails = async (
   return apiRequest<{
     success: boolean;
     count: number;
-    emails: import("./types").LeadEmail[];
   }>(`/api/leads/${leadId}/emails/sync`, "POST", {
     userId,
     installerGroupId,
   });
 };
 
+// Send email (requires Outlook auth)
 export const sendLeadEmail = async (
   leadId: string,
   userId: string,
@@ -217,22 +262,6 @@ export const sendLeadEmail = async (
     subject,
     body,
     messageId,
-  });
-};
-
-export const fetchEmailThreads = async (
-  leadId: string,
-  userId: string,
-  installerGroupId: string,
-  messageIds: string[]
-) => {
-  return apiRequest<{
-    success: boolean;
-    emails: import("./types").EmailContent[];
-  }>(`/api/leads/${leadId}/emails/threads`, "POST", {
-    userId,
-    installerGroupId,
-    messageIds,
   });
 };
 
@@ -260,4 +289,29 @@ export const updateMountItems = async (
     installer_group_id: installerGroupId,
     ...data,
   });
+};
+
+export const getMountVolumeReductions = async (installerGroupId: string) => {
+  return apiRequest<MountVolumeReductionType[]>(
+    `/api/price_table/mount_volume_reductions?installerGroupId=${installerGroupId}`
+  );
+};
+
+export const updateMountVolumeReductions = async (
+  installerGroupId: string,
+  data: {
+    number: number;
+    amount: number;
+    amount2: number;
+    reduction: number;
+  }
+) => {
+  return apiRequest<MountVolumeReductionType>(
+    `/api/price_table/mount_volume_reductions`,
+    "PATCH",
+    {
+      installer_group_id: installerGroupId,
+      ...data,
+    }
+  );
 };

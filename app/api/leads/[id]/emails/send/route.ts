@@ -56,13 +56,23 @@ export async function POST(
 
     let graphRes;
     let isReply = false;
+    let sentMessageId: string | null = null;
+    let conversationId: string | null = null;
 
-    // If messageId is provided, this is a reply to an existing message
+    // If messageId is provided, this is a reply
     if (messageId) {
       isReply = true;
-      console.log(`Creating reply to message: ${messageId}`);
 
-      // Use the createReply endpoint for proper threading
+      // Get the original message details for conversation_id
+      const { data: originalEmail } = await client
+        .from("email_messages")
+        .select("conversation_id")
+        .eq("message_id", messageId)
+        .single();
+
+      conversationId = originalEmail?.conversation_id || null;
+
+      // Create reply draft
       const replyUrl = `https://graph.microsoft.com/v1.0/me/messages/${messageId}/createReply`;
       const createReplyRes = await fetch(replyUrl, {
         method: "POST",
@@ -82,9 +92,9 @@ export async function POST(
       }
 
       const draft = await createReplyRes.json();
-      console.log(`Draft created with ID: ${draft.id}`);
+      sentMessageId = draft.id;
 
-      // Update the draft with our body content
+      // Update draft with body
       const updateUrl = `https://graph.microsoft.com/v1.0/me/messages/${draft.id}`;
       const updateRes = await fetch(updateUrl, {
         method: "PATCH",
@@ -114,8 +124,6 @@ export async function POST(
         );
       }
 
-      console.log(`Draft updated, now sending...`);
-
       // Send the draft
       const sendUrl = `https://graph.microsoft.com/v1.0/me/messages/${draft.id}/send`;
       graphRes = await fetch(sendUrl, {
@@ -124,10 +132,8 @@ export async function POST(
           Authorization: `Bearer ${account.access_token}`,
         },
       });
-
-      console.log(`Send response status: ${graphRes.status}`);
     } else {
-      // New email - use sendMail endpoint
+      // New email
       if (!subject) {
         return NextResponse.json(
           { error: "Subject is required for new emails" },
@@ -173,10 +179,29 @@ export async function POST(
       );
     }
 
-    // Don't store email in database - let the sync process handle it
-    // This prevents duplicates and ensures we always have the real Microsoft IDs
-
-    console.log(`Email ${isReply ? "reply" : "message"} sent successfully`);
+    // Store sent email in database immediately
+    // For new emails, we need to wait a moment and fetch it from Graph API
+    // For replies, we already have the message ID
+    if (isReply && sentMessageId && conversationId) {
+      try {
+        await client.from("email_messages").insert({
+          installer_group_id: installerGroupId,
+          lead_id: leadId,
+          message_id: sentMessageId,
+          conversation_id: conversationId,
+          subject: subject,
+          from_address: account.email,
+          to_addresses: [lead.email],
+          body_preview: body.substring(0, 255),
+          body: body,
+          received_at: new Date().toISOString(),
+          has_attachments: false,
+        });
+      } catch (error) {
+        console.error("Error storing sent email:", error);
+        // Don't fail the request if storage fails
+      }
+    }
 
     return NextResponse.json({
       success: true,

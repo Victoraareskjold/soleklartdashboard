@@ -11,6 +11,7 @@ export interface WorkItem {
 export interface Supplier {
   id: string;
   name: string;
+  category: string;
 }
 
 export interface ProductCategory {

@@ -2,6 +2,7 @@ import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import MountingTable from "./MountingTable";
 import { SupplierWithProducts } from "@/types/price_table";
 import LoadingScreen from "../../LoadingScreen";
+import VolumeReductionsTable from "./VolumeReductionsTable";
 
 interface WorkTablesProps {
   suppliersAndProducts: SupplierWithProducts[];
@@ -18,6 +19,7 @@ export default function WorkTables({ suppliersAndProducts }: WorkTablesProps) {
         suppliersAndProducts={suppliersAndProducts}
         installerGroupId={installerGroupId}
       />
+      <VolumeReductionsTable installerGroupId={installerGroupId} />
     </div>
   );
 }

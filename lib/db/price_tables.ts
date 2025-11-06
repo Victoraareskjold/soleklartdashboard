@@ -2,7 +2,7 @@ import { Product, Supplier } from "@/types/price_table";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export async function getSuppliers(client: SupabaseClient) {
-  const { data, error } = await client.from("suppliers").select("id, name");
+  const { data, error } = await client.from("suppliers").select("*");
   if (error) throw error;
   return data as Supplier[];
 }
@@ -36,6 +36,16 @@ export async function getCategories(client: SupabaseClient) {
       `
     )
     .order("name");
+  if (error) throw error;
+  return data;
+}
+
+export async function getElectricalInstallationCategories(
+  client: SupabaseClient
+) {
+  const { data, error } = await client
+    .from("electrical_installation_categories")
+    .select("*");
   if (error) throw error;
   return data;
 }

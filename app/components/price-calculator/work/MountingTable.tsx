@@ -156,12 +156,13 @@ export default function MountingTable({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Montering</h2>
-      </div>
-
       <table className="w-full border-collapse border border-gray-300">
         <thead>
+          <tr>
+            <th colSpan={4} className="border p-2 bg-gray-100">
+              MONTERING ⚙️
+            </th>
+          </tr>
           <tr className="bg-gray-100">
             <th className="border p-2">Leverandør</th>
             <th className="border p-2">Taktype</th>

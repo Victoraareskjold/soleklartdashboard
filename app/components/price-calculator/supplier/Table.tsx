@@ -29,6 +29,18 @@ export interface CategoryWithSubcategories extends ProductCategory {
   subcategories?: ProductSubcategory[];
 }
 
+export interface ElectricalInstallationItem {
+  id: string;
+  installer_group_id: string;
+  name: string;
+  price_per: number;
+  extra_costs?: number | null;
+  category?: {
+    id: string;
+    name: string;
+  };
+}
+
 export default function SupplierTable({
   suppliersAndProducts,
 }: SupplierTableProps) {

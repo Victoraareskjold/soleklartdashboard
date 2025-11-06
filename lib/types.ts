@@ -118,35 +118,31 @@ export interface LeadEmail {
   created_at?: string;
 }
 
-// Type for email content fetched from Microsoft Graph API
 export interface EmailContent {
   id: string;
-  conversationId: string;
+  installer_group_id: string;
+  lead_id: string;
+  message_id: string;
+  conversation_id: string;
   subject: string;
-  from: {
-    emailAddress: {
-      name?: string;
-      address: string;
-    };
-  };
-  toRecipients: Array<{
-    emailAddress: {
-      name?: string;
-      address: string;
-    };
-  }>;
-  bodyPreview: string;
-  body?: {
-    contentType: string;
-    content: string;
-  };
-  receivedDateTime: string;
-  sentDateTime?: string;
-  hasAttachments?: boolean;
-  isDraft?: boolean;
+  from_address: string;
+  to_addresses: string[];
+  body_preview: string;
+  body: string;
+  received_at: string;
+  has_attachments: boolean;
+  created_at?: string;
 }
 
 export interface RoofType {
   id: string;
   name: string;
+}
+
+export interface MountVolumeReductionType {
+  id: string;
+  number: number;
+  amount: number;
+  amount2: number;
+  reduction: number;
 }
