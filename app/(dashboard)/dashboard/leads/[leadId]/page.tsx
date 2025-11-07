@@ -1,6 +1,5 @@
 "use client";
-import LoadingScreen from "@/app/components/LoadingScreen";
-import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
+import { SolarData } from "@/app/components/SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { getEstimate, getLead, updateEstimate, updateLead } from "@/lib/api";
 import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
@@ -9,6 +8,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
+import EstimateSection from "@/app/components/leads/EstimateSection";
 
 interface InputProps {
   label: string;
@@ -139,8 +139,6 @@ export default function LeadPage() {
     setIsModalOpen(!isModalOpen);
   };
 
-  if (loading) return <LoadingScreen />;
-
   return (
     <div className="flex flex-row">
       {/* Contact information */}
@@ -201,13 +199,26 @@ export default function LeadPage() {
 
         {activeRoute === "Estimat" && hasEstimate && (
           <>
-            <SolarDataView solarData={solarData} setSolarData={setSolarData} />
-            <button onClick={handleUpdate} disabled={loading}>
-              {loading ? "Lagrer..." : "Lagre"}
-            </button>
-            <button onClick={handleToggleModal} disabled={loading}>
-              Åpne
-            </button>
+            <EstimateSection
+              solarData={solarData}
+              setSolarData={setSolarData}
+            />
+            <div className="flex gap-2">
+              <button
+                className="py-2 px-3 bg-slate-100"
+                onClick={handleToggleModal}
+                disabled={loading}
+              >
+                Åpne pvmap
+              </button>
+              <button
+                className="py-2 px-3 bg-orange-300"
+                onClick={handleUpdate}
+                disabled={loading}
+              >
+                {loading ? "Lagrer..." : "Lagre"}
+              </button>
+            </div>
           </>
         )}
       </section>

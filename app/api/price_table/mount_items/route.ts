@@ -28,7 +28,7 @@ export async function GET(req: Request) {
           roof_type_id,
           price_per,
           product:products(id, name, price_ex_vat, supplier:suppliers(id, name)),
-          roof_type_id
+          roof_type:roof_types(id, name)
         `
       )
       .eq("installer_group_id", installerGroupId);

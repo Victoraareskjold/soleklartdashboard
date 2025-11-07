@@ -1,15 +1,18 @@
 import { Supplier, SupplierWithProducts } from "@/types/price_table";
 import { useState, useMemo, useEffect } from "react";
-import { getCategories } from "@/lib/api";
+import { getCategories, getMountItems } from "@/lib/api";
 import CalculationSheet from "./CalculationSheet";
+import CalculatorRow from "./CalculatorRow";
+import { SolarData } from "../../SolarDataView";
+import { useInstallerGroup } from "@/context/InstallerGroupContext";
 
 interface CalculatorResultsProps {
   suppliers: Supplier[] | null;
   suppliersAndProducts: SupplierWithProducts[] | null;
-  initialPanelCount?: number;
+  solarData?: SolarData;
 }
 
-interface CalculatorItem {
+export interface CalculatorItem {
   id: string;
   displayName: string;
   dbName: string;
@@ -19,6 +22,7 @@ interface CalculatorItem {
   supplierId: string;
   productId: string;
   defaultSupplier?: string;
+  defaultProduct?: string;
 }
 
 export interface CalculatorState {
@@ -36,13 +40,16 @@ export interface CategoryWithSubcategories {
   }[];
 }
 
-type CalculatorItemUpdate = Partial<CalculatorItem> & { _delete?: boolean };
+export type CalculatorItemUpdate = Partial<CalculatorItem> & {
+  _delete?: boolean;
+};
 
 export default function CalculatorResults({
   suppliers,
   suppliersAndProducts,
-  initialPanelCount = 1,
+  solarData,
 }: CalculatorResultsProps) {
+  const { installerGroupId } = useInstallerGroup();
   const [allCategories, setAllCategories] = useState<
     CategoryWithSubcategories[]
   >([]);
@@ -59,19 +66,21 @@ export default function CalculatorResults({
         displayName: "Panel",
         dbName: "SOLCELLEPANEL",
         categoryId: "",
-        quantity: initialPanelCount,
+        quantity: solarData?.totalPanels || 1,
         supplierId: "",
         productId: "",
         defaultSupplier: "Solar Technologies Scandinavia AS",
+        defaultProduct: "Jinka Solar 240w",
       },
       {
         id: "feste",
         displayName: "Feste",
         dbName: "FESTEMATERIELL LØSNING",
         categoryId: "",
-        quantity: initialPanelCount,
+        quantity: solarData?.totalPanels || 1,
         supplierId: "",
         productId: "",
+        defaultSupplier: "Solar Technologies Scandinavia AS",
       },
       {
         id: "inverter",
@@ -100,7 +109,7 @@ export default function CalculatorResults({
         supplierId: "",
         productId: "",
       },
-      {
+      /* {
         id: "battery",
         displayName: "Batteri",
         dbName: "BATTERI",
@@ -126,7 +135,7 @@ export default function CalculatorResults({
         quantity: 1,
         supplierId: "",
         productId: "",
-      },
+      }, */
     ],
     totalPrice: 0,
   });
@@ -139,6 +148,7 @@ export default function CalculatorResults({
     productId: "",
   });
 
+  // koble kategorier
   useEffect(() => {
     if (allCategories.length === 0) return;
 
@@ -156,6 +166,7 @@ export default function CalculatorResults({
     }));
   }, [allCategories]);
 
+  // koble leverandører
   useEffect(() => {
     if (!suppliers || suppliers.length === 0) return;
 
@@ -173,6 +184,63 @@ export default function CalculatorResults({
       }),
     }));
   }, [suppliers]);
+
+  // hent feste hvis vi har solarData
+  useEffect(() => {
+    async function fetchMountItem() {
+      if (!solarData?.selectedRoofType || !installerGroupId) return;
+      try {
+        const mountItems = await getMountItems(installerGroupId);
+
+        if (!mountItems || mountItems.length === 0) return;
+
+        const matchingMount = mountItems.find(
+          (item) => item.roof_type?.name === solarData.selectedRoofType
+        );
+
+        if (!matchingMount || !matchingMount.product) return;
+        setCalculatorState((prev) => ({
+          ...prev,
+          items: prev.items.map((item) =>
+            item.id === "feste"
+              ? {
+                  ...item,
+                  supplierId: matchingMount.product.supplier.id,
+                  productId: matchingMount.product.id,
+                  roofTypeName: matchingMount.roof_type.name,
+                  mountProductName: matchingMount.product.name,
+                }
+              : item
+          ),
+        }));
+      } catch (err) {
+        console.error("Failed to load mount item:", err);
+      }
+    }
+
+    fetchMountItem();
+  }, [installerGroupId, solarData?.selectedRoofType]);
+
+  useEffect(() => {
+    if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
+
+    setCalculatorState((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (item.productId || !item.supplierId || !item.defaultProduct)
+          return item;
+
+        const supplier = suppliersAndProducts.find(
+          (s) => s.id === item.supplierId
+        );
+        const product = supplier?.products.find(
+          (p) => p.name.toLowerCase() === item.defaultProduct!.toLowerCase()
+        );
+
+        return product ? { ...item, productId: product.id } : item;
+      }),
+    }));
+  }, [suppliersAndProducts]);
 
   const handleAddItem = () => {
     if (!newItem.categoryId) return;
@@ -255,13 +323,21 @@ export default function CalculatorResults({
             <th colSpan={4} className="border p-2 bg-gray-100">
               SOLCELLE ANLEGG
             </th>
+            <th className="font-bold">
+              <button
+                className="bg-green-600 p-4 text-white"
+                onClick={() => setShowModal(true)}
+              >
+                +
+              </button>
+            </th>
           </tr>
           <tr className="bg-gray-100">
             <th className="border p-2">Antall</th>
             <th className="border p-2">Utstyr</th>
             <th className="border p-2">Leverandør</th>
             <th className="border p-2">Pris eks. mva</th>
-            <th>🗑️</th>
+            <th className="border p-2">🗑️</th>
           </tr>
         </thead>
         <tbody>
@@ -275,20 +351,12 @@ export default function CalculatorResults({
               onUpdate={(updates) => updateItem(item.id, updates)}
             />
           ))}
-          <tr className="bg-gray-50 font-bold">
-            <td>
-              <div className="mt-4 flex justify-between">
-                <button
-                  className="bg-green-600 text-white px-3 py-2 rounded"
-                  onClick={() => setShowModal(true)}
-                >
-                  + Legg til utstyr
-                </button>
-              </div>
-            </td>
-          </tr>
         </tbody>
       </table>
+      {/*  <pre className="text-red-500">
+        {JSON.stringify(solarData) || "no data"}
+      </pre> */}
+
       <CalculationSheet
         calculatorState={calculatorState}
         suppliersAndProducts={suppliersAndProducts}
@@ -341,159 +409,5 @@ export default function CalculatorResults({
         </div>
       )}
     </div>
-  );
-}
-
-interface CalculatorRowProps {
-  item: CalculatorItem;
-  suppliers: Supplier[];
-  suppliersAndProducts: SupplierWithProducts[];
-  allCategories: CategoryWithSubcategories[];
-  onUpdate: (updates: CalculatorItemUpdate) => void;
-}
-
-function CalculatorRow({
-  item,
-  suppliers,
-  suppliersAndProducts,
-  allCategories,
-  onUpdate,
-}: CalculatorRowProps) {
-  const category = allCategories.find((c) => c.id === item.categoryId);
-  const subcategory = item.subcategoryId
-    ? category?.subcategories?.find((s) => s.id === item.subcategoryId)
-    : null;
-
-  const availableProducts = useMemo(() => {
-    if (!item.supplierId) return [];
-
-    const supplier = suppliersAndProducts.find((s) => s.id === item.supplierId);
-    if (!supplier) return [];
-
-    return supplier.products.filter((product) => {
-      const categoryMatch = product.category?.id === item.categoryId;
-
-      if (item.subcategoryId) {
-        return categoryMatch && product.subcategory?.id === item.subcategoryId;
-      }
-      return categoryMatch;
-    });
-  }, [
-    item.supplierId,
-    item.categoryId,
-    item.subcategoryId,
-    suppliersAndProducts,
-  ]);
-
-  const selectedProduct = useMemo(() => {
-    if (!item.productId || !availableProducts.length) return null;
-    return availableProducts.find((p) => p.id === item.productId);
-  }, [item.productId, availableProducts]);
-
-  const handleQuantityChange = (value: string) => {
-    const num = parseInt(value) || 0;
-    onUpdate({ quantity: num });
-  };
-
-  const handleSupplierChange = (supplierId: string) => {
-    onUpdate({ supplierId, productId: "" });
-  };
-
-  const handleProductChange = (productId: string) => {
-    onUpdate({ productId });
-  };
-
-  const displayName = subcategory?.name || category?.name || "produkt";
-
-  return (
-    <tr>
-      <td className="border p-2 text-center">
-        <input
-          type="number"
-          min="0"
-          value={item.quantity}
-          onChange={(e) => handleQuantityChange(e.target.value)}
-          className="w-full text-center"
-        />
-      </td>
-      <td className="border p-2 flex items-center">
-        <p className="w-42">{item.displayName}</p>
-        <select
-          className="bg-gray-100 p-2 w-full"
-          value={item.productId}
-          onChange={(e) => handleProductChange(e.target.value)}
-          disabled={!item.supplierId || availableProducts.length === 0}
-        >
-          <option value="" disabled>
-            {!item.supplierId
-              ? "Velg leverandør først..."
-              : availableProducts.length === 0
-              ? `Ingen ${displayName.toLowerCase()} tilgjengelig`
-              : `Velg ${displayName.toLowerCase()}...`}
-          </option>
-          {(() => {
-            if (!category) return null;
-
-            const grouped: Record<string, typeof availableProducts> = {};
-            for (const product of availableProducts) {
-              const subName = product.subcategory?.name || "";
-              if (!grouped[subName]) grouped[subName] = [];
-              grouped[subName].push(product);
-            }
-
-            const sortedGroups = Object.entries(grouped).sort(([a], [b]) => {
-              if (a === "") return -1;
-              if (b === "") return 1;
-              return a.localeCompare(b);
-            });
-
-            return sortedGroups.map(([subName, products]) =>
-              subName ? (
-                <optgroup key={subName} label={subName}>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : (
-                products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))
-              )
-            );
-          })()}
-        </select>
-      </td>
-      <td className="border p-2">
-        <select
-          className="bg-gray-100 p-2 w-full"
-          value={item.supplierId}
-          onChange={(e) => handleSupplierChange(e.target.value)}
-        >
-          <option value="">Velg leverandør...</option>
-          {suppliers.map((sup) => (
-            <option key={sup.id} value={sup.id}>
-              {sup.name}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td className="border p-2 text-right">
-        {selectedProduct && item.quantity > 0
-          ? `${(selectedProduct.price_ex_vat * item.quantity).toFixed(2)} kr`
-          : "0.00 kr"}
-      </td>
-      <td className="border p-2 text-right">
-        <button
-          className="ml-2 text-red-600 hover:text-red-800"
-          onClick={() => onUpdate({ _delete: true })}
-        >
-          ✕
-        </button>
-      </td>
-    </tr>
   );
 }
