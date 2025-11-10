@@ -5,6 +5,7 @@ import CalculationSheet from "./CalculationSheet";
 import CalculatorRow from "./CalculatorRow";
 import { SolarData } from "../../SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
+import { getPanelWp } from "@/utils/getPanelWp";
 
 interface CalculatorResultsProps {
   suppliers: Supplier[] | null;
@@ -16,7 +17,7 @@ export interface CalculatorItem {
   id: string;
   displayName: string;
   dbName: string;
-  categoryId: string;
+  categoryId?: string;
   subcategoryId?: string;
   quantity: number;
   supplierId: string;
@@ -90,6 +91,7 @@ export default function CalculatorResults({
         quantity: 1,
         supplierId: "",
         productId: "",
+        defaultSupplier: "Solar Technologies Scandinavia AS",
       },
       {
         id: "stillase",
@@ -97,9 +99,11 @@ export default function CalculatorResults({
         dbName: "STILLASE",
         categoryId: "",
         quantity: 1,
-        supplierId: "",
-        productId: "",
+        supplierId: "ba4f75fd-26fd-44ef-9c18-25110d3b4448",
+        productId: "1557c4ef-2e78-41ef-904c-8113d8ba76cd",
+        defaultSupplier: "Stillase Moss AS",
       },
+      /* {
       {
         id: "frakt",
         displayName: "Frakt",
@@ -108,8 +112,8 @@ export default function CalculatorResults({
         quantity: 1,
         supplierId: "",
         productId: "",
+        defaultSupplier: "DHL Freight",
       },
-      /* {
         id: "battery",
         displayName: "Batteri",
         dbName: "BATTERI",
@@ -220,6 +224,190 @@ export default function CalculatorResults({
 
     fetchMountItem();
   }, [installerGroupId, solarData?.selectedRoofType]);
+
+  useEffect(() => {
+    async function fetchStillase() {
+      if (
+        !solarData?.totalPanels ||
+        !installerGroupId ||
+        !suppliersAndProducts ||
+        allCategories.length === 0
+      )
+        return;
+      try {
+        const totalPanels = solarData.totalPanels;
+
+        const count36 = Math.max(1, Math.ceil(totalPanels / 36));
+        const count100 = Math.max(1, Math.ceil(totalPanels / 100));
+
+        const allProducts = suppliersAndProducts.flatMap((s) =>
+          s.products.map((p) => ({ ...p, supplierId: s.id }))
+        );
+
+        const standardPall = allProducts.find((p) =>
+          p.name.toLowerCase().includes("standardpall")
+        );
+        const europaPall = allProducts.find((p) =>
+          p.name.toLowerCase().includes("europall")
+        );
+
+        // Finn FRAKT kategori
+        const fraktCategory = allCategories.find((c) => c.name === "FRAKT");
+
+        setCalculatorState((prev) => {
+          // Fjern eksisterende frakt-items for å unngå duplikater
+          const itemsWithoutFrakt = prev.items.filter(
+            (item) => item.id !== "frakt" && item.id !== "frakt2"
+          );
+
+          const newItems = [...itemsWithoutFrakt];
+
+          if (standardPall) {
+            newItems.push({
+              id: "frakt",
+              displayName: "Frakt",
+              dbName: "FRAKT",
+              categoryId: fraktCategory?.id || "",
+              quantity: count36,
+              supplierId: standardPall.supplierId,
+              productId: standardPall.id,
+            });
+          }
+
+          if (europaPall) {
+            newItems.push({
+              id: "frakt2",
+              displayName: "Frakt",
+              dbName: "FRAKT",
+              categoryId: fraktCategory?.id || "",
+              quantity: count100,
+              supplierId: europaPall.supplierId,
+              productId: europaPall.id,
+            });
+          }
+
+          return { ...prev, items: newItems };
+        });
+      } catch (err) {
+        console.error("Feil ved lasting av stillase:", err);
+      }
+    }
+
+    fetchStillase();
+  }, [
+    installerGroupId,
+    solarData?.totalPanels,
+    suppliersAndProducts,
+    allCategories,
+  ]);
+
+  // Auto-select inverter basert på default eller andre regler
+  useEffect(() => {
+    async function fetchBestInverter() {
+      if (
+        !solarData?.totalPanels ||
+        !installerGroupId ||
+        !suppliersAndProducts ||
+        allCategories.length === 0
+      )
+        return;
+
+      try {
+        const totalPanels = solarData.totalPanels;
+        const panelWp = getPanelWp(
+          solarData.selectedPanelType || "Jinka Solar 240w"
+        );
+        const totalKwp = (totalPanels * panelWp) / 1000; // kWp
+        const desiredCapacity = totalKwp * 0.87; // 87 % av total kWp
+
+        const solarTechSupplier = suppliersAndProducts.find(
+          (s) => s.name.toLowerCase() === "solar technologies scandinavia as"
+        );
+        const inverterCategory = allCategories.find(
+          (c) => c.name.toUpperCase() === "INVERTER"
+        );
+        if (!solarTechSupplier || !inverterCategory) return;
+
+        const inverterProducts = solarTechSupplier.products.filter(
+          (p) => p.category?.id === inverterCategory.id
+        );
+        if (!inverterProducts || inverterProducts.length === 0) return;
+
+        const parsePower = (name: string) => {
+          const match = name.match(/(\d+\.?\d*)\s?kW/i);
+          return match ? parseFloat(match[1]) : 0;
+        };
+
+        const sorted = inverterProducts
+          .map((p) => ({ ...p, power: parsePower(p.name) }))
+          .filter((p) => p.power > 0)
+          .sort((a, b) => b.power - a.power);
+
+        let remaining = desiredCapacity;
+        const selected: { product: (typeof sorted)[0]; quantity: number }[] =
+          [];
+
+        for (const p of sorted) {
+          if (remaining <= 0) break;
+          const qty = Math.floor(remaining / p.power);
+          if (qty > 0) {
+            selected.push({ product: p, quantity: qty });
+            remaining -= qty * p.power;
+          }
+        }
+
+        // Beregn total valgt kapasitet
+        const totalSelectedPower = selected.reduce(
+          (sum, s) => sum + s.product.power * s.quantity,
+          0
+        );
+
+        // Ikke legg til invertere hvis totalen er for lav (<70 % av ønsket kapasitet)
+        const minAcceptable = desiredCapacity * 0.7;
+        if (totalSelectedPower < minAcceptable) {
+          console.log(
+            `Kunne ikke dekke ønsket kapasitet (${desiredCapacity.toFixed(
+              2
+            )} kWp), valgt kun ${totalSelectedPower.toFixed(2)} kW`
+          );
+          return;
+        }
+
+        console.log("Desired:", desiredCapacity.toFixed(2), "kWp");
+        console.log("Total valgt:", totalSelectedPower.toFixed(2), "kW");
+        console.log(
+          "Valgte invertere:",
+          selected.map((s) => `${s.quantity}× ${s.product.name}`)
+        );
+
+        setCalculatorState((prev) => {
+          const itemsWithoutInverter = prev.items.filter(
+            (item) => !item.id.startsWith("inverter")
+          );
+          const newItems = selected.map((s, index) => ({
+            id: `inverter-${index}`,
+            displayName: s.product.name,
+            dbName: "INVERTER",
+            categoryId: inverterCategory.id,
+            quantity: s.quantity,
+            supplierId: solarTechSupplier.id,
+            productId: s.product.id,
+          }));
+          return { ...prev, items: [...itemsWithoutInverter, ...newItems] };
+        });
+      } catch (err) {
+        console.error("Feil ved lasting av inverter:", err);
+      }
+    }
+
+    fetchBestInverter();
+  }, [
+    installerGroupId,
+    solarData?.totalPanels,
+    solarData?.selectedPanelType,
+    suppliersAndProducts,
+    allCategories,
+  ]);
 
   useEffect(() => {
     if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
@@ -353,7 +541,7 @@ export default function CalculatorResults({
           ))}
         </tbody>
       </table>
-      {/*  <pre className="text-red-500">
+      {/* <pre className="text-red-500 text-break">
         {JSON.stringify(solarData) || "no data"}
       </pre> */}
 
