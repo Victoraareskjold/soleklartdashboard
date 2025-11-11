@@ -36,7 +36,7 @@ export default function AuthPage() {
             email,
             password,
             options: {
-              emailRedirectTo: `${window.location.origin}/${CLIENT_ROUTES.DASHBOARD}`,
+              emailRedirectTo: `${window.location.origin}/${CLIENT_ROUTES.ONBOARDING}`,
             },
           });
         if (signUpError) throw signUpError;

@@ -9,12 +9,13 @@ import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
 import EstimateSection from "@/app/components/leads/EstimateSection";
+import FacilityInfo from "@/app/components/price-calculator/result/FacilityInfo";
 
 interface InputProps {
   label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
+  value: string | number;
+  onChange: (value: string) => void; // always string
+  type?: "text" | "number" | "date" | "email";
   placeholder?: string;
 }
 
@@ -51,10 +52,13 @@ export default function LeadPage() {
   const [estimateId, setEstimateId] = useState("");
 
   // Input
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(0);
+  const [personInfo, setPersonInfo] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [company, setCompany] = useState("");
   const [address, setAddress] = useState("");
+  const [ownConsumtion, setOwnConsumtion] = useState(0);
 
   const [solarData, setSolarData] = useState<SolarData>({
     totalPanels: 0,
@@ -70,7 +74,7 @@ export default function LeadPage() {
     imageUrl: "",
   });
 
-  const [activeRoute, setActiveRoute] = useState("Aktivitet");
+  const [activeRoute, setActiveRoute] = useState("Estimat");
   const routes = ["Aktivitet", "Merknader", "E-poster"];
 
   useEffect(() => {
@@ -80,10 +84,12 @@ export default function LeadPage() {
 
     Promise.all([
       getLead(leadIdStr).then((data) => {
-        setName(data.name ?? "");
         setEmail(data.email ?? "");
-        setPhone(data.phone ?? "");
+        setPersonInfo(data.personInfo ?? "");
+        setBirthDate(data.birthDate ?? "");
+        setPhone(data.phone || 0);
         setAddress(data.address ?? "");
+        setOwnConsumtion(data.ownConsumption || 0);
       }),
       getEstimate(leadIdStr).then((data) => {
         setEstimateId(data.id);
@@ -105,7 +111,7 @@ export default function LeadPage() {
 
     try {
       await updateLead(leadIdStr!, {
-        name,
+        personInfo,
         email,
         phone,
         address,
@@ -145,29 +151,42 @@ export default function LeadPage() {
       <section className="w-1/4 p-2">
         <form>
           <Input
-            label="Navn"
-            value={name}
-            onChange={setName}
-            placeholder="Navn"
-          />
-          <Input
-            label="E-post"
+            label="E-postadresse"
             value={email}
             onChange={setEmail}
-            type="email"
-            placeholder="E-postaddresse"
+            placeholder="E-postadresse"
           />
           <Input
-            label="Telefon"
-            value={phone}
-            onChange={setPhone}
-            placeholder="Telefonnummer"
+            label="Personinfo"
+            value={personInfo}
+            onChange={setPersonInfo}
+            placeholder="Personinfo"
           />
           <Input
-            label="Addresse"
+            label="Fødselsdato"
+            value={birthDate}
+            onChange={setBirthDate}
+            type="date"
+            placeholder="Fødselsdato"
+          />
+          <Input
+            label="Bedrift"
+            value={company}
+            onChange={setCompany}
+            placeholder="Bedrift"
+          />
+          <Input
+            label="Gateadresse"
             value={address}
             onChange={setAddress}
-            placeholder="Addresse"
+            placeholder="Gateadresse"
+          />
+          <Input
+            label="Eget forbruk"
+            value={ownConsumtion}
+            onChange={(val) => setOwnConsumtion(Number(val))}
+            type="number"
+            placeholder="Eget forbruk"
           />
         </form>
       </section>
@@ -198,28 +217,31 @@ export default function LeadPage() {
         )}
 
         {activeRoute === "Estimat" && hasEstimate && (
-          <>
-            <EstimateSection
-              solarData={solarData}
-              setSolarData={setSolarData}
-            />
-            <div className="flex gap-2">
-              <button
-                className="py-2 px-3 bg-slate-100"
-                onClick={handleToggleModal}
-                disabled={loading}
-              >
-                Åpne pvmap
-              </button>
-              <button
-                className="py-2 px-3 bg-orange-300"
-                onClick={handleUpdate}
-                disabled={loading}
-              >
-                {loading ? "Lagrer..." : "Lagre"}
-              </button>
+          <div className="flex gap-2">
+            <FacilityInfo />
+            <div>
+              <EstimateSection
+                solarData={solarData}
+                setSolarData={setSolarData}
+              />
+              <div className="flex gap-2">
+                <button
+                  className="py-2 px-3 bg-slate-100"
+                  onClick={handleToggleModal}
+                  disabled={loading}
+                >
+                  Åpne pvmap
+                </button>
+                <button
+                  className="py-2 px-3 bg-orange-300"
+                  onClick={handleUpdate}
+                  disabled={loading}
+                >
+                  {loading ? "Lagrer..." : "Lagre"}
+                </button>
+              </div>
             </div>
-          </>
+          </div>
         )}
       </section>
       <section className="w-1/4 p-2">

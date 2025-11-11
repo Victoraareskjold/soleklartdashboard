@@ -54,7 +54,7 @@ export default function MentionsCenter({ onClose }: { onClose: () => void }) {
 
   const handleGoToLead = (leadId: string) => {
     onClose();
-    router.push(`/dashboard/leads/${leadId}`);
+    router.push(`/leads/${leadId}`);
   };
 
   return (

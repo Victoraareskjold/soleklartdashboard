@@ -1,15 +1,16 @@
 export const CLIENT_ROUTES = {
   AUTH: "/auth",
+  ONBOARDING: "/onboarding",
 
-  DASHBOARD: "/dashboard",
+  DASHBOARD: "/overview",
 
-  LEADS: "/dashboard/leads",
-  CREATE_LEAD: "/dashboard/leads/create",
+  LEADS: "/leads",
+  CREATE_LEAD: "/leads/create",
 
-  PRICETABLE: "/dashboard/pricetable",
+  PRICETABLE: "/pricetable",
 
-  TEAM: "/dashboard/team",
-  PROFILE: "/dashboard/profile",
+  TEAM: "/team",
+  PROFILE: "/profile",
 };
 
 export const NAVBAR_ROUTES = [

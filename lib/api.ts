@@ -171,6 +171,12 @@ export const getSuppliersWithProducts = async () => {
   );
 };
 
+export const getMarkupPercentages = async () => {
+  return apiRequest<SupplierWithProducts[]>(
+    "/api/price_table/suppliers/products"
+  );
+};
+
 export const addSupplierProduct = async (
   newProduct: unknown
 ): Promise<Product> => {
@@ -313,5 +319,17 @@ export const updateMountVolumeReductions = async (
       installer_group_id: installerGroupId,
       ...data,
     }
+  );
+};
+
+export const addUserToInstallerGroupOrTeam = async (
+  activeSelection: string,
+  userId: string,
+  code: string
+) => {
+  return apiRequest<MountVolumeReductionType>(
+    `/api/${activeSelection}/add_user`,
+    "POST",
+    { userId, code }
   );
 };

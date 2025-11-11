@@ -1,3 +1,4 @@
+"use client";
 import { Supplier, SupplierWithProducts } from "@/types/price_table";
 import { useState, useMemo, useEffect } from "react";
 import { getCategories, getMountItems } from "@/lib/api";
@@ -16,7 +17,6 @@ interface CalculatorResultsProps {
 export interface CalculatorItem {
   id: string;
   displayName: string;
-  dbName: string;
   categoryId?: string;
   subcategoryId?: string;
   quantity: number;
@@ -63,9 +63,8 @@ export default function CalculatorResults({
   const [calculatorState, setCalculatorState] = useState<CalculatorState>({
     items: [
       {
-        id: "panel",
-        displayName: "Panel",
-        dbName: "SOLCELLEPANEL",
+        id: "solcellepanel",
+        displayName: "Solcellepanel",
         categoryId: "",
         quantity: solarData?.totalPanels || 1,
         supplierId: "",
@@ -76,7 +75,6 @@ export default function CalculatorResults({
       {
         id: "feste",
         displayName: "Feste",
-        dbName: "FESTEMATERIELL LØSNING",
         categoryId: "",
         quantity: solarData?.totalPanels || 1,
         supplierId: "",
@@ -86,7 +84,6 @@ export default function CalculatorResults({
       {
         id: "inverter",
         displayName: "Inverter",
-        dbName: "INVERTER",
         categoryId: "",
         quantity: 1,
         supplierId: "",
@@ -96,7 +93,6 @@ export default function CalculatorResults({
       {
         id: "stillase",
         displayName: "Stillase",
-        dbName: "STILLASE",
         categoryId: "",
         quantity: 1,
         supplierId: "ba4f75fd-26fd-44ef-9c18-25110d3b4448",
@@ -107,7 +103,6 @@ export default function CalculatorResults({
       {
         id: "frakt",
         displayName: "Frakt",
-        dbName: "FRAKT",
         categoryId: "",
         quantity: 1,
         supplierId: "",
@@ -116,7 +111,6 @@ export default function CalculatorResults({
       },
         id: "battery",
         displayName: "Batteri",
-        dbName: "BATTERI",
         categoryId: "",
         quantity: 1,
         supplierId: "",
@@ -125,7 +119,6 @@ export default function CalculatorResults({
       {
         id: "ballastein",
         displayName: "Ballastein",
-        dbName: "BALLASTEIN",
         categoryId: "",
         quantity: 1,
         supplierId: "",
@@ -134,7 +127,6 @@ export default function CalculatorResults({
       {
         id: "solcellekran",
         displayName: "Solcellekran",
-        dbName: "SOLCELLEKRAN",
         categoryId: "",
         quantity: 1,
         supplierId: "",
@@ -146,7 +138,7 @@ export default function CalculatorResults({
 
   const [newItem, setNewItem] = useState<Partial<CalculatorItem>>({
     displayName: "",
-    dbName: "",
+    id: "",
     quantity: 1,
     supplierId: "",
     productId: "",
@@ -160,7 +152,7 @@ export default function CalculatorResults({
       ...prev,
       items: prev.items.map((item) => {
         if (item.categoryId) return item;
-        const cat = allCategories.find((c) => c.name === item.dbName);
+        const cat = allCategories.find((c) => c.name === item.id);
         return {
           ...item,
           categoryId: cat?.id || "",
@@ -252,7 +244,7 @@ export default function CalculatorResults({
         );
 
         // Finn FRAKT kategori
-        const fraktCategory = allCategories.find((c) => c.name === "FRAKT");
+        const fraktCategory = allCategories.find((c) => c.name === "frakt");
 
         setCalculatorState((prev) => {
           // Fjern eksisterende frakt-items for å unngå duplikater
@@ -266,7 +258,6 @@ export default function CalculatorResults({
             newItems.push({
               id: "frakt",
               displayName: "Frakt",
-              dbName: "FRAKT",
               categoryId: fraktCategory?.id || "",
               quantity: count36,
               supplierId: standardPall.supplierId,
@@ -278,7 +269,6 @@ export default function CalculatorResults({
             newItems.push({
               id: "frakt2",
               displayName: "Frakt",
-              dbName: "FRAKT",
               categoryId: fraktCategory?.id || "",
               quantity: count100,
               supplierId: europaPall.supplierId,
@@ -324,12 +314,15 @@ export default function CalculatorResults({
           (s) => s.name.toLowerCase() === "solar technologies scandinavia as"
         );
         const inverterCategory = allCategories.find(
-          (c) => c.name.toUpperCase() === "INVERTER"
+          (c) => c.name.toLowerCase() === "inverter"
         );
-        if (!solarTechSupplier || !inverterCategory) return;
 
-        const inverterProducts = solarTechSupplier.products.filter(
-          (p) => p.category?.id === inverterCategory.id
+        const inverter3FasSub = inverterCategory?.subcategories?.find(
+          (sub) => sub.name.toLowerCase() === "inverter 3-fas"
+        );
+
+        const inverterProducts = solarTechSupplier?.products.filter(
+          (p) => p.subcategory?.id === inverter3FasSub?.id
         );
         if (!inverterProducts || inverterProducts.length === 0) return;
 
@@ -386,11 +379,10 @@ export default function CalculatorResults({
           );
           const newItems = selected.map((s, index) => ({
             id: `inverter-${index}`,
-            displayName: s.product.name,
-            dbName: "INVERTER",
-            categoryId: inverterCategory.id,
+            displayName: "Inverter",
+            categoryId: inverterCategory!.id,
             quantity: s.quantity,
-            supplierId: solarTechSupplier.id,
+            supplierId: solarTechSupplier!.id,
             productId: s.product.id,
           }));
           return { ...prev, items: [...itemsWithoutInverter, ...newItems] };
@@ -443,7 +435,6 @@ export default function CalculatorResults({
         {
           id,
           displayName: category?.name || "Nytt utstyr",
-          dbName: category?.name?.toUpperCase() || "UKJENT",
           categoryId: newItem.categoryId!,
           quantity: newItem.quantity || 1,
           supplierId: newItem.supplierId || "",
@@ -454,7 +445,6 @@ export default function CalculatorResults({
 
     setNewItem({
       displayName: "",
-      dbName: "",
       quantity: 1,
       supplierId: "",
       productId: "",

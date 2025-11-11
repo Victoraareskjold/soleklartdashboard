@@ -28,27 +28,27 @@ export async function GET(req: Request) {
 
     const defaults = [
       {
-        name: "ELEKTRISK INSTALLASJON",
+        name: "elektrisk installasjon",
         markup_percentage: 0,
       },
       {
-        name: "MONTERING",
+        name: "montering",
         markup_percentage: 0,
       },
       {
-        name: "SOLCELLEMATERIELL",
+        name: "solcellemateriell",
         markup_percentage: 0,
       },
       {
-        name: "BALLASTEIN",
+        name: "ballastein",
         markup_percentage: 0,
       },
       {
-        name: "STILLASE",
+        name: "stillase",
         markup_percentage: 0,
       },
       {
-        name: "FRAKT",
+        name: "frakt",
         markup_percentage: 0,
       },
     ];

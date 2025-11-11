@@ -59,9 +59,7 @@ export default function MountingTable({
   const getMountOptions = (supplierId: string) => {
     const supplier = suppliersAndProducts.find((s) => s.id === supplierId);
     if (!supplier) return [];
-    return supplier.products.filter(
-      (p) => p.category?.name === "FESTEMATERIELL LØSNING"
-    );
+    return supplier.products.filter((p) => p.category?.name === "feste");
   };
 
   const updateLocalData = (

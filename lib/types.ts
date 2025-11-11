@@ -33,17 +33,26 @@ export interface Lead {
   id: string;
   team_id: string;
   installer_group_id: string;
-  assigned_to?: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  status?: LeadStatus;
-  source?: string;
-  created_at: string;
-  updated_at?: string;
-  priority: string;
+  assignedTo?: string;
+  personInfo?: string;
+  birthDate?: string;
+  company?: string;
   address?: string;
-  estimate?: Estimate;
+  priority: string;
+  ownConsumption?: number;
+  voltage?: number;
+  phases?: number;
+  roofTypeId?: string;
+  roofSlope?: number;
+  roofAge?: number;
+  electricityPriceAvg?: number;
+  mainFuse?: number;
+  estimateId?: Estimate;
+  createdAt: string;
+  updatedAt?: string;
+  status?: LeadStatus;
+  email?: string;
+  phone?: number;
 }
 
 export type CreateLeadInput = {
