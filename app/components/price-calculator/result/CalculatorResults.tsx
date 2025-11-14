@@ -192,9 +192,6 @@ export default function CalculatorResults({
       s.products.map((p) => ({ ...p, supplierId: s.id }))
     );
 
-    console.log(allProducts);
-    console.log(panelTypeToMatch);
-
     const matchedProduct = allProducts.find(
       (p) => p.name.toLowerCase() === panelTypeToMatch.toLowerCase()
     );

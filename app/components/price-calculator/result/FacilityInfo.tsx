@@ -14,13 +14,20 @@ export default function FacilityInfo({ solarData }: FacilityInfoProps) {
 
   const yearlyCo2Saved = () => {
     if (!solarData?.yearlyProd) return 0;
-    return solarData.yearlyProd * 0.207;
+    return (solarData.yearlyProd * 0.207).toFixed(2);
   };
 
-  //Selvprodusert i % = ([årlig Kwh produksjon] / [Eget forbruk]) * 100
   const selfProduced = () => {
-    if (!solarData) return 0;
+    if (!solarData?.desiredKwh || !solarData?.yearlyProd) return 0;
+    return ((solarData.desiredKwh / solarData.yearlyProd) * 100).toFixed(2);
   };
+
+  const enovaSupport = () => {
+    const kWp = getkWp();
+    const eligibleKwp = Math.min(kWp, 15);
+    return (eligibleKwp * 2500).toFixed(2);
+  };
+
   return (
     <table className="border border-collapse w-1/4 h-fit">
       <thead>
@@ -53,9 +60,7 @@ export default function FacilityInfo({ solarData }: FacilityInfoProps) {
 
             <tr>
               <td className="border p-1 w-1/2">Selvprodusert (%)</td>
-              <td className="border p-1 w-1/2">
-                {solarData.coveragePercentage ?? 0} %
-              </td>
+              <td className="border p-1 w-1/2">{selfProduced()} %</td>
             </tr>
 
             <tr>
@@ -81,7 +86,7 @@ export default function FacilityInfo({ solarData }: FacilityInfoProps) {
 
             <tr>
               <td className="border p-1 w-1/2">Enova støtte</td>
-              <td className="border p-1 w-1/2">Kommer…</td>
+              <td className="border p-1 w-1/2">{enovaSupport()}</td>
             </tr>
           </>
         )}

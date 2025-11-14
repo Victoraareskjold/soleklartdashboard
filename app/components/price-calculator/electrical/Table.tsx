@@ -40,7 +40,6 @@ export default function ElectricalInstallationTable({
   const handleDeleteItem = async (id: string) => {
     const confirmDelete = window.confirm("Slette?");
     if (!confirmDelete) return;
-    console.log(id);
   };
 
   const openModal = () => {
@@ -66,7 +65,6 @@ export default function ElectricalInstallationTable({
   // TODO opdater submit for. legge til produkt
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(formData);
   };
 
   // TODO onchange update price funksjon

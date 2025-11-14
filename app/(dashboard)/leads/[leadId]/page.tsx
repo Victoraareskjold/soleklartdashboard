@@ -171,7 +171,6 @@ export default function LeadPage() {
   useEffect(() => {
     if (!solarData || !roofTypes.length) return;
 
-    // Hvis selectedRoofType allerede er et navn, bruk det direkte
     if (solarData.selectedRoofType) {
       const matchingRoofType = roofTypes.find(
         (rt) =>
@@ -180,12 +179,11 @@ export default function LeadPage() {
       );
 
       if (matchingRoofType) {
-        setRoofType(matchingRoofType.id);
-        // Oppdater også solarData til å bruke ID hvis den ikke allerede gjør det
-        if (solarData.selectedRoofType !== matchingRoofType.id) {
+        setRoofType(matchingRoofType.name);
+        if (solarData.selectedRoofType !== matchingRoofType.name) {
           setSolarData((prev) => ({
             ...prev,
-            selectedRoofType: matchingRoofType.id,
+            selectedRoofType: matchingRoofType.name,
           }));
         }
       }
@@ -321,7 +319,7 @@ export default function LeadPage() {
                 setSolarData((prev) => ({ ...prev, selectedRoofType: val }))
               }
               input="select"
-              options={roofTypes.map((r) => ({ label: r.name, value: r.id }))}
+              options={roofTypes.map((r) => ({ label: r.name, value: r.name }))}
               placeholder="Taktype"
             />
             <Input
@@ -370,10 +368,6 @@ export default function LeadPage() {
 
         {activeRoute === "Estimat" && hasEstimate && (
           <div>
-            <EstimateSection
-              solarData={solarData}
-              setSolarData={setSolarData}
-            />
             <div className="flex gap-2">
               <button
                 className="py-2 px-3 bg-slate-100"
@@ -390,6 +384,10 @@ export default function LeadPage() {
                 {loading ? "Lagrer..." : "Lagre"}
               </button>
             </div>
+            <EstimateSection
+              solarData={solarData}
+              setSolarData={setSolarData}
+            />
           </div>
         )}
       </section>

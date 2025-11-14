@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import CalculatorResults from "../price-calculator/result/CalculatorResults";
-import SolarDataView, { SolarData } from "../SolarDataView";
+import { SolarData } from "../SolarDataView";
 import { Supplier, SupplierWithProducts } from "@/types/price_table";
 import { getSuppliers, getSuppliersWithProducts } from "@/lib/api";
 
@@ -9,10 +9,7 @@ interface EstimateSectionProps {
   setSolarData: React.Dispatch<React.SetStateAction<SolarData>>;
 }
 
-export default function EstimateSection({
-  solarData,
-  setSolarData,
-}: EstimateSectionProps) {
+export default function EstimateSection({ solarData }: EstimateSectionProps) {
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
   const [suppliersAndProducts, setSuppliersAndProducts] = useState<
     SupplierWithProducts[] | null
@@ -34,7 +31,6 @@ export default function EstimateSection({
         suppliersAndProducts={suppliersAndProducts}
         solarData={solarData}
       />
-      <SolarDataView solarData={solarData} setSolarData={setSolarData} />
     </>
   );
 }

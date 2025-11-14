@@ -10,7 +10,6 @@ export async function POST(req: Request) {
     const client = createSupabaseClient(token);
 
     const { userId, code } = await req.json();
-    console.log(userId, code);
     if (!userId || !code)
       return NextResponse.json(
         { error: "missing parameters" },
