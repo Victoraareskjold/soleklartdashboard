@@ -8,7 +8,6 @@ import {
 import { supabase } from "./supabase";
 import {
   CreateEstimateInput,
-  CreateLeadInput,
   Estimate,
   InstallerGroup,
   Lead,
@@ -90,7 +89,7 @@ export const getLead = async (leadId: string) => {
 };
 
 // Create lead
-export const createLead = async (lead: CreateLeadInput) => {
+export const createLead = async (lead: Partial<Lead>) => {
   return apiRequest<Lead>(`/api/leads`, "POST", lead);
 };
 

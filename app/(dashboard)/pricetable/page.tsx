@@ -33,15 +33,17 @@ export default function PriceTablePage() {
     return <LoadingScreen />;
 
   return (
-    <div className="flex flex-col gap-2 p-2">
-      <CalculatorResults
-        suppliers={suppliers}
-        suppliersAndProducts={suppliersAndProducts}
-      />
-      <ElectricalInstallationTable installerGroupId={installerGroupId} />
-      <WorkTables suppliersAndProducts={suppliersAndProducts} />
-      <SupplierMarkupsTable />
-      <SupplierTable suppliersAndProducts={suppliersAndProducts} />
+    <div className="flex gap-2 p-2">
+      <div className="w-full">
+        <CalculatorResults
+          suppliers={suppliers}
+          suppliersAndProducts={suppliersAndProducts}
+        />
+        <ElectricalInstallationTable installerGroupId={installerGroupId} />
+        <WorkTables suppliersAndProducts={suppliersAndProducts} />
+        <SupplierMarkupsTable />
+        <SupplierTable suppliersAndProducts={suppliersAndProducts} />
+      </div>
     </div>
   );
 }

@@ -33,40 +33,27 @@ export interface Lead {
   id: string;
   team_id: string;
   installer_group_id: string;
-  assignedTo?: string;
-  personInfo?: string;
-  birthDate?: string;
+  assigned_to?: string;
+  person_info?: string;
+  birth_date?: string;
   company?: string;
   address?: string;
   priority: string;
-  ownConsumption?: number;
+  own_consumption?: number;
   voltage?: number;
   phases?: number;
-  roofTypeId?: string;
-  roofSlope?: number;
-  roofAge?: number;
-  electricityPriceAvg?: number;
-  mainFuse?: number;
-  estimateId?: Estimate;
-  createdAt: string;
-  updatedAt?: string;
+  roof_type_id?: string;
+  roof_slope?: number;
+  roof_age?: number;
+  electricity_price_avg?: number;
+  main_fuse?: number;
+  estimate_id?: Estimate;
+  created_at: string;
+  updated_at?: string;
   status?: LeadStatus;
   email?: string;
-  phone?: number;
-}
-
-export type CreateLeadInput = {
-  team_id: string;
-  installer_group_id: string;
-  assigned_to?: string;
-  name: string;
-  email?: string;
   phone?: string;
-  status: LeadStatus;
-  source?: string;
-  priority: string;
-  address?: string;
-};
+}
 
 export const LEAD_STATUSES = [
   "new",

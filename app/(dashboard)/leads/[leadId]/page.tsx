@@ -1,7 +1,13 @@
 "use client";
 import { SolarData } from "@/app/components/SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
-import { getEstimate, getLead, updateEstimate, updateLead } from "@/lib/api";
+import {
+  getEstimate,
+  getLead,
+  getRoofTypes,
+  updateEstimate,
+  updateLead,
+} from "@/lib/api";
 import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
 
 import { useParams } from "next/navigation";
@@ -9,14 +15,16 @@ import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
 import EstimateSection from "@/app/components/leads/EstimateSection";
-import FacilityInfo from "@/app/components/price-calculator/result/FacilityInfo";
+import { RoofType } from "@/lib/types";
 
 interface InputProps {
   label: string;
   value: string | number;
-  onChange: (value: string) => void; // always string
+  onChange: (value: string) => void;
   type?: "text" | "number" | "date" | "email";
+  input?: "input" | "select";
   placeholder?: string;
+  options?: { label: string; value: string | number }[];
 }
 
 const Input = ({
@@ -24,20 +32,37 @@ const Input = ({
   value,
   onChange,
   type = "text",
+  input = "input",
   placeholder,
+  options = [],
 }: InputProps) => (
-  <div className="mb-3">
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {label}
-    </label>
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    />
-  </div>
+  <tr className="w-full">
+    <td className="border w-1/2 text-sm font-medium text-gray-700">{label}</td>
+    <td className="border w-full">
+      {input === "input" ? (
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full"
+        />
+      ) : (
+        <select
+          className="w-full"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">Velg...</option>
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      )}
+    </td>
+  </tr>
 );
 
 export default function LeadPage() {
@@ -53,12 +78,46 @@ export default function LeadPage() {
 
   // Input
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState(0);
+  const [phone, setPhone] = useState("");
   const [personInfo, setPersonInfo] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [company, setCompany] = useState("");
   const [address, setAddress] = useState("");
   const [ownConsumtion, setOwnConsumtion] = useState(0);
+
+  // Customer info
+  const [voltage, setVoltage] = useState(230);
+  const voltageOptions = [
+    { label: "230V", value: 230 },
+    { label: "400V", value: 400 },
+  ];
+  const [phase, setPhase] = useState(3);
+  const phaseOptions = [
+    { label: "1-fase", value: 1 },
+    { label: "3-fase", value: 3 },
+  ];
+  const [mainFuse, setMainFuse] = useState(25);
+  const mainFuseOptions = [
+    { label: "25 A", value: 25 },
+    { label: "32 A", value: 32 },
+    { label: "40 A", value: 40 },
+    { label: "50 A", value: 50 },
+    { label: "63 A", value: 63 },
+    { label: "80 A", value: 80 },
+    { label: "100 A", value: 100 },
+    { label: "125 A+", value: 125 },
+  ];
+  const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
+  const [roofSlope, setRoofSlope] = useState("6-15");
+  const roofSlopeOptions = [
+    { label: "0-5°", value: "0-5" },
+    { label: "6-15°", value: "6-15" },
+    { label: "16-25°", value: "16-25" },
+    { label: "26-35°", value: "26-35" },
+    { label: "36-45°", value: "36-45" },
+    { label: "46+°", value: "46+" },
+  ];
+  const [roofAge, setRoofAge] = useState(5);
 
   const [solarData, setSolarData] = useState<SolarData>({
     totalPanels: 0,
@@ -85,11 +144,11 @@ export default function LeadPage() {
     Promise.all([
       getLead(leadIdStr).then((data) => {
         setEmail(data.email ?? "");
-        setPersonInfo(data.personInfo ?? "");
-        setBirthDate(data.birthDate ?? "");
-        setPhone(data.phone || 0);
+        setPersonInfo(data.person_info ?? "");
+        setBirthDate(data.birth_date ?? "");
+        setPhone(data.phone ?? "");
         setAddress(data.address ?? "");
-        setOwnConsumtion(data.ownConsumption || 0);
+        setOwnConsumtion(data.own_consumption || 0);
       }),
       getEstimate(leadIdStr).then((data) => {
         setEstimateId(data.id);
@@ -100,10 +159,38 @@ export default function LeadPage() {
           setHasEstimate(false);
         }
       }),
+      getRoofTypes().then((data) => {
+        setRoofTypes(data ?? []);
+      }),
     ])
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, [leadIdStr, installerGroupId]);
+
+  const [roofType, setRoofType] = useState("");
+  useEffect(() => {
+    if (!solarData || !roofTypes.length) return;
+
+    // Hvis selectedRoofType allerede er et navn, bruk det direkte
+    if (solarData.selectedRoofType) {
+      const matchingRoofType = roofTypes.find(
+        (rt) =>
+          rt.name === solarData.selectedRoofType ||
+          rt.id === solarData.selectedRoofType
+      );
+
+      if (matchingRoofType) {
+        setRoofType(matchingRoofType.id);
+        // Oppdater også solarData til å bruke ID hvis den ikke allerede gjør det
+        if (solarData.selectedRoofType !== matchingRoofType.id) {
+          setSolarData((prev) => ({
+            ...prev,
+            selectedRoofType: matchingRoofType.id,
+          }));
+        }
+      }
+    }
+  }, [solarData.selectedRoofType, roofTypes, solarData]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +198,7 @@ export default function LeadPage() {
 
     try {
       await updateLead(leadIdStr!, {
-        personInfo,
+        person_info: personInfo,
         email,
         phone,
         address,
@@ -148,47 +235,112 @@ export default function LeadPage() {
   return (
     <div className="flex flex-row">
       {/* Contact information */}
-      <section className="w-1/4 p-2">
-        <form>
-          <Input
-            label="E-postadresse"
-            value={email}
-            onChange={setEmail}
-            placeholder="E-postadresse"
-          />
-          <Input
-            label="Personinfo"
-            value={personInfo}
-            onChange={setPersonInfo}
-            placeholder="Personinfo"
-          />
-          <Input
-            label="Fødselsdato"
-            value={birthDate}
-            onChange={setBirthDate}
-            type="date"
-            placeholder="Fødselsdato"
-          />
-          <Input
-            label="Bedrift"
-            value={company}
-            onChange={setCompany}
-            placeholder="Bedrift"
-          />
-          <Input
-            label="Gateadresse"
-            value={address}
-            onChange={setAddress}
-            placeholder="Gateadresse"
-          />
-          <Input
-            label="Eget forbruk"
-            value={ownConsumtion}
-            onChange={(val) => setOwnConsumtion(Number(val))}
-            type="number"
-            placeholder="Eget forbruk"
-          />
-        </form>
+      <section className="w-1/4 p-2 flex flex-col gap-6">
+        <table className="w-full">
+          <tbody>
+            <Input
+              label="E-postadresse"
+              value={email}
+              onChange={setEmail}
+              placeholder="E-postadresse"
+            />
+            <Input
+              label="Telefon"
+              value={phone}
+              onChange={setPhone}
+              placeholder="Telefon"
+            />
+            <Input
+              label="Personinfo"
+              value={personInfo}
+              onChange={setPersonInfo}
+              placeholder="Personinfo"
+            />
+            <Input
+              label="Fødselsdato"
+              value={birthDate}
+              onChange={setBirthDate}
+              type="date"
+              placeholder="Fødselsdato"
+            />
+            <Input
+              label="Bedrift"
+              value={company}
+              onChange={setCompany}
+              placeholder="Bedrift"
+            />
+            <Input
+              label="Gateadresse"
+              value={address}
+              onChange={setAddress}
+              placeholder="Gateadresse"
+            />
+            <Input
+              label="Eget forbruk"
+              value={ownConsumtion}
+              onChange={(val) => setOwnConsumtion(Number(val))}
+              type="number"
+              placeholder="Eget forbruk"
+            />
+          </tbody>
+        </table>
+        <table className="w-full">
+          <tbody>
+            <Input
+              label="Spenning (nett)"
+              value={voltage}
+              onChange={(val) => setVoltage(Number(val))}
+              input="select"
+              options={voltageOptions}
+              placeholder="Spenning (nett)"
+            />
+            <Input
+              label="Faser"
+              value={phase}
+              onChange={(val) => setPhase(Number(val))}
+              input="select"
+              options={phaseOptions}
+              placeholder="Faser"
+            />
+            <Input
+              label="Hovedsikring (A)"
+              value={mainFuse}
+              onChange={(val) => setMainFuse(Number(val))}
+              input="select"
+              options={mainFuseOptions}
+              placeholder="HovedSikring (A)"
+            />
+          </tbody>
+        </table>
+        <table className="w-full">
+          <tbody>
+            <Input
+              label="Taktype"
+              value={roofType}
+              onChange={(val) =>
+                setSolarData((prev) => ({ ...prev, selectedRoofType: val }))
+              }
+              input="select"
+              options={roofTypes.map((r) => ({ label: r.name, value: r.id }))}
+              placeholder="Taktype"
+            />
+            <Input
+              label="Helning på tak"
+              value={roofSlope}
+              onChange={setRoofSlope}
+              input="select"
+              options={roofSlopeOptions}
+              placeholder="Helning på tak"
+            />
+            <Input
+              label="Alder på tak i år"
+              value={roofAge}
+              onChange={(val) => setRoofAge(Number(val))}
+              type="number"
+              placeholder="Alder på tak i år"
+            />
+          </tbody>
+        </table>
       </section>
       {/* Center section */}
       <section className="w-full bg-blue-100 p-2 [min-height:calc(100vh-3rem)]">
@@ -217,29 +369,26 @@ export default function LeadPage() {
         )}
 
         {activeRoute === "Estimat" && hasEstimate && (
-          <div className="flex gap-2">
-            <FacilityInfo />
-            <div>
-              <EstimateSection
-                solarData={solarData}
-                setSolarData={setSolarData}
-              />
-              <div className="flex gap-2">
-                <button
-                  className="py-2 px-3 bg-slate-100"
-                  onClick={handleToggleModal}
-                  disabled={loading}
-                >
-                  Åpne pvmap
-                </button>
-                <button
-                  className="py-2 px-3 bg-orange-300"
-                  onClick={handleUpdate}
-                  disabled={loading}
-                >
-                  {loading ? "Lagrer..." : "Lagre"}
-                </button>
-              </div>
+          <div>
+            <EstimateSection
+              solarData={solarData}
+              setSolarData={setSolarData}
+            />
+            <div className="flex gap-2">
+              <button
+                className="py-2 px-3 bg-slate-100"
+                onClick={handleToggleModal}
+                disabled={loading}
+              >
+                Åpne pvmap
+              </button>
+              <button
+                className="py-2 px-3 bg-orange-300"
+                onClick={handleUpdate}
+                disabled={loading}
+              >
+                {loading ? "Lagrer..." : "Lagre"}
+              </button>
             </div>
           </div>
         )}

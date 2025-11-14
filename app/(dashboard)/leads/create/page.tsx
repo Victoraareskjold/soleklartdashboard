@@ -15,9 +15,9 @@ import { toast } from "react-toastify";
 
 interface InputProps {
   label: string;
-  value: string;
+  value: string | number;
   onChange: (value: string) => void;
-  type?: string;
+  type?: "text" | "number" | "date" | "email";
   placeholder?: string;
 }
 
@@ -51,9 +51,11 @@ export default function CreateLead() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Inputs
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [personInfo, setPersonInfo] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [company, setCompany] = useState("");
   const [address, setAddress] = useState("");
 
   const [solarData, setSolarData] = useState<SolarData>({
@@ -87,7 +89,7 @@ export default function CreateLead() {
         team_id: teamId,
         installer_group_id: installerGroupId,
         assigned_to: user.id,
-        name,
+        person_info: personInfo,
         email,
         phone,
         address,
@@ -100,7 +102,7 @@ export default function CreateLead() {
       });
       toast.success(
         <div>
-          Lead &quot;<strong>{lead.name}</strong>&quot; created!{" "}
+          Lead &quot;<strong>{lead.person_info}</strong>&quot; created!{" "}
           <Link
             href={`${CLIENT_ROUTES.DASHBOARD}/leads/${lead.id}`}
             className="font-bold"
@@ -158,29 +160,41 @@ export default function CreateLead() {
       )}
       <form onSubmit={handleSubmit}>
         <Input
-          label="Name"
-          value={name}
-          onChange={setName}
-          placeholder="Lead name"
-        />
-        <Input
-          label="Email"
+          label="E-postadresse"
           value={email}
           onChange={setEmail}
-          type="email"
-          placeholder="Lead email"
+          placeholder="E-postadresse"
         />
         <Input
-          label="Phone"
+          label="Telefon"
           value={phone}
           onChange={setPhone}
-          placeholder="Lead phone"
+          placeholder="Telefon"
         />
         <Input
-          label="Address"
+          label="Personinfo"
+          value={personInfo}
+          onChange={setPersonInfo}
+          placeholder="Personinfo"
+        />
+        <Input
+          label="Fødselsdato"
+          value={birthDate}
+          onChange={setBirthDate}
+          type="date"
+          placeholder="Fødselsdato"
+        />
+        <Input
+          label="Bedrift"
+          value={company}
+          onChange={setCompany}
+          placeholder="Bedrift"
+        />
+        <Input
+          label="Gateadresse"
           value={address}
           onChange={setAddress}
-          placeholder="Lead address"
+          placeholder="Gateadresse"
         />
 
         <SolarDataView solarData={solarData} setSolarData={setSolarData} />

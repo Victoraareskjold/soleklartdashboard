@@ -7,6 +7,7 @@ import CalculatorRow from "./CalculatorRow";
 import { SolarData } from "../../SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { getPanelWp } from "@/utils/getPanelWp";
+import FacilityInfo from "./FacilityInfo";
 
 interface CalculatorResultsProps {
   suppliers: Supplier[] | null;
@@ -180,6 +181,39 @@ export default function CalculatorResults({
       }),
     }));
   }, [suppliers]);
+
+  // Auto-select panel product based on solarData.panelType
+  useEffect(() => {
+    if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
+    if (!solarData?.selectedPanelType) return;
+
+    const panelTypeToMatch = solarData.selectedPanelType;
+    const allProducts = suppliersAndProducts.flatMap((s) =>
+      s.products.map((p) => ({ ...p, supplierId: s.id }))
+    );
+
+    console.log(allProducts);
+    console.log(panelTypeToMatch);
+
+    const matchedProduct = allProducts.find(
+      (p) => p.name.toLowerCase() === panelTypeToMatch.toLowerCase()
+    );
+
+    if (matchedProduct) {
+      setCalculatorState((prev) => ({
+        ...prev,
+        items: prev.items.map((item) =>
+          item.id === "solcellepanel"
+            ? {
+                ...item,
+                supplierId: matchedProduct!.supplierId,
+                productId: matchedProduct!.id,
+              }
+            : item
+        ),
+      }));
+    }
+  }, [suppliersAndProducts, solarData?.selectedPanelType]);
 
   // hent feste hvis vi har solarData
   useEffect(() => {
@@ -494,98 +528,101 @@ export default function CalculatorResults({
   if (allCategories.length === 0) return <p>Laster kategorier...</p>;
 
   return (
-    <div>
-      <table className="w-full">
-        <thead>
-          <tr>
-            <th colSpan={4} className="border p-2 bg-gray-100">
-              SOLCELLE ANLEGG
-            </th>
-            <th className="font-bold">
-              <button
-                className="bg-green-600 p-4 text-white"
-                onClick={() => setShowModal(true)}
-              >
-                +
-              </button>
-            </th>
-          </tr>
-          <tr className="bg-gray-100">
-            <th className="border p-2">Antall</th>
-            <th className="border p-2">Utstyr</th>
-            <th className="border p-2">Leverandør</th>
-            <th className="border p-2">Pris eks. mva</th>
-            <th className="border p-2">🗑️</th>
-          </tr>
-        </thead>
-        <tbody>
-          {calculatorState.items.map((item) => (
-            <CalculatorRow
-              key={item.id}
-              item={item}
-              suppliers={suppliers}
-              suppliersAndProducts={suppliersAndProducts}
-              allCategories={allCategories}
-              onUpdate={(updates) => updateItem(item.id, updates)}
-            />
-          ))}
-        </tbody>
-      </table>
-      {/* <pre className="text-red-500 text-break">
+    <div className="flex gap-2">
+      <FacilityInfo solarData={solarData} />
+      <div>
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th colSpan={4} className="border p-2 bg-gray-100">
+                SOLCELLE ANLEGG
+              </th>
+              <th className="font-bold">
+                <button
+                  className="bg-green-600 p-4 text-white"
+                  onClick={() => setShowModal(true)}
+                >
+                  +
+                </button>
+              </th>
+            </tr>
+            <tr className="bg-gray-100">
+              <th className="border p-2">Antall</th>
+              <th className="border p-2">Utstyr</th>
+              <th className="border p-2">Leverandør</th>
+              <th className="border p-2">Pris eks. mva</th>
+              <th className="border p-2">🗑️</th>
+            </tr>
+          </thead>
+          <tbody>
+            {calculatorState.items.map((item) => (
+              <CalculatorRow
+                key={item.id}
+                item={item}
+                suppliers={suppliers}
+                suppliersAndProducts={suppliersAndProducts}
+                allCategories={allCategories}
+                onUpdate={(updates) => updateItem(item.id, updates)}
+              />
+            ))}
+          </tbody>
+        </table>
+        {/* <pre className="text-red-500 text-break">
         {JSON.stringify(solarData) || "no data"}
       </pre> */}
 
-      <CalculationSheet
-        calculatorState={calculatorState}
-        suppliersAndProducts={suppliersAndProducts}
-      />
-      {showModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setShowModal(false)}
-        >
+        <CalculationSheet
+          calculatorState={calculatorState}
+          suppliersAndProducts={suppliersAndProducts}
+        />
+        {showModal && (
           <div
-            className="bg-white p-6 rounded-lg w-96 shadow"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            onClick={() => setShowModal(false)}
           >
-            <h3 className="text-lg font-semibold mb-3">Legg til utstyr</h3>
-
-            <select
-              className="border w-full p-2 mb-2"
-              value={newItem.categoryId || ""}
-              onChange={(e) =>
-                setNewItem({
-                  ...newItem,
-                  categoryId: e.target.value,
-                  subcategoryId: "",
-                })
-              }
+            <div
+              className="bg-white p-6 rounded-lg w-96 shadow"
+              onClick={(e) => e.stopPropagation()}
             >
-              <option value="">Velg kategori...</option>
-              {allCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+              <h3 className="text-lg font-semibold mb-3">Legg til utstyr</h3>
 
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-3 py-2 bg-gray-300 rounded"
-                onClick={() => setShowModal(false)}
+              <select
+                className="border w-full p-2 mb-2"
+                value={newItem.categoryId || ""}
+                onChange={(e) =>
+                  setNewItem({
+                    ...newItem,
+                    categoryId: e.target.value,
+                    subcategoryId: "",
+                  })
+                }
               >
-                Avbryt
-              </button>
-              <button
-                className="px-3 py-2 bg-green-600 text-white rounded"
-                onClick={handleAddItem}
-              >
-                Legg til
-              </button>
+                <option value="">Velg kategori...</option>
+                {allCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-3 py-2 bg-gray-300 rounded"
+                  onClick={() => setShowModal(false)}
+                >
+                  Avbryt
+                </button>
+                <button
+                  className="px-3 py-2 bg-green-600 text-white rounded"
+                  onClick={handleAddItem}
+                >
+                  Legg til
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
