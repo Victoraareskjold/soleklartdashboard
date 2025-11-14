@@ -1,5 +1,5 @@
 "use client";
-import { Supplier, SupplierWithProducts } from "@/types/price_table";
+import { MountItem, Supplier, SupplierWithProducts } from "@/types/price_table";
 import { useState, useMemo, useEffect } from "react";
 import { getCategories, getMountItems } from "@/lib/api";
 import CalculationSheet from "./CalculationSheet";
@@ -25,6 +25,7 @@ export interface CalculatorItem {
   productId: string;
   defaultSupplier?: string;
   defaultProduct?: string;
+  mountPricePer?: number;
 }
 
 export interface CalculatorState {
@@ -56,9 +57,14 @@ export default function CalculatorResults({
     CategoryWithSubcategories[]
   >([]);
 
+  const [mountItems, setMountItems] = useState<MountItem[]>([]);
+
   useEffect(() => {
+    if (!installerGroupId) return;
     getCategories().then(setAllCategories);
-  }, []);
+    getMountItems(installerGroupId).then(setMountItems);
+  }, [installerGroupId]);
+
   const [showModal, setShowModal] = useState(false);
 
   const [calculatorState, setCalculatorState] = useState<CalculatorState>({
@@ -217,13 +223,14 @@ export default function CalculatorResults({
     async function fetchMountItem() {
       if (!solarData?.selectedRoofType || !installerGroupId) return;
       try {
-        const mountItems = await getMountItems(installerGroupId);
-
         if (!mountItems || mountItems.length === 0) return;
 
         const matchingMount = mountItems.find(
           (item) => item.roof_type?.name === solarData.selectedRoofType
         );
+        setMountItems(mountItems);
+
+        console.log(mountItems);
 
         if (!matchingMount || !matchingMount.product) return;
         setCalculatorState((prev) => ({
@@ -236,6 +243,7 @@ export default function CalculatorResults({
                   productId: matchingMount.product.id,
                   roofTypeName: matchingMount.roof_type.name,
                   mountProductName: matchingMount.product.name,
+                  mountPricePer: matchingMount.price_per,
                 }
               : item
           ),
@@ -246,7 +254,7 @@ export default function CalculatorResults({
     }
 
     fetchMountItem();
-  }, [installerGroupId, solarData?.selectedRoofType]);
+  }, [installerGroupId, solarData?.selectedRoofType, mountItems]);
 
   useEffect(() => {
     async function fetchStillase() {
@@ -513,7 +521,12 @@ export default function CalculatorResults({
 
       if (!product) return sum;
 
-      return sum + product.price_ex_vat * item.quantity;
+      const unitPrice =
+        item.mountPricePer !== undefined
+          ? item.mountPricePer // montering pr feste
+          : product.price_ex_vat; // levering pris fra supplier
+
+      return sum + unitPrice * item.quantity;
     }, 0);
 
     setCalculatorState((prev) => ({ ...prev, totalPrice: total }));
@@ -571,6 +584,7 @@ export default function CalculatorResults({
         <CalculationSheet
           calculatorState={calculatorState}
           suppliersAndProducts={suppliersAndProducts}
+          mountItems={mountItems}
         />
         {showModal && (
           <div

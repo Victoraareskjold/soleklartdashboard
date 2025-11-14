@@ -141,8 +141,12 @@ export default function CalculatorRow({
         </select>
       </td>
       <td className="border p-2 text-right">
-        {selectedProduct && item.quantity > 0
-          ? `${(selectedProduct.price_ex_vat * item.quantity).toFixed(2)} kr`
+        {item.quantity > 0
+          ? `${(
+              (item.mountPricePer !== undefined
+                ? item.mountPricePer
+                : selectedProduct?.price_ex_vat || 0) * item.quantity
+            ).toFixed(2)} kr`
           : "0.00 kr"}
       </td>
       <td className="border p-2 text-center">
