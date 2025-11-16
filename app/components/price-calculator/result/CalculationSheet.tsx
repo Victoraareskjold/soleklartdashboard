@@ -152,17 +152,20 @@ export default function CalculationSheet({
   const mountingItems = items.filter((i) => i.source === "mounting");
 
   const totalSupplierMarkup = supplierItems.reduce((sum, item) => {
-    return sum + item.price;
+    const finalPrice = getFinalPrice(item.id, item.price);
+    return sum + finalPrice;
   }, 0);
 
   const totalMountingMarkup = mountingItems.reduce((sum, item) => {
+    const finalPrice = getFinalPrice(item.id, item.price);
     const markup = getCategoryMarkup(item.category || "");
-    const markupValue = item.price * (markup / 100);
-    return sum + markupValue;
+    return sum + finalPrice * (markup / 100);
   }, 0);
 
-  const total = items.reduce((sum, i) => sum + i.price, 0);
-
+  const total = items.reduce((sum, item) => {
+    const finalPrice = getFinalPrice(item.id, item.price);
+    return sum + finalPrice;
+  }, 0);
   const søknadItems = eletricalData.filter(
     (item) => item.category?.name?.toLowerCase() === "søknad"
   );
@@ -282,23 +285,28 @@ export default function CalculationSheet({
           </tr>
           {supplierItems.map((item) => {
             const markup = getCategoryMarkup(item.category || "");
-            const priceWithMarkup = item.price * (1 + markup / 100);
             return (
               <tr key={item.id}>
                 <td className="p-2">
                   {item.name} - {item.supplier}
                 </td>
                 <td className="p-2 text-right">{item.quantity} stk.</td>
-                <td className="p-2 text-right">{item.price.toFixed(2)} kr</td>
-                <td className="p-2 text-right">{markup} %</td>
                 <td className="p-2 text-right">
                   <input
-                    value={getFinalPrice(item.id, priceWithMarkup).toFixed(2)}
+                    value={getFinalPrice(item.id, item.price).toFixed(0)}
                     onChange={(e) =>
                       updatePriceOverride(item.id, e.target.value)
                     }
                     className="text-right w-24"
                   />
+                </td>
+                <td className="p-2 text-right">{markup} %</td>
+                <td className="p-2 text-right">
+                  {(
+                    getFinalPrice(item.id, item.price) *
+                    (1 + markup / 100)
+                  ).toFixed(2)}{" "}
+                  kr
                 </td>
               </tr>
             );
