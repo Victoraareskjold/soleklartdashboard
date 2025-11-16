@@ -76,9 +76,6 @@ export default function CalculationSheet({
     fetchData();
   }, [installerGroupId]);
 
-  // Find the section where items are created (around line 82-92)
-  // Replace this part:
-
   const items = calculatorState.items
     .flatMap((item) => {
       if (!item.supplierId || !item.productId) {
@@ -90,8 +87,8 @@ export default function CalculationSheet({
             quantity: item.quantity,
             category: "unknown",
             source: "supplier",
-            supplier: "Ukjent", // Add this line
-            product: "", // Add this line for consistency
+            supplier: "Ukjent",
+            product: "",
           },
         ];
       }
@@ -105,24 +102,21 @@ export default function CalculationSheet({
 
       const category = product.category?.name?.toLowerCase() || "ukjent";
 
-      // LEVERANDØR-ITEM (alltid)
       const supplierItem = {
         id: item.id + "_supplier",
         name: item.displayName,
         product: product.name,
-        supplier: supplier?.name || "Ukjent", // Add fallback here too
+        supplier: supplier?.name || "Ukjent",
         category,
         quantity: item.quantity,
         source: "supplier",
         price: product.price_ex_vat * item.quantity,
       };
 
-      // Hvis ikke "feste" → kun leverandør-linje
       if (category !== "feste") {
         return [supplierItem];
       }
 
-      // MONTERINGS-ITEM (kun feste)
       const mountMatch = mountItems.find((m) => m.product.id === product.id);
 
       const mountingItem = mountMatch
@@ -130,7 +124,7 @@ export default function CalculationSheet({
             id: item.id + "_mount",
             name: item.displayName,
             product: product.name,
-            supplier: supplier?.name || "Ukjent", // Add fallback here too
+            supplier: supplier?.name || "Ukjent",
             category,
             quantity: item.quantity,
             source: "mounting",
@@ -153,7 +147,8 @@ export default function CalculationSheet({
 
   const totalSupplierMarkup = supplierItems.reduce((sum, item) => {
     const finalPrice = getFinalPrice(item.id, item.price);
-    return sum + finalPrice;
+    const markup = getCategoryMarkup(item.category || "");
+    return sum + finalPrice * (markup / 100);
   }, 0);
 
   const totalMountingMarkup = mountingItems.reduce((sum, item) => {
