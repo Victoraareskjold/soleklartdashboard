@@ -46,8 +46,6 @@ export default function CalculationSheet({
     frakt: "frakt",
   };
 
-  console.log(mountItems);
-
   const getCategoryMarkup = (categoryName: string) => {
     const mappedName =
       categoryMapping[categoryName.toLowerCase()] || categoryName;
@@ -161,6 +159,7 @@ export default function CalculationSheet({
     const finalPrice = getFinalPrice(item.id, item.price);
     return sum + finalPrice;
   }, 0);
+
   const søknadItems = eletricalData.filter(
     (item) => item.category?.name?.toLowerCase() === "søknad"
   );
@@ -172,7 +171,6 @@ export default function CalculationSheet({
   }, 0);
 
   const electricalMarkup = getCategoryMarkup("elektrisk installasjon");
-  const søknadTotalWithMarkup = søknadTotal * (1 + electricalMarkup / 100);
 
   const solcelleAnleggItems = eletricalData.filter(
     (item) => item.category?.name?.toLowerCase() === "solcelleanlegg"
@@ -184,12 +182,9 @@ export default function CalculationSheet({
     return sum + base + extra;
   }, 0);
 
-  const panelCount = supplierItems
-    .filter((i) => i.category?.toLowerCase() === "feste")
+  const inverterCount = supplierItems
+    .filter((i) => i.category?.includes("inverter"))
     .reduce((sum, i) => sum + i.quantity, 0);
-
-  const solcelleAnleggTotal =
-    solcelleAnleggBaseTotal * panelCount * (1 + electricalMarkup / 100);
 
   const batteryCount = supplierItems
     .filter((i) => i.category?.toLowerCase() === "batteri")
@@ -205,8 +200,6 @@ export default function CalculationSheet({
   );
   const batteryBasePrice =
     (selectedBattery?.price_per || 0) + (selectedBattery?.extra_costs || 0);
-  const batteryTotal =
-    batteryBasePrice * batteryCount * (1 + electricalMarkup / 100);
 
   const additionalCostOptions = eletricalData.filter(
     (item) => item.category?.name?.toLowerCase() === "tilleggskostnader"
@@ -233,23 +226,32 @@ export default function CalculationSheet({
     );
   };
 
-  const søknadMarkup = søknadTotal * (electricalMarkup / 100);
-
-  const solcelleAnleggMarkup =
-    solcelleAnleggBaseTotal * panelCount * (electricalMarkup / 100);
-
-  const batteryMarkup =
-    batteryBasePrice * batteryCount * (electricalMarkup / 100);
-
-  const additionalCostsMarkup = additionalCosts.reduce((sum, ac) => {
+  const additionalCostsMarkup = additionalCosts.reduce((sum, ac, index) => {
     const selectedItem = additionalCostOptions.find((i) => i.id === ac.id);
     const base =
       (selectedItem?.price_per || 0) + (selectedItem?.extra_costs || 0);
-    return sum + base * ac.quantity * (electricalMarkup / 100);
+    const overrideId = `additional_${index}`;
+    return (
+      sum +
+      getFinalPrice(overrideId, base * ac.quantity) * (electricalMarkup / 100)
+    );
   }, 0);
 
+  const søknadFinal = getFinalPrice("søknad", søknadTotal);
+  const solcelleAnleggFinal = getFinalPrice(
+    "solcelle_anlegg",
+    solcelleAnleggBaseTotal * inverterCount
+  );
+  const batteryFinal = getFinalPrice(
+    "batteri",
+    batteryBasePrice * batteryCount
+  );
+
   const totalInstallationMarkup =
-    søknadMarkup + solcelleAnleggMarkup + batteryMarkup + additionalCostsMarkup;
+    søknadFinal * (electricalMarkup / 100) +
+    solcelleAnleggFinal * (electricalMarkup / 100) +
+    batteryFinal * (electricalMarkup / 100) +
+    additionalCostsMarkup;
 
   const updatePriceOverride = (itemId: string, value: string) => {
     const price = Number(value);
@@ -258,6 +260,23 @@ export default function CalculationSheet({
       [itemId]: isNaN(price) ? 0 : price,
     }));
   };
+
+  const totalWithInstallation =
+    total +
+    søknadFinal * (1 + electricalMarkup / 100) +
+    solcelleAnleggFinal * (1 + electricalMarkup / 100) +
+    batteryFinal * (1 + electricalMarkup / 100) +
+    additionalCosts.reduce((sum, ac, index) => {
+      const selectedItem = additionalCostOptions.find((i) => i.id === ac.id);
+      const base =
+        (selectedItem?.price_per || 0) + (selectedItem?.extra_costs || 0);
+      const overrideId = `additional_${index}`;
+      return (
+        sum +
+        getFinalPrice(overrideId, base * ac.quantity) *
+          (1 + electricalMarkup / 100)
+      );
+    }, 0);
 
   return (
     <div className="mt-8 border rounded-lg bg-white shadow p-4">
@@ -292,7 +311,7 @@ export default function CalculationSheet({
                     onChange={(e) =>
                       updatePriceOverride(item.id, e.target.value)
                     }
-                    className="text-right w-24"
+                    className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
                   />
                 </td>
                 <td className="p-2 text-right">{markup} %</td>
@@ -300,7 +319,7 @@ export default function CalculationSheet({
                   {(
                     getFinalPrice(item.id, item.price) *
                     (1 + markup / 100)
-                  ).toFixed(2)}{" "}
+                  ).toFixed(0)}{" "}
                   kr
                 </td>
               </tr>
@@ -311,7 +330,7 @@ export default function CalculationSheet({
               Total leverandør påslag
             </td>
             <td className="p-2 text-right">
-              {totalSupplierMarkup.toFixed(2)} kr
+              {totalSupplierMarkup.toFixed(0)} kr
             </td>
           </tr>
 
@@ -322,17 +341,28 @@ export default function CalculationSheet({
           </tr>
           {mountingItems.map((item) => {
             const markup = getCategoryMarkup(item.category || "");
-            const priceWithMarkup = item.price * (1 + markup / 100);
             return (
               <tr key={item.id}>
                 <td className="p-2">
                   {item.name} - {item.supplier}
                 </td>
                 <td className="p-2 text-right">{item.quantity} stk.</td>
-                <td className="p-2 text-right">{item.price.toFixed(2)} kr</td>
+                <td className="p-2 text-right">
+                  <input
+                    value={getFinalPrice(item.id, item.price).toFixed(0)}
+                    onChange={(e) =>
+                      updatePriceOverride(item.id, e.target.value)
+                    }
+                    className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
+                  />
+                </td>
                 <td className="p-2 text-right">{markup} %</td>
                 <td className="p-2 text-right">
-                  {priceWithMarkup.toFixed(2)} kr
+                  {(
+                    getFinalPrice(item.id, item.price) *
+                    (1 + markup / 100)
+                  ).toFixed(0)}{" "}
+                  kr
                 </td>
               </tr>
             );
@@ -342,7 +372,7 @@ export default function CalculationSheet({
               Total montering påslag
             </td>
             <td className="p-2 text-right">
-              {totalMountingMarkup.toFixed(2)} kr
+              {totalMountingMarkup.toFixed(0)} kr
             </td>
           </tr>
 
@@ -355,23 +385,51 @@ export default function CalculationSheet({
             <tr>
               <td className="p-2">Søknad</td>
               <td className="p-2 text-right">1 stk.</td>
-              <td className="p-2 text-right">{søknadTotal.toFixed(2)} kr</td>
+              <td className="p-2 text-right">
+                <input
+                  className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
+                  value={getFinalPrice("søknad", søknadTotal).toFixed(0)}
+                  onChange={(e) =>
+                    updatePriceOverride("søknad", e.target.value)
+                  }
+                />
+              </td>
               <td className="p-2 text-right">{electricalMarkup} %</td>
               <td className="p-2 text-right">
-                {søknadTotalWithMarkup.toFixed(2)} kr
+                {(
+                  getFinalPrice("søknad", søknadTotal) *
+                  (1 + electricalMarkup / 100)
+                ).toFixed(0)}{" "}
+                kr
               </td>
             </tr>
           )}
-          {panelCount > 0 && (
+          {inverterCount > 0 && (
             <tr>
               <td className="p-2 ">Solcelleanlegg - arbeid per inverter</td>
-              <td className="p-2 text-right">{panelCount} stk.</td>
+              <td className="p-2 text-right">{inverterCount} stk.</td>
               <td className="p-2 text-right">
-                {(solcelleAnleggBaseTotal * panelCount).toFixed(2)} kr
+                <input
+                  className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
+                  value={getFinalPrice(
+                    "solcelle_anlegg",
+                    solcelleAnleggBaseTotal * inverterCount
+                  ).toFixed(0)}
+                  onChange={(e) =>
+                    updatePriceOverride("solcelle_anlegg", e.target.value)
+                  }
+                />
               </td>
               <td className="p-2 text-right">{electricalMarkup} %</td>
               <td className="p-2 text-right">
-                {solcelleAnleggTotal.toFixed(2)} kr
+                {(
+                  getFinalPrice(
+                    "solcelle_anlegg",
+                    solcelleAnleggBaseTotal * inverterCount
+                  ) *
+                  (1 + electricalMarkup / 100)
+                ).toFixed(0)}{" "}
+                kr
               </td>
             </tr>
           )}
@@ -388,7 +446,7 @@ export default function CalculationSheet({
                   {batteryOptions.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name} (
-                      {((b.price_per || 0) + (b.extra_costs || 0)).toFixed(2)}{" "}
+                      {((b.price_per || 0) + (b.extra_costs || 0)).toFixed(0)}{" "}
                       kr)
                     </option>
                   ))}
@@ -396,10 +454,25 @@ export default function CalculationSheet({
               </td>
               <td className="p-2 text-right">{batteryCount} stk.</td>
               <td className="p-2 text-right">
-                {(batteryBasePrice * batteryCount).toFixed(2)} kr
+                <input
+                  className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
+                  value={getFinalPrice(
+                    "batteri",
+                    batteryBasePrice * batteryCount
+                  ).toFixed(0)}
+                  onChange={(e) =>
+                    updatePriceOverride("batteri", e.target.value)
+                  }
+                />
               </td>
               <td className="p-2 text-right">{electricalMarkup} %</td>
-              <td className="p-2 text-right">{batteryTotal.toFixed(2)} kr</td>
+              <td className="p-2 text-right">
+                {(
+                  getFinalPrice("batteri", batteryBasePrice * batteryCount) *
+                  (1 + electricalMarkup / 100)
+                ).toFixed(0)}{" "}
+                kr
+              </td>
             </tr>
           )}
           {additionalCosts.map((ac, index) => {
@@ -408,7 +481,12 @@ export default function CalculationSheet({
             );
             const base =
               (selectedItem?.price_per || 0) + (selectedItem?.extra_costs || 0);
-            const total = base * ac.quantity * (1 + electricalMarkup / 100);
+            const defaultPrice = base * ac.quantity;
+            const overrideId = `additional_${index}`; // unikt per rad
+
+            const totalWithMarkup =
+              getFinalPrice(overrideId, defaultPrice) *
+              (1 + electricalMarkup / 100);
 
             return (
               <tr key={index}>
@@ -432,7 +510,7 @@ export default function CalculationSheet({
                         {item.name} (
                         {(
                           (item.price_per || 0) + (item.extra_costs || 0)
-                        ).toFixed(2)}{" "}
+                        ).toFixed(0)}{" "}
                         kr)
                       </option>
                     ))}
@@ -454,11 +532,17 @@ export default function CalculationSheet({
                   />
                 </td>
                 <td className="p-2 text-right">
-                  {(base * ac.quantity).toFixed(2)} kr
+                  <input
+                    className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
+                    value={getFinalPrice(overrideId, defaultPrice).toFixed(0)}
+                    onChange={(e) =>
+                      updatePriceOverride(overrideId, e.target.value)
+                    }
+                  />
                 </td>
                 <td className="p-2 text-right">{electricalMarkup} %</td>
-                <td className="p-2 text-right font-medium">
-                  {total.toFixed(2)} kr
+                <td className="p-2 text-right">
+                  {totalWithMarkup.toFixed(0)} kr
                 </td>
               </tr>
             );
@@ -479,14 +563,14 @@ export default function CalculationSheet({
               Total installasjon påslag
             </td>
             <td className="p-2 text-right">
-              {totalInstallationMarkup.toFixed(2)} kr
+              {totalInstallationMarkup.toFixed(0)} kr
             </td>
           </tr>
 
           <tr className="bg-gray-50 font-semibold">
             <td className="p-2 text-left">Totalt:</td>
             <td colSpan={4} className="p-2 text-right">
-              {total.toFixed(2)} kr
+              {totalWithInstallation.toFixed(0)} kr
             </td>
           </tr>
         </tbody>

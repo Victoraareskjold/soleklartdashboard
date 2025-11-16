@@ -321,7 +321,7 @@ export default function CalculatorResults({
             ...prev.items,
             {
               id: "solcellekran",
-              displayName: "Solcellekran",
+              displayName: "Frakt",
               categoryId: fraktCategory?.id || "",
               quantity: 1,
               supplierId: solarCrane.supplierId,
@@ -696,9 +696,6 @@ export default function CalculatorResults({
             ))}
           </tbody>
         </table>
-        {/* <pre className="text-red-500 text-break">
-        {JSON.stringify(solarData) || "no data"}
-      </pre> */}
 
         <CalculationSheet
           calculatorState={calculatorState}
