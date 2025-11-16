@@ -218,6 +218,127 @@ export default function CalculatorResults({
     }
   }, [suppliersAndProducts, solarData?.selectedPanelType]);
 
+  // Auto-add ballastein for flatt tak
+  useEffect(() => {
+    if (!solarData?.selectedRoofType) return;
+
+    const isFlatRoof = solarData.selectedRoofType.toLowerCase() === "flatt tak";
+
+    setCalculatorState((prev) => {
+      const ballasteinExists = prev.items.some(
+        (item) => item.id === "ballastein"
+      );
+
+      if (isFlatRoof && !ballasteinExists) {
+        return {
+          ...prev,
+          items: [
+            ...prev.items,
+            {
+              id: "ballastein",
+              displayName: "Ballastein",
+              categoryId: "",
+              quantity: solarData.totalPanels || 1,
+              defaultSupplier: "",
+              supplierId: "c15b13b3-21d5-4e7b-a6e3-e6047e17c830",
+              productId: "",
+            },
+          ],
+        };
+      } else if (!isFlatRoof && ballasteinExists) {
+        return {
+          ...prev,
+          items: prev.items.filter((item) => item.id !== "ballastein"),
+        };
+      }
+
+      return prev;
+    });
+  }, [solarData?.selectedRoofType, solarData?.totalPanels]);
+
+  // Auto-add "Bratt tak" kostnad for takhelning > 35 grader
+  useEffect(() => {
+    if (!solarData?.checkedRoofData || solarData.checkedRoofData.length === 0)
+      return;
+
+    const isSteepRoof = solarData.checkedRoofData.some((r) => r.angle > 35);
+
+    setCalculatorState((prev) => {
+      const steepRoofExists = prev.items.some(
+        (item) => item.id === "bratt-tak"
+      );
+
+      if (isSteepRoof && !steepRoofExists) {
+        return {
+          ...prev,
+          items: [
+            ...prev.items,
+            {
+              id: "bratt-tak",
+              displayName: "Tillegg for bratt tak",
+              categoryId: "", // evt. legg til kategori for arbeidskostnad
+              quantity: 1,
+              supplierId: "", // evt. standard leverandør
+              productId: "",
+              mountPricePer: 5000, // eksempelpris per prosjekt
+            },
+          ],
+        };
+      } else if (!isSteepRoof && steepRoofExists) {
+        // Fjern bratt tak-kostnad hvis helningen blir mindre enn 35°
+        return {
+          ...prev,
+          items: prev.items.filter((item) => item.id !== "bratt-tak"),
+        };
+      }
+
+      return prev;
+    });
+  }, [solarData?.checkedRoofData]);
+
+  useEffect(() => {
+    if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
+    if (!solarData?.totalPanels) return;
+
+    const shouldAddCrane = solarData.totalPanels > 72;
+
+    setCalculatorState((prev) => {
+      const craneExists = prev.items.some((i) => i.id === "solcellekran");
+      if (shouldAddCrane && !craneExists) {
+        const allProducts = suppliersAndProducts.flatMap((s) =>
+          s.products.map((p) => ({ ...p, supplierId: s.id }))
+        );
+        const solarCrane = allProducts.find((p) =>
+          p.name.toLowerCase().includes("solcellekran")
+        );
+        if (!solarCrane) return prev;
+
+        const fraktCategory = allCategories.find((c) => c.name === "frakt");
+
+        return {
+          ...prev,
+          items: [
+            ...prev.items,
+            {
+              id: "solcellekran",
+              displayName: "Solcellekran",
+              categoryId: fraktCategory?.id || "",
+              quantity: 1,
+              supplierId: solarCrane.supplierId,
+              productId: solarCrane.id,
+            },
+          ],
+        };
+      } else if (!shouldAddCrane && craneExists) {
+        return {
+          ...prev,
+          items: prev.items.filter((i) => i.id !== "solcellekran"),
+        };
+      }
+      return prev;
+    });
+  }, [solarData?.totalPanels, allCategories, suppliersAndProducts]);
+
   // hent feste hvis vi har solarData
   useEffect(() => {
     async function fetchMountItem() {
@@ -229,8 +350,6 @@ export default function CalculatorResults({
           (item) => item.roof_type?.name === solarData.selectedRoofType
         );
         setMountItems(mountItems);
-
-        console.log(mountItems);
 
         if (!matchingMount || !matchingMount.product) return;
         setCalculatorState((prev) => ({
