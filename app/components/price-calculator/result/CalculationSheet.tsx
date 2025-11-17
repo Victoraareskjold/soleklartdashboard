@@ -278,6 +278,71 @@ export default function CalculationSheet({
       );
     }, 0);
 
+  const priceOverview = {
+    suppliers: supplierItems.map((item) => {
+      const markup = getCategoryMarkup(item.category || "");
+      const price = getFinalPrice(item.id, item.price);
+      return {
+        id: item.id,
+        name: item.name,
+        supplier: item.supplier,
+        product: item.product,
+        category: item.category,
+        quantity: item.quantity,
+        priceWithMarkup: price * (1 + markup / 100),
+      };
+    }),
+    mounting: mountingItems.map((item) => {
+      const markup = getCategoryMarkup(item.category || "");
+      const price = getFinalPrice(item.id, item.price);
+      return {
+        id: item.id,
+        name: item.name,
+        supplier: item.supplier,
+        product: item.product,
+        category: item.category,
+        quantity: item.quantity,
+        priceWithMarkup: price * (1 + markup / 100),
+      };
+    }),
+    installation: {
+      søknad: {
+        priceWithMarkup:
+          getFinalPrice("søknad", søknadTotal) * (1 + electricalMarkup / 100),
+      },
+      solcelleAnlegg: {
+        priceWithMarkup:
+          getFinalPrice(
+            "solcelle_anlegg",
+            solcelleAnleggBaseTotal * inverterCount
+          ) *
+          (1 + electricalMarkup / 100),
+      },
+      battery: {
+        selectedBatteryId,
+        priceWithMarkup:
+          getFinalPrice("batteri", batteryBasePrice * batteryCount) *
+          (1 + electricalMarkup / 100),
+      },
+      additionalCosts: additionalCosts.map((ac, index) => {
+        const selectedItem = additionalCostOptions.find((i) => i.id === ac.id);
+        const base =
+          (selectedItem?.price_per || 0) + (selectedItem?.extra_costs || 0);
+        const overrideId = `additional_${index}`;
+        const finalPrice = getFinalPrice(overrideId, base * ac.quantity);
+        return {
+          id: ac.id,
+          name: selectedItem?.name || "",
+          quantity: ac.quantity,
+          priceWithMarkup: finalPrice * (1 + electricalMarkup / 100),
+        };
+      }),
+    },
+    total: totalWithInstallation,
+  };
+
+  /* console.log(JSON.stringify(priceOverview, null, 2)); */
+
   return (
     <div className="mt-8 border rounded-lg bg-white shadow p-4">
       <h3 className="text-lg font-medium mb-3">PRISOVERSIKT</h3>
@@ -288,7 +353,7 @@ export default function CalculationSheet({
             <th className="p-2 text-left">Antall</th>
             <th className="p-2 text-left">Kostnad eks. mva</th>
             <th className="p-2 text-right">Påslag i %</th>
-            <th className="p-2 text-right">Pris inkl. mva</th>
+            <th className="p-2 text-right">Total eks. mva</th>
           </tr>
         </thead>
         <tbody>
@@ -482,7 +547,7 @@ export default function CalculationSheet({
             const base =
               (selectedItem?.price_per || 0) + (selectedItem?.extra_costs || 0);
             const defaultPrice = base * ac.quantity;
-            const overrideId = `additional_${index}`; // unikt per rad
+            const overrideId = `additional_${index}`;
 
             const totalWithMarkup =
               getFinalPrice(overrideId, defaultPrice) *

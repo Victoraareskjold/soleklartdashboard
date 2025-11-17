@@ -225,6 +225,10 @@ export default function CalculatorResults({
     const isFlatRoof = solarData.selectedRoofType.toLowerCase() === "flatt tak";
 
     setCalculatorState((prev) => {
+      const ballasteinCategory = allCategories.find(
+        (c) => c.name === "ballastein"
+      );
+
       const ballasteinExists = prev.items.some(
         (item) => item.id === "ballastein"
       );
@@ -237,9 +241,8 @@ export default function CalculatorResults({
             {
               id: "ballastein",
               displayName: "Ballastein",
-              categoryId: "",
+              categoryId: ballasteinCategory?.id,
               quantity: solarData.totalPanels || 1,
-              defaultSupplier: "",
               supplierId: "c15b13b3-21d5-4e7b-a6e3-e6047e17c830",
               productId: "",
             },
@@ -254,9 +257,8 @@ export default function CalculatorResults({
 
       return prev;
     });
-  }, [solarData?.selectedRoofType, solarData?.totalPanels]);
+  }, [solarData?.selectedRoofType, solarData?.totalPanels, allCategories]);
 
-  // Auto-add "Bratt tak" kostnad for takhelning > 35 grader
   useEffect(() => {
     if (!solarData?.checkedRoofData || solarData.checkedRoofData.length === 0)
       return;
@@ -276,16 +278,15 @@ export default function CalculatorResults({
             {
               id: "bratt-tak",
               displayName: "Tillegg for bratt tak",
-              categoryId: "", // evt. legg til kategori for arbeidskostnad
+              categoryId: "",
               quantity: 1,
-              supplierId: "", // evt. standard leverandør
+              supplierId: "",
               productId: "",
-              mountPricePer: 5000, // eksempelpris per prosjekt
+              mountPricePer: 5000,
             },
           ],
         };
       } else if (!isSteepRoof && steepRoofExists) {
-        // Fjern bratt tak-kostnad hvis helningen blir mindre enn 35°
         return {
           ...prev,
           items: prev.items.filter((item) => item.id !== "bratt-tak"),

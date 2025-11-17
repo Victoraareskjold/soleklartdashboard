@@ -1,16 +1,23 @@
 import { getPanelWp } from "@/utils/getPanelWp";
 import { SolarData } from "../../SolarDataView";
+import { useEffect, useState } from "react";
 
 interface FacilityInfoProps {
   solarData?: SolarData;
 }
 
 export default function FacilityInfo({ solarData }: FacilityInfoProps) {
-  const getkWp = () => {
-    if (!solarData?.selectedPanelType || !solarData?.totalPanels) return 0;
+  const [kWp, setkWp] = useState(0);
+
+  useEffect(() => {
+    if (!solarData?.selectedPanelType || !solarData?.totalPanels) {
+      setkWp(0);
+      return;
+    }
+
     const watt = getPanelWp(solarData.selectedPanelType);
-    return (watt * solarData.totalPanels) / 1000;
-  };
+    setkWp((watt * solarData.totalPanels) / 1000);
+  }, [solarData?.selectedPanelType, solarData?.totalPanels]);
 
   const yearlyCo2Saved = () => {
     if (!solarData?.yearlyProd) return 0;
@@ -23,10 +30,11 @@ export default function FacilityInfo({ solarData }: FacilityInfoProps) {
   };
 
   const enovaSupport = () => {
-    const kWp = getkWp();
     const eligibleKwp = Math.min(kWp, 15);
     return (eligibleKwp * 2500).toFixed(2);
   };
+
+  console.log(solarData);
 
   return (
     <table className="border border-collapse w-1/4 h-fit">
@@ -41,7 +49,7 @@ export default function FacilityInfo({ solarData }: FacilityInfoProps) {
       <tbody>
         <tr>
           <td className="border p-1 w-1/2">kWp</td>
-          <td className="border p-1 w-1/2">{getkWp()}</td>
+          <td className="border p-1 w-1/2">{kWp}</td>
         </tr>
 
         {solarData && (

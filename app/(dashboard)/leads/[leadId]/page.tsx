@@ -108,15 +108,8 @@ export default function LeadPage() {
     { label: "125 A+", value: 125 },
   ];
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
-  const [roofSlope, setRoofSlope] = useState("6-15");
-  const roofSlopeOptions = [
-    { label: "0-5°", value: "0-5" },
-    { label: "6-15°", value: "6-15" },
-    { label: "16-25°", value: "16-25" },
-    { label: "26-35°", value: "26-35" },
-    { label: "36-45°", value: "36-45" },
-    { label: "46+°", value: "46+" },
-  ];
+  const [roofSlope, setRoofSlope] = useState(0);
+
   const [roofAge, setRoofAge] = useState(5);
 
   const [solarData, setSolarData] = useState<SolarData>({
@@ -187,6 +180,9 @@ export default function LeadPage() {
           }));
         }
       }
+    }
+    if (solarData.checkedRoofData && solarData.checkedRoofData.length > 0) {
+      setRoofSlope(solarData.checkedRoofData[0].angle || 0);
     }
   }, [solarData.selectedRoofType, roofTypes, solarData]);
 
@@ -324,10 +320,9 @@ export default function LeadPage() {
             />
             <Input
               label="Helning på tak"
-              value={roofSlope}
-              onChange={setRoofSlope}
-              input="select"
-              options={roofSlopeOptions}
+              value={roofSlope.toFixed(0)}
+              onChange={(val) => setRoofSlope(Number(val))}
+              type="number"
               placeholder="Helning på tak"
             />
             <Input
