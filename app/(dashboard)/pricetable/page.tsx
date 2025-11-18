@@ -10,6 +10,7 @@ import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { getSuppliersWithProducts, getSuppliers } from "@/lib/api";
 import { Supplier, SupplierWithProducts } from "@/types/price_table";
 import { useEffect, useState } from "react";
+import { SolarData } from "@/app/components/SolarDataView";
 
 export default function PriceTablePage() {
   const { installerGroupId } = useInstallerGroup();
@@ -18,6 +19,11 @@ export default function PriceTablePage() {
     SupplierWithProducts[] | null
   >(null);
   const [loading, setLoading] = useState(true);
+  const [solarData, setSolarData] = useState<SolarData>({
+    selectedPanelType: "Jinka Solar 240w",
+    totalPanels: 10,
+    selectedRoofType: "Enkeltkrummet takstein",
+  });
 
   useEffect(() => {
     getSuppliers().then((data) => {
@@ -38,6 +44,8 @@ export default function PriceTablePage() {
         <CalculatorResults
           suppliers={suppliers}
           suppliersAndProducts={suppliersAndProducts}
+          solarData={solarData}
+          setSolarData={setSolarData}
         />
         <ElectricalInstallationTable installerGroupId={installerGroupId} />
         <WorkTables suppliersAndProducts={suppliersAndProducts} />

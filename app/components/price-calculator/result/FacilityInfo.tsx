@@ -1,22 +1,36 @@
 import { getPanelWp } from "@/utils/getPanelWp";
 import { SolarData } from "../../SolarDataView";
 import { useEffect, useState } from "react";
+import { getRoofTypes } from "@/lib/api";
+import { RoofType } from "@/lib/types";
 
 interface FacilityInfoProps {
   solarData?: SolarData;
+  setSolarData?: (data: SolarData) => void; // <- må inn
 }
 
-export default function FacilityInfo({ solarData }: FacilityInfoProps) {
+export default function FacilityInfo({
+  solarData,
+  setSolarData,
+}: FacilityInfoProps) {
   const [kWp, setkWp] = useState(0);
+  const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
 
   useEffect(() => {
-    if (!solarData?.selectedPanelType || !solarData?.totalPanels) {
-      setkWp(0);
-      return;
-    }
+    const fetchData = async () => {
+      const data = await getRoofTypes();
+      setRoofTypes(data);
 
-    const watt = getPanelWp(solarData.selectedPanelType);
-    setkWp((watt * solarData.totalPanels) / 1000);
+      if (!solarData?.selectedPanelType || !solarData?.totalPanels) {
+        setkWp(0);
+        return;
+      }
+
+      const watt = getPanelWp(solarData.selectedPanelType);
+      setkWp((watt * solarData.totalPanels) / 1000);
+    };
+
+    fetchData();
   }, [solarData?.selectedPanelType, solarData?.totalPanels]);
 
   const yearlyCo2Saved = () => {
@@ -34,8 +48,6 @@ export default function FacilityInfo({ solarData }: FacilityInfoProps) {
     return (eligibleKwp * 2500).toFixed(2);
   };
 
-  console.log(solarData);
-
   return (
     <table className="border border-collapse w-1/4 h-fit">
       <thead>
@@ -52,7 +64,30 @@ export default function FacilityInfo({ solarData }: FacilityInfoProps) {
           <td className="border p-1 w-1/2">{kWp}</td>
         </tr>
 
-        {solarData && (
+        <tr>
+          <td className="border p-1 w-1/2">Valgt taktype</td>
+          <td className="border p-1 w-1/2">
+            <select
+              value={solarData?.selectedRoofType ?? ""}
+              onChange={(e) =>
+                setSolarData?.({
+                  ...solarData!,
+                  selectedRoofType: e.target.value,
+                })
+              }
+              className="border p-1 w-full"
+            >
+              <option value="">Velg taktype...</option>
+              {roofTypes.map((roof) => (
+                <option key={roof.id} value={roof.name}>
+                  {roof.name}
+                </option>
+              ))}
+            </select>
+          </td>
+        </tr>
+
+        {solarData?.yearlyProd && (
           <>
             <tr>
               <td className="border p-1 w-1/2">Årlig kWh produksjon</td>

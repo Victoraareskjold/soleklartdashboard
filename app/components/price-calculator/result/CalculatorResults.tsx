@@ -13,6 +13,7 @@ interface CalculatorResultsProps {
   suppliers: Supplier[] | null;
   suppliersAndProducts: SupplierWithProducts[] | null;
   solarData?: SolarData;
+  setSolarData?: React.Dispatch<React.SetStateAction<SolarData>>;
 }
 
 export interface CalculatorItem {
@@ -51,6 +52,7 @@ export default function CalculatorResults({
   suppliers,
   suppliersAndProducts,
   solarData,
+  setSolarData,
 }: CalculatorResultsProps) {
   const { installerGroupId } = useInstallerGroup();
   const [allCategories, setAllCategories] = useState<
@@ -242,7 +244,7 @@ export default function CalculatorResults({
               id: "ballastein",
               displayName: "Ballastein",
               categoryId: ballasteinCategory?.id,
-              quantity: solarData.totalPanels || 1,
+              quantity: 1,
               supplierId: "c15b13b3-21d5-4e7b-a6e3-e6047e17c830",
               productId: "",
             },
@@ -343,6 +345,7 @@ export default function CalculatorResults({
   // hent feste hvis vi har solarData
   useEffect(() => {
     async function fetchMountItem() {
+      console.log("hei");
       if (!solarData?.selectedRoofType || !installerGroupId) return;
       try {
         if (!mountItems || mountItems.length === 0) return;
@@ -350,7 +353,6 @@ export default function CalculatorResults({
         const matchingMount = mountItems.find(
           (item) => item.roof_type?.name === solarData.selectedRoofType
         );
-        setMountItems(mountItems);
 
         if (!matchingMount || !matchingMount.product) return;
         setCalculatorState((prev) => ({
@@ -652,6 +654,19 @@ export default function CalculatorResults({
     setCalculatorState((prev) => ({ ...prev, totalPrice: total }));
   }, [calculatorState.items, suppliersAndProducts]);
 
+  useEffect(() => {
+    if (!setSolarData) return;
+    const panelItem = calculatorState.items.find(
+      (item) => item.id === "solcellepanel"
+    );
+    if (panelItem) {
+      setSolarData((prev) => ({
+        ...prev,
+        totalPanels: panelItem.quantity,
+      }));
+    }
+  }, [calculatorState.items, setSolarData]);
+
   if (!suppliers || suppliers.length === 0) return <p>Ingen suppliers</p>;
   if (!suppliersAndProducts || suppliersAndProducts.length === 0)
     return <p>Ingen supplierdata</p>;
@@ -659,7 +674,7 @@ export default function CalculatorResults({
 
   return (
     <div className="flex gap-2">
-      <FacilityInfo solarData={solarData} />
+      <FacilityInfo solarData={solarData} setSolarData={setSolarData} />
       <div>
         <table className="w-full">
           <thead>
