@@ -12,17 +12,20 @@ import {
 } from "@/lib/api";
 import { toast } from "react-toastify";
 import { ElectricalInstallationItem } from "../supplier/Table";
+import { SolarData } from "../../SolarDataView";
 
 interface CalculationSheetProps {
   calculatorState: CalculatorState;
   suppliersAndProducts: SupplierWithProducts[];
   mountItems: MountItem[];
+  solarData?: SolarData;
 }
 
 export default function CalculationSheet({
   calculatorState,
   suppliersAndProducts,
   mountItems,
+  solarData,
 }: CalculationSheetProps) {
   const { installerGroupId } = useInstallerGroup();
   const [suppliersWithCategories, setSuppliersWithCategories] = useState<
@@ -115,7 +118,12 @@ export default function CalculationSheet({
         return [supplierItem];
       }
 
-      const mountMatch = mountItems.find((m) => m.product.id === product.id);
+      const mountMatch = mountItems.find(
+        (m) =>
+          m.product.id === product.id &&
+          m.roof_type?.name === solarData?.selectedRoofType
+      );
+      console.log(mountMatch);
 
       const mountingItem = mountMatch
         ? {

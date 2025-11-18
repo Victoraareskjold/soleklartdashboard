@@ -62,7 +62,7 @@ export default function CalculatorRow({
     const product = availableProducts.find((p) => p.id === productId);
     onUpdate({
       productId,
-      mountPricePer: product?.price_ex_vat, // <-- oppdater mountPricePer
+      mountPricePer: product?.price_ex_vat,
     });
   };
 

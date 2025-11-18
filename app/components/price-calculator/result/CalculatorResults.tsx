@@ -717,6 +717,7 @@ export default function CalculatorResults({
           calculatorState={calculatorState}
           suppliersAndProducts={suppliersAndProducts}
           mountItems={mountItems}
+          solarData={solarData}
         />
         {showModal && (
           <div
