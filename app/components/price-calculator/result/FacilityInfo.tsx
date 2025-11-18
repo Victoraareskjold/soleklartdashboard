@@ -59,33 +59,37 @@ export default function FacilityInfo({
       </thead>
 
       <tbody>
-        <tr>
-          <td className="border p-1 w-1/2">kWp</td>
-          <td className="border p-1 w-1/2">{kWp}</td>
-        </tr>
+        {!solarData?.yearlyProd && (
+          <>
+            <tr>
+              <td className="border p-1 w-1/2">kWp</td>
+              <td className="border p-1 w-1/2">{kWp}</td>
+            </tr>
 
-        <tr>
-          <td className="border p-1 w-1/2">Valgt taktype</td>
-          <td className="border p-1 w-1/2">
-            <select
-              value={solarData?.selectedRoofType ?? ""}
-              onChange={(e) =>
-                setSolarData?.({
-                  ...solarData!,
-                  selectedRoofType: e.target.value,
-                })
-              }
-              className="border p-1 w-full"
-            >
-              <option value="">Velg taktype...</option>
-              {roofTypes.map((roof) => (
-                <option key={roof.id} value={roof.name}>
-                  {roof.name}
-                </option>
-              ))}
-            </select>
-          </td>
-        </tr>
+            <tr>
+              <td className="border p-1 w-1/2">Valgt taktype</td>
+              <td className="border p-1 w-1/2">
+                <select
+                  value={solarData?.selectedRoofType ?? ""}
+                  onChange={(e) =>
+                    setSolarData?.({
+                      ...solarData!,
+                      selectedRoofType: e.target.value,
+                    })
+                  }
+                  className=" w-full"
+                >
+                  <option value="">Velg taktype...</option>
+                  {roofTypes.map((roof) => (
+                    <option key={roof.id} value={roof.name}>
+                      {roof.name}
+                    </option>
+                  ))}
+                </select>
+              </td>
+            </tr>
+          </>
+        )}
 
         {solarData?.yearlyProd && (
           <>
