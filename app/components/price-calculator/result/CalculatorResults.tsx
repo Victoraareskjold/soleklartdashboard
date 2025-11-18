@@ -262,44 +262,6 @@ export default function CalculatorResults({
   }, [solarData?.selectedRoofType, solarData?.totalPanels, allCategories]);
 
   useEffect(() => {
-    if (!solarData?.checkedRoofData || solarData.checkedRoofData.length === 0)
-      return;
-
-    const isSteepRoof = solarData.checkedRoofData.some((r) => r.angle > 35);
-
-    setCalculatorState((prev) => {
-      const steepRoofExists = prev.items.some(
-        (item) => item.id === "bratt-tak"
-      );
-
-      if (isSteepRoof && !steepRoofExists) {
-        return {
-          ...prev,
-          items: [
-            ...prev.items,
-            {
-              id: "bratt-tak",
-              displayName: "Tillegg for bratt tak",
-              categoryId: "",
-              quantity: 1,
-              supplierId: "",
-              productId: "",
-              mountPricePer: 5000,
-            },
-          ],
-        };
-      } else if (!isSteepRoof && steepRoofExists) {
-        return {
-          ...prev,
-          items: prev.items.filter((item) => item.id !== "bratt-tak"),
-        };
-      }
-
-      return prev;
-    });
-  }, [solarData?.checkedRoofData]);
-
-  useEffect(() => {
     if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
     if (!solarData?.totalPanels) return;
 
@@ -345,7 +307,6 @@ export default function CalculatorResults({
   // hent feste hvis vi har solarData
   useEffect(() => {
     async function fetchMountItem() {
-      console.log("hei");
       if (!solarData?.selectedRoofType || !installerGroupId) return;
       try {
         if (!mountItems || mountItems.length === 0) return;

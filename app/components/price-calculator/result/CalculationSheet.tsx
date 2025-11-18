@@ -123,7 +123,6 @@ export default function CalculationSheet({
           m.product.id === product.id &&
           m.roof_type?.name === solarData?.selectedRoofType
       );
-      console.log(mountMatch);
 
       const mountingItem = mountMatch
         ? {
@@ -214,6 +213,30 @@ export default function CalculationSheet({
   const [additionalCosts, setAdditionalCosts] = useState<
     { id: string; quantity: number }[]
   >([]);
+
+  useEffect(() => {
+    if (!solarData?.checkedRoofData) return;
+
+    const isSteepRoof = solarData.checkedRoofData.some((r) => r.angle > 35);
+
+    const brattTakItem = additionalCostOptions.find((ac) =>
+      ac.name?.toLowerCase().includes("bratt-tak")
+    );
+    if (!brattTakItem) return;
+
+    const hasBrattTak = additionalCosts.some((ac) => ac.id === brattTakItem.id);
+
+    if (isSteepRoof && !hasBrattTak) {
+      setAdditionalCosts((prev) => [
+        ...prev,
+        { id: brattTakItem.id, quantity: 1 },
+      ]);
+    } else if (!isSteepRoof && hasBrattTak) {
+      setAdditionalCosts((prev) =>
+        prev.filter((ac) => ac.id !== brattTakItem.id)
+      );
+    }
+  }, [solarData?.checkedRoofData, additionalCosts, additionalCostOptions]);
 
   const handleAddAdditionalCost = () => {
     setAdditionalCosts((prev) => [...prev, { id: "", quantity: 1 }]);

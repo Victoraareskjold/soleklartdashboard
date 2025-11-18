@@ -23,6 +23,15 @@ export default function PriceTablePage() {
     selectedPanelType: "Jinka Solar 240w",
     totalPanels: 10,
     selectedRoofType: "Enkeltkrummet takstein",
+    checkedRoofData: [
+      {
+        roofId: "",
+        adjustedPanelCount: 0,
+        maxPanels: 0,
+        direction: "",
+        angle: 0,
+      },
+    ],
   });
 
   useEffect(() => {

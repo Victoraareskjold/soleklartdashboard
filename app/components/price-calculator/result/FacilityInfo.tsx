@@ -6,7 +6,7 @@ import { RoofType } from "@/lib/types";
 
 interface FacilityInfoProps {
   solarData?: SolarData;
-  setSolarData?: (data: SolarData) => void; // <- må inn
+  setSolarData?: (data: SolarData) => void;
 }
 
 export default function FacilityInfo({
@@ -67,7 +67,40 @@ export default function FacilityInfo({
             </tr>
 
             <tr>
-              <td className="border p-1 w-1/2">Valgt taktype</td>
+              <td className="border p-1 w-1/2">Vinkel på tak</td>
+              <td className="border p-1 w-1/2">
+                <input
+                  type="number"
+                  onChange={(e) => {
+                    if (!solarData || !setSolarData) return;
+                    const newCheckedRoofData = [
+                      ...(solarData.checkedRoofData ?? []),
+                    ];
+                    if (newCheckedRoofData.length === 0) {
+                      newCheckedRoofData.push({
+                        roofId: "",
+                        adjustedPanelCount: 0,
+                        maxPanels: 0,
+                        direction: "",
+                        angle: 0,
+                      });
+                    }
+                    newCheckedRoofData[0] = {
+                      ...newCheckedRoofData[0],
+                      angle: Number(e.target.value),
+                    };
+                    setSolarData({
+                      ...solarData,
+                      checkedRoofData: newCheckedRoofData,
+                    });
+                  }}
+                  value={solarData?.checkedRoofData?.[0]?.angle ?? 0}
+                />
+              </td>
+            </tr>
+
+            <tr>
+              <td className="border p-1 w-1/2">Helning på tak</td>
               <td className="border p-1 w-1/2">
                 <select
                   value={solarData?.selectedRoofType ?? ""}
