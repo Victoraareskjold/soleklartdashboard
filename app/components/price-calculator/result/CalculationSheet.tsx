@@ -126,8 +126,7 @@ export default function CalculationSheet({
             category,
             quantity: item.quantity,
             source: "mounting",
-            price:
-              (mountMatch.price_per - product.price_ex_vat) * item.quantity,
+            price: mountMatch.price_per * item.quantity,
           }
         : null;
 

@@ -365,7 +365,7 @@ export default function CalculatorResults({
                   productId: matchingMount.product.id,
                   roofTypeName: matchingMount.roof_type.name,
                   mountProductName: matchingMount.product.name,
-                  mountPricePer: matchingMount.price_per,
+                  mountPricePer: matchingMount.product.price_ex_vat,
                 }
               : item
           ),

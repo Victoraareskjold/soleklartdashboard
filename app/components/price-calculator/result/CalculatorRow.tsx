@@ -59,7 +59,11 @@ export default function CalculatorRow({
   };
 
   const handleProductChange = (productId: string) => {
-    onUpdate({ productId });
+    const product = availableProducts.find((p) => p.id === productId);
+    onUpdate({
+      productId,
+      mountPricePer: product?.price_ex_vat, // <-- oppdater mountPricePer
+    });
   };
 
   const displayName = subcategory?.name || category?.name || "produkt";
@@ -149,6 +153,15 @@ export default function CalculatorRow({
             ).toFixed(2)} kr`
           : "0.00 kr"}
       </td>
+      {/* <td className="border p-2 text-right">
+        {item.quantity > 0
+          ? `${(
+              (item.mountPricePer !== undefined
+                ? item.mountPricePer
+                : selectedProduct?.price_ex_vat || 0) * item.quantity
+            ).toFixed(2)} kr`
+          : "0.00 kr"}
+      </td> */}
       <td className="border p-2 text-center">
         <button
           className="hover:text-red-800"
