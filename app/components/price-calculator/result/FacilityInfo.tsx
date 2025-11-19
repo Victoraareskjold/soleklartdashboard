@@ -67,7 +67,7 @@ export default function FacilityInfo({
             </tr>
 
             <tr>
-              <td className="border p-1 w-1/2">Vinkel på tak</td>
+              <td className="border p-1 w-1/2">Helning på tak</td>
               <td className="border p-1 w-1/2">
                 <input
                   type="number"
@@ -100,7 +100,7 @@ export default function FacilityInfo({
             </tr>
 
             <tr>
-              <td className="border p-1 w-1/2">Helning på tak</td>
+              <td className="border p-1 w-1/2">Taktype</td>
               <td className="border p-1 w-1/2">
                 <select
                   value={solarData?.selectedRoofType ?? ""}

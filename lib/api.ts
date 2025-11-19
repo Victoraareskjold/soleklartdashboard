@@ -221,9 +221,34 @@ export const getElectricalInstallationItems = async (
   );
 };
 
-// Add these new functions to your existing api.ts
+export const addElectricalInstallationItem = async (
+  newProduct: unknown
+): Promise<ElectricalInstallationItem> => {
+  return apiRequest<ElectricalInstallationItem>(
+    `/api/price_table/electrical_items`,
+    "POST",
+    newProduct
+  );
+};
 
-// Get stored emails from database (no Outlook auth needed)
+export const updateElectricalInstallationItem = async (
+  productId: string,
+  price: number
+) => {
+  return apiRequest(
+    `/api/price_table/electrical_items?productId=${productId}`,
+    "PATCH",
+    { price }
+  );
+};
+
+export const deleteElectricalInstallationItem = async (productId: string) => {
+  return apiRequest(
+    `/api/price_table/electrical_items?productId=${productId}`,
+    "DELETE"
+  );
+};
+
 export const getStoredLeadEmails = async (
   leadId: string,
   installerGroupId: string

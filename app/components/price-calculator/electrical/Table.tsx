@@ -1,10 +1,14 @@
 import {
+  addElectricalInstallationItem,
+  deleteElectricalInstallationItem,
   getElectricalInstallationCategories,
   getElectricalInstallationItems,
+  updateElectricalInstallationItem,
 } from "@/lib/api";
 import { ProductCategory, ProductSubcategory } from "@/types/price_table";
 import { useEffect, useState } from "react";
 import { ElectricalInstallationItem } from "../supplier/Table";
+import { toast } from "react-toastify";
 
 interface ElectricalInstallationTableProps {
   installerGroupId: string;
@@ -37,18 +41,13 @@ export default function ElectricalInstallationTable({
     getElectricalInstallationItems(installerGroupId).then(setItems);
   }, [installerGroupId]);
 
-  const handleDeleteItem = async (id: string) => {
-    const confirmDelete = window.confirm("Slette?");
-    if (!confirmDelete) return;
-  };
-
   const openModal = () => {
     setShowModal(true);
     setFormData({
-      category_id: formData.category_id,
-      name: formData.name,
-      price_per: Number(formData.price_per),
-      extra_costs: Number(formData.extra_costs),
+      category_id: "",
+      name: "",
+      price_per: 0,
+      extra_costs: 0,
     });
   };
 
@@ -62,12 +61,59 @@ export default function ElectricalInstallationTable({
     });
   };
 
-  // TODO opdater submit for. legge til produkt
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const payload = {
+      installer_group_id: installerGroupId,
+      category_id: formData.category_id,
+      name: formData.name,
+      price_per: Number(formData.price_per),
+      extra_costs: Number(formData.extra_costs) || 0,
+    };
+
+    try {
+      const newItem = await addElectricalInstallationItem(payload);
+
+      setItems((prev) => [...prev, newItem]);
+
+      closeModal();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  // TODO onchange update price funksjon
+  const handlePriceChange = async (id: string, value: string) => {
+    const price = value === "" ? 0 : parseFloat(value);
+
+    try {
+      await updateElectricalInstallationItem(id, price);
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, price_per: price } : item
+        )
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    const confirmDelete = window.confirm("Slette?");
+    if (!confirmDelete) return;
+
+    try {
+      await deleteElectricalInstallationItem(id);
+
+      setItems((prev) => prev.filter((item) => item.id !== id));
+
+      toast.success("Produkt slettet");
+    } catch (err) {
+      console.error(err);
+      toast.error("Kunne ikke slette produkt");
+    }
+  };
 
   return (
     <>
@@ -90,7 +136,11 @@ export default function ElectricalInstallationTable({
           .map((cat) => (
             <div key={cat.id} className="mb-8">
               <h3 className="text-lg font-bold bg-gray-100 p-2">{cat.name}</h3>
-              <ProductTable items={cat.items} onDelete={handleDeleteItem} />
+              <ProductTable
+                items={cat.items}
+                onDelete={handleDeleteItem}
+                onPriceChange={handlePriceChange}
+              />
             </div>
           ))}
       </div>
@@ -217,10 +267,30 @@ export default function ElectricalInstallationTable({
 function ProductTable({
   items,
   onDelete,
+  onPriceChange,
 }: {
   items: ElectricalInstallationItem[];
   onDelete: (productId: string) => void;
+  onPriceChange: (productId: string, newPrice: string) => void;
 }) {
+  const [localPrices, setLocalPrices] = useState(
+    Object.fromEntries(items.map((i) => [i.id, String(i.price_per)]))
+  );
+
+  const handleChange = (id: string, value: string) => {
+    if (/^\d*\.?\d*$/.test(value) || value === "") {
+      setLocalPrices((prev) => ({ ...prev, [id]: value }));
+    }
+  };
+
+  const handleSave = async (id: string) => {
+    onPriceChange(id, localPrices[id]);
+  };
+
+  const handleDelete = async (productId: string) => {
+    onDelete(productId);
+  };
+
   return (
     <table className="w-full border-collapse border border-gray-300">
       <thead>
@@ -249,14 +319,13 @@ function ProductTable({
             <td className="border">
               <input
                 className="w-full p-1"
-                value={item.price_per}
                 type="text"
+                onChange={(e) => handleChange(item.id, e.target.value)}
+                onBlur={() => handleSave(item.id)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.currentTarget.blur();
-                  }
+                  if (e.key === "Enter") e.currentTarget.blur();
                 }}
-                readOnly
+                value={localPrices[item.id]}
               />
             </td>
             {item.category?.name === "BATTERI" ? (
