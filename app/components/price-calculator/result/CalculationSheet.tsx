@@ -371,7 +371,7 @@ export default function CalculationSheet({
     total: totalWithInstallation,
   };
 
-  /* console.log(JSON.stringify(priceOverview, null, 2)); */
+  console.log(JSON.stringify(priceOverview, null, 2));
 
   return (
     <div className="mt-8 border rounded-lg bg-white shadow p-4">

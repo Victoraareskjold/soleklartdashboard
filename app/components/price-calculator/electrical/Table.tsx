@@ -286,10 +286,10 @@ function ProductTable({
   const handleSave = async (id: string) => {
     onPriceChange(id, localPrices[id]);
   };
-
+  /* 
   const handleDelete = async (productId: string) => {
     onDelete(productId);
-  };
+  }; */
 
   return (
     <table className="w-full border-collapse border border-gray-300">
