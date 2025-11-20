@@ -190,7 +190,7 @@ export const updateSupplierPrice = async (productId: string, price: number) => {
   return apiRequest(
     `/api/price_table/suppliers/products/${productId}`,
     "PATCH",
-    price
+    { price }
   );
 };
 

@@ -54,7 +54,8 @@ export async function PATCH(
 
     const client = createSupabaseClient(token);
 
-    const price = await req.json();
+    const body = await req.json();
+    const { price } = body;
     if (price === undefined) {
       return NextResponse.json({ error: "Missing price" }, { status: 400 });
     }
