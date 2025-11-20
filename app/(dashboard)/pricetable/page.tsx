@@ -19,19 +19,24 @@ export default function PriceTablePage() {
     SupplierWithProducts[] | null
   >(null);
   const [loading, setLoading] = useState(true);
-  const [solarData, setSolarData] = useState<SolarData>({
-    selectedPanelType: "Jinka Solar 240w",
-    totalPanels: 10,
-    selectedRoofType: "Enkeltkrummet takstein",
-    checkedRoofData: [
-      {
-        roofId: "",
-        adjustedPanelCount: 0,
-        maxPanels: 0,
-        direction: "",
-        angle: 0,
-      },
-    ],
+  const [solarData, setSolarData] = useState<SolarData>(() => {
+    const defaultPanelType =
+      (typeof window !== "undefined" && localStorage.getItem("defaultPanel")) ||
+      "";
+    return {
+      selectedPanelType: defaultPanelType,
+      totalPanels: 10,
+      selectedRoofType: "Enkeltkrummet takstein",
+      checkedRoofData: [
+        {
+          roofId: "",
+          adjustedPanelCount: 0,
+          maxPanels: 0,
+          direction: "",
+          angle: 0,
+        },
+      ],
+    };
   });
 
   useEffect(() => {

@@ -46,6 +46,7 @@ export interface CategoryWithSubcategories {
 
 export type CalculatorItemUpdate = Partial<CalculatorItem> & {
   _delete?: boolean;
+  productName?: string;
 };
 
 export default function CalculatorResults({
@@ -417,7 +418,7 @@ export default function CalculatorResults({
   useEffect(() => {
     async function fetchBestInverter() {
       if (
-        !solarData?.totalPanels ||
+        !solarData?.kwp ||
         !installerGroupId ||
         !suppliersAndProducts ||
         allCategories.length === 0
@@ -425,11 +426,7 @@ export default function CalculatorResults({
         return;
 
       try {
-        const totalPanels = solarData.totalPanels;
-        const panelWp = getPanelWp(
-          solarData.selectedPanelType || "Jinka Solar 240w"
-        );
-        const totalKwp = (totalPanels * panelWp) / 1000; // kWp
+        const totalKwp = solarData.kwp; // kWp
         const desiredCapacity = totalKwp * 0.87; // 87 % av total kWp
 
         const solarTechSupplier = suppliersAndProducts.find(
@@ -515,13 +512,7 @@ export default function CalculatorResults({
     }
 
     fetchBestInverter();
-  }, [
-    installerGroupId,
-    solarData?.totalPanels,
-    solarData?.selectedPanelType,
-    suppliersAndProducts,
-    allCategories,
-  ]);
+  }, [installerGroupId, solarData?.kwp, suppliersAndProducts, allCategories]);
 
   useEffect(() => {
     if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
@@ -583,6 +574,16 @@ export default function CalculatorResults({
       return;
     }
 
+    if (
+      itemId === "solcellepanel" &&
+      updates.productName &&
+      setSolarData &&
+      solarData
+    ) {
+      setSolarData({ ...solarData, selectedPanelType: updates.productName });
+      localStorage.setItem("defaultPanel", updates.productName);
+    }
+
     setCalculatorState((prev) => ({
       ...prev,
       items: prev.items.map((item) =>
@@ -621,12 +622,37 @@ export default function CalculatorResults({
       (item) => item.id === "solcellepanel"
     );
     if (panelItem) {
-      setSolarData((prev) => ({
-        ...prev,
-        totalPanels: panelItem.quantity,
-      }));
+      setSolarData((prev) => {
+        if (!prev) return prev!;
+        return {
+          ...prev,
+          totalPanels: panelItem.quantity,
+        };
+      });
     }
   }, [calculatorState.items, setSolarData]);
+
+  useEffect(() => {
+    if (!setSolarData || !solarData) return;
+
+    const { totalPanels, selectedPanelType } = solarData;
+    if (!totalPanels || !selectedPanelType) {
+      setSolarData((prev) => {
+        if (!prev || prev.kwp === 0) return prev!;
+        return { ...prev, kwp: 0 };
+      });
+      return;
+    }
+
+    const panelWp = getPanelWp(selectedPanelType);
+    const newKwp = (totalPanels * panelWp) / 1000;
+
+    setSolarData((prev) => {
+      if (!prev || prev.kwp === newKwp) return prev!;
+      return { ...prev, kwp: newKwp };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [solarData?.totalPanels, solarData?.selectedPanelType, setSolarData]);
 
   if (!suppliers || suppliers.length === 0) return <p>Ingen suppliers</p>;
   if (!suppliersAndProducts || suppliersAndProducts.length === 0)

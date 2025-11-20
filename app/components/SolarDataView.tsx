@@ -20,6 +20,7 @@ export interface SolarData {
   yearlyProd?: number;
   desiredKwh?: number;
   coveragePercentage?: number;
+  kwp?: number;
 }
 
 interface SolarDataViewProps {

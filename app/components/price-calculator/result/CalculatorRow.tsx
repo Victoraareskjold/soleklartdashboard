@@ -60,9 +60,11 @@ export default function CalculatorRow({
 
   const handleProductChange = (productId: string) => {
     const product = availableProducts.find((p) => p.id === productId);
+    if (!product) return;
     onUpdate({
       productId,
-      mountPricePer: product?.price_ex_vat,
+      mountPricePer: product.price_ex_vat,
+      productName: product.name,
     });
   };
 
