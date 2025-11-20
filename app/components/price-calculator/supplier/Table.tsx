@@ -305,13 +305,15 @@ export default function SupplierTable({
                 categories.map((cat) => (
                   <div key={cat.id} className="mb-4">
                     <h3 className="text-lg font-bold bg-gray-100 p-2">
-                      {cat.name}
+                      {cat.name.toUpperCase()}
                     </h3>
                     {cat.subcategories.length > 0 ? (
                       cat.subcategories.map((subcat) => (
                         <div key={subcat.id}>
                           <div className="w-full bg-gray-200 flex justify-between items-center p-2">
-                            <h4 className="font-semibold">{subcat.name}</h4>
+                            <h4 className="font-semibold">
+                              {subcat.name.toUpperCase()}
+                            </h4>
                           </div>
                           <ProductTable
                             products={subcat.products}
@@ -384,7 +386,7 @@ export default function SupplierTable({
                 selectedCategory.subcategories.length > 0 && (
                   <div className="mb-4">
                     <label className="block text-sm font-medium mb-1">
-                      Underkategori
+                      Underkategori *
                     </label>
                     <select
                       value={formData.subcategoryId}
@@ -395,6 +397,7 @@ export default function SupplierTable({
                         })
                       }
                       className="w-full border rounded p-2"
+                      required={selectedCategory.subcategories.length > 0}
                     >
                       <option value="">Ingen (tilhører hovedkategori)</option>
                       {selectedCategory.subcategories.map((sub) => (
@@ -547,6 +550,12 @@ function ProductTable({
     Object.fromEntries(products.map((p) => [p.id, String(p.price_ex_vat)]))
   );
 
+  useEffect(() => {
+    setLocalPrices(
+      Object.fromEntries(products.map((p) => [p.id, String(p.price_ex_vat)]))
+    );
+  }, [products]);
+
   const handleChange = (id: string, value: string) => {
     if (/^\d*\.?\d*$/.test(value) || value === "") {
       setLocalPrices((prev) => ({ ...prev, [id]: value }));
@@ -593,7 +602,7 @@ function ProductTable({
               <input
                 className="w-full p-1"
                 type="text"
-                value={localPrices[product.id]}
+                value={localPrices[product.id] ?? ""}
                 onChange={(e) => handleChange(product.id, e.target.value)}
                 onBlur={() => handleSave(product.id)}
                 onKeyDown={(e) => {
