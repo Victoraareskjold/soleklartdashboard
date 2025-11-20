@@ -80,7 +80,6 @@ export default function CalculatorResults({
         supplierId: "",
         productId: "",
         defaultSupplier: "Solar Technologies Scandinavia AS",
-        defaultProduct: "Jinka Solar 240w",
       },
       {
         id: "feste",
