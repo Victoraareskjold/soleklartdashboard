@@ -28,6 +28,7 @@ export interface ProductSubcategory {
   id: string;
   name: string;
   category_id: string;
+  index?: number;
 }
 
 export interface Product {

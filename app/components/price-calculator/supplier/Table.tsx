@@ -494,7 +494,7 @@ function buildCategoriesFromProducts(products: Product[]) {
       products: Product[];
       subcategories: Map<
         string,
-        { id: string; name: string; products: Product[] }
+        { id: string; name: string; index?: number; products: Product[] }
       >;
     }
   >();
@@ -521,6 +521,7 @@ function buildCategoriesFromProducts(products: Product[]) {
         category.subcategories.set(subcatKey, {
           id: product.subcategory.id,
           name: product.subcategory.name,
+          index: product.subcategory.index,
           products: [],
         });
       }
@@ -533,7 +534,16 @@ function buildCategoriesFromProducts(products: Product[]) {
 
   return Array.from(categoryMap.values()).map((cat) => ({
     ...cat,
-    subcategories: Array.from(cat.subcategories.values()),
+    subcategories: Array.from(cat.subcategories.values()).sort((a, b) => {
+      // Assuming 'index' is a property of ProductSubcategory and is optional (can be undefined)
+      // Sorts by index if available, otherwise maintains original order
+      if (a.index !== undefined && b.index !== undefined) {
+        return a.index - b.index;
+      }
+      if (a.index !== undefined) return -1; // a comes first if it has an index and b doesn't
+      if (b.index !== undefined) return 1; // b comes first if it has an index and a doesn't
+      return 0; // Maintain original order if neither has an index
+    }),
   }));
 }
 

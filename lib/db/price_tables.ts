@@ -8,7 +8,10 @@ export async function getSuppliers(client: SupabaseClient) {
 }
 
 export async function getSuppliersWithProducts(client: SupabaseClient) {
-  const { data, error } = await client.from("suppliers").select(`
+  const { data, error } = await client
+    .from("suppliers")
+    .select(
+      `
     id,
     name,
     products (
@@ -19,9 +22,11 @@ export async function getSuppliersWithProducts(client: SupabaseClient) {
       updated_at,
       supplier_id,
       category:product_categories(name, id),
-      subcategory:product_subcategories(name, id)
+      subcategory:product_subcategories(name, id, index)
     )
-  `);
+  `
+    )
+    .order("index", { foreignTable: "products.product_subcategories" });
   if (error) throw error;
   return data as unknown as (Supplier & { products: Product[] })[];
 }
@@ -32,10 +37,10 @@ export async function getCategories(client: SupabaseClient) {
     .select(
       `
       *,
-      subcategories:product_subcategories(*)
+      subcategories:product_subcategories(name, id, index)
       `
     )
-    .order("name");
+    .order("index", { foreignTable: "product_subcategories" });
   if (error) throw error;
   return data;
 }
