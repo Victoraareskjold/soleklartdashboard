@@ -573,22 +573,36 @@ export default function CalculatorResults({
       return;
     }
 
-    if (
-      itemId === "solcellepanel" &&
-      updates.productName &&
-      setSolarData &&
-      solarData
-    ) {
-      setSolarData({ ...solarData, selectedPanelType: updates.productName });
-      localStorage.setItem("defaultPanel", updates.productName);
-    }
+    setCalculatorState((prev) => {
+      const updatedItems = prev.items.map((item) => {
+        if (item.id === itemId) {
+          if (
+            itemId === "solcellepanel" &&
+            updates.productName &&
+            setSolarData &&
+            solarData
+          ) {
+            setSolarData({ ...solarData, selectedPanelType: updates.productName });
+            localStorage.setItem("defaultPanel", updates.productName);
+          }
+          return { ...item, ...updates };
+        }
+        return item;
+      });
 
-    setCalculatorState((prev) => ({
-      ...prev,
-      items: prev.items.map((item) =>
-        item.id === itemId ? { ...item, ...updates } : item
-      ),
-    }));
+      if (itemId === "solcellepanel" && updates.quantity !== undefined) {
+        return {
+          ...prev,
+          items: updatedItems.map((item) =>
+            item.id === "feste"
+              ? { ...item, quantity: updates.quantity as number }
+              : item
+          ),
+        };
+      }
+
+      return { ...prev, items: updatedItems };
+    });
   };
 
   useMemo(() => {
