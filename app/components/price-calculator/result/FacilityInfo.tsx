@@ -49,13 +49,12 @@ export default function FacilityInfo({
       </thead>
 
       <tbody>
-        {!solarData?.yearlyProd && (
+        {!solarData?.yearlyProd ? (
           <>
             <tr>
               <td className="border p-1 w-1/2">kWp</td>
-              <td className="border p-1 w-1/2">{solarData?.kwp ?? 0}</td>
+              <td className="border p-1 w-1/2">{solarData?.kwp ?? "0"}</td>
             </tr>
-
             <tr>
               <td className="border p-1 w-1/2">Helning på tak</td>
               <td className="border p-1 w-1/2">
@@ -66,7 +65,7 @@ export default function FacilityInfo({
                     const newCheckedRoofData = [
                       ...(solarData.checkedRoofData ?? []),
                     ];
-                    if (newCheckedRoofData.length === 0) {
+                    if (!newCheckedRoofData.length) {
                       newCheckedRoofData.push({
                         roofId: "",
                         adjustedPanelCount: 0,
@@ -88,7 +87,6 @@ export default function FacilityInfo({
                 />
               </td>
             </tr>
-
             <tr>
               <td className="border p-1 w-1/2">Taktype</td>
               <td className="border p-1 w-1/2">
@@ -112,48 +110,40 @@ export default function FacilityInfo({
               </td>
             </tr>
           </>
-        )}
-
-        {solarData?.yearlyProd && (
+        ) : (
           <>
             <tr>
               <td className="border p-1 w-1/2">Årlig kWh produksjon</td>
               <td className="border p-1 w-1/2">
-                {solarData.yearlyProd ?? 0} kWh
+                {solarData.yearlyProd ?? "0"} kWh
               </td>
             </tr>
-
             <tr>
               <td className="border p-1 w-1/2">Årlig CO₂ spart (kg)</td>
               <td className="border p-1 w-1/2">{yearlyCo2Saved()} kg</td>
             </tr>
-
             <tr>
               <td className="border p-1 w-1/2">Selvprodusert (%)</td>
               <td className="border p-1 w-1/2">{selfProduced()} %</td>
             </tr>
-
             <tr>
               <td className="border p-1 w-1/2">Eget forbruk</td>
               <td className="border p-1 w-1/2">
-                {solarData.yearlyCost ?? 0} kWh
+                {solarData.yearlyCost ?? "0"} kWh
               </td>
             </tr>
-
             <tr>
               <td className="border p-1 w-1/2">Total besparing 30 år</td>
               <td className="border p-1 w-1/2">
-                {solarData.yearlyCost2 ? solarData.yearlyCost2 * 30 : 0} kr
+                {solarData.yearlyCost2 ? solarData.yearlyCost2 * 30 : "0"} kr
               </td>
             </tr>
-
             <tr>
               <td className="border p-1 w-1/2">Årlig besparing</td>
               <td className="border p-1 w-1/2">
-                {solarData.yearlyCost2 ?? 0} kr
+                {solarData.yearlyCost2 ?? "0"} kr
               </td>
             </tr>
-
             <tr>
               <td className="border p-1 w-1/2">Enova støtte</td>
               <td className="border p-1 w-1/2">{enovaSupport()}</td>

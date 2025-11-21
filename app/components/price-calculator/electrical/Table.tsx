@@ -205,8 +205,7 @@ export default function ElectricalInstallationTable({
                   Pris pr.
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
                   value={formData.price_per}
                   onChange={(e) =>
                     setFormData({
@@ -227,8 +226,7 @@ export default function ElectricalInstallationTable({
                     Smådeler kostnad
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text"
                     value={formData.extra_costs ?? ""}
                     onChange={(e) =>
                       setFormData({
