@@ -573,6 +573,18 @@ export default function CalculatorResults({
       return;
     }
 
+    if (itemId === "feste" && updates.productId) {
+      const selectedMount = mountItems.find(
+        (item) => item.product.id === updates.productId
+      );
+      if (selectedMount && selectedMount.roof_type && setSolarData && solarData) {
+        setSolarData({
+          ...solarData,
+          selectedRoofType: selectedMount.roof_type.name,
+        });
+      }
+    }
+
     setCalculatorState((prev) => {
       const updatedItems = prev.items.map((item) => {
         if (item.id === itemId) {
@@ -582,7 +594,10 @@ export default function CalculatorResults({
             setSolarData &&
             solarData
           ) {
-            setSolarData({ ...solarData, selectedPanelType: updates.productName });
+            setSolarData({
+              ...solarData,
+              selectedPanelType: updates.productName,
+            });
             localStorage.setItem("defaultPanel", updates.productName);
           }
           return { ...item, ...updates };
