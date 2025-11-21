@@ -30,8 +30,8 @@ export default function ElectricalInstallationTable({
   const [formData, setFormData] = useState({
     category_id: "",
     name: "",
-    price_per: 0,
-    extra_costs: 0,
+    price_per: "",
+    extra_costs: "",
   });
 
   useEffect(() => {
@@ -46,8 +46,8 @@ export default function ElectricalInstallationTable({
     setFormData({
       category_id: "",
       name: "",
-      price_per: 0,
-      extra_costs: 0,
+      price_per: "",
+      extra_costs: "",
     });
   };
 
@@ -56,8 +56,8 @@ export default function ElectricalInstallationTable({
     setFormData({
       category_id: "",
       name: "",
-      price_per: 0,
-      extra_costs: 0,
+      price_per: "",
+      extra_costs: "",
     });
   };
 
@@ -210,7 +210,7 @@ export default function ElectricalInstallationTable({
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      price_per: Number(e.target.value),
+                      price_per: e.target.value,
                     })
                   }
                   className="w-full border rounded p-2"
@@ -220,7 +220,7 @@ export default function ElectricalInstallationTable({
 
               {/* Extra costs, kun for BATTERI */}
               {allCategories.find((cat) => cat.id === formData.category_id)
-                ?.name === "BATTERI" && (
+                ?.name === "batteri" && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-1">
                     Smådeler kostnad
@@ -231,7 +231,7 @@ export default function ElectricalInstallationTable({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        extra_costs: Number(e.target.value),
+                        extra_costs: e.target.value,
                       })
                     }
                     className="w-full border rounded p-2"
@@ -295,7 +295,7 @@ function ProductTable({
         <tr className="bg-gray-100">
           <th className="border p-1 max-w-full">Navn</th>
           <th className="border p-1 w-64">Pris pr.</th>
-          {items[0]?.category?.name === "BATTERI" ? (
+          {items[0]?.category?.name === "batteri" ? (
             <th className="border p-1 w-64">Smådeler</th>
           ) : null}
           <th className="border p-1 w-64">Total pris</th>
@@ -326,7 +326,7 @@ function ProductTable({
                 value={localPrices[item.id]}
               />
             </td>
-            {item.category?.name === "BATTERI" ? (
+            {item.category?.name === "batteri" ? (
               <td className="border p-1">
                 <input
                   className="w-full p-1"
