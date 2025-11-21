@@ -183,15 +183,20 @@ export default function SupplierTable({
     }
   };
 
-  const openModal = (supplierId: string, supplierName: string) => {
+  const openModal = (
+    supplierId: string,
+    supplierName: string,
+    categoryId?: string,
+    subcategoryId?: string
+  ) => {
     setModal({
       isOpen: true,
       supplierId,
       supplierName,
     });
     setFormData({
-      categoryId: "",
-      subcategoryId: "",
+      categoryId: categoryId || "",
+      subcategoryId: subcategoryId || "",
       name: "",
       price_ex_vat: "",
       attachment: "",
@@ -314,6 +319,19 @@ export default function SupplierTable({
                             <h4 className="font-semibold">
                               {subcat.name.toUpperCase()}
                             </h4>
+                            <button
+                              onClick={() =>
+                                openModal(
+                                  supplier.id,
+                                  supplier.name,
+                                  cat.id,
+                                  subcat.id
+                                )
+                              }
+                              className="ml-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                            >
+                              + Legg til produkt
+                            </button>
                           </div>
                           <ProductTable
                             products={subcat.products}
