@@ -134,6 +134,8 @@ export default function CalculationSheet({
             quantity: item.quantity,
             source: "mounting",
             price: mountMatch.price_per * item.quantity,
+            roofTypeName: mountMatch.roof_type?.name,
+            mountProductName: mountMatch.product.name,
           }
         : null;
 
@@ -394,11 +396,13 @@ export default function CalculationSheet({
           </tr>
           {supplierItems.map((item) => {
             const markup = getCategoryMarkup(item.category || "");
+            const displayValue =
+              item.category === "feste"
+                ? item.product
+                : `${item.name} - ${item.supplier}`;
             return (
               <tr key={item.id}>
-                <td className="p-2">
-                  {item.name} - {item.supplier}
-                </td>
+                <td className="p-2">{displayValue}</td>
                 <td className="p-2 text-right">{item.quantity} stk.</td>
                 <td className="p-2 text-right">
                   <input
@@ -439,7 +443,7 @@ export default function CalculationSheet({
             return (
               <tr key={item.id}>
                 <td className="p-2">
-                  {item.name} - {item.supplier}
+                  Paneler og fester for {solarData?.selectedRoofType}
                 </td>
                 <td className="p-2 text-right">{item.quantity} stk.</td>
                 <td className="p-2 text-right">
