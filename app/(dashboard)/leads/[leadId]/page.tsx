@@ -86,7 +86,6 @@ export default function LeadPage() {
   const [ownConsumtion, setOwnConsumtion] = useState(0);
 
   // Customer info
-  const [voltage, setVoltage] = useState(230);
   const voltageOptions = [
     { label: "230V", value: 230 },
     { label: "400V", value: 400 },
@@ -124,6 +123,7 @@ export default function LeadPage() {
     desiredKwh: 0,
     coveragePercentage: 0,
     imageUrl: "",
+    voltage: 0,
   });
 
   const [activeRoute, setActiveRoute] = useState("Estimat");
@@ -282,8 +282,10 @@ export default function LeadPage() {
           <tbody>
             <Input
               label="Spenning (nett)"
-              value={voltage}
-              onChange={(val) => setVoltage(Number(val))}
+              value={solarData.voltage ?? 230}
+              onChange={(val) =>
+                setSolarData((prev) => ({ ...prev, voltage: Number(val) }))
+              }
               input="select"
               options={voltageOptions}
               placeholder="Spenning (nett)"
