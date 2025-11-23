@@ -14,7 +14,6 @@ export default function FacilityInfo({
 }: FacilityInfoProps) {
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
 
-  const [voltage, setVoltage] = useState(230);
   const voltageOptions = [
     { label: "230V", value: 230 },
     { label: "400V", value: 400 },
@@ -120,8 +119,15 @@ export default function FacilityInfo({
               <td className="border p-1 w-1/2">Spenning</td>
               <td className="border p-1 w-1/2">
                 <select
-                  value={voltage}
-                  onChange={(e) => setVoltage(Number(e.target.value))}
+                  value={solarData?.voltage ?? 230}
+                  onChange={(e) => {
+                    if (setSolarData && solarData) {
+                      setSolarData({
+                        ...solarData,
+                        voltage: Number(e.target.value),
+                      });
+                    }
+                  }}
                   className=" w-full"
                 >
                   {voltageOptions.map((volt) => (

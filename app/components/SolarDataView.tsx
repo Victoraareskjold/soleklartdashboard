@@ -21,6 +21,7 @@ export interface SolarData {
   desiredKwh?: number;
   coveragePercentage?: number;
   kwp?: number;
+  voltage?: number;
 }
 
 interface SolarDataViewProps {

@@ -435,14 +435,46 @@ export default function CalculatorResults({
           (c) => c.name.toLowerCase() === "inverter"
         );
 
-        const inverter3FasSub = inverterCategory?.subcategories?.find(
-          (sub) => sub.name.toLowerCase() === "inverter 3-fas"
+        const voltage = solarData.voltage || 230;
+        const subcategoryName =
+          voltage === 400 ? "inverter 3-fas" : "inverter 1-fas";
+
+        // Match subkategori basert på voltage
+        const inverterSubcategory = inverterCategory?.subcategories?.find(
+          (sub) => {
+            const n = sub.name.toLowerCase();
+
+            if (voltage === 400) {
+              return (
+                n.includes("400") ||
+                n.includes("3-fas") ||
+                n.includes("3fas") ||
+                n.includes("3 phase")
+              );
+            }
+
+            // Default 230V
+            return (
+              n.includes("230") ||
+              n.includes("1-fas") ||
+              n.includes("1fas") ||
+              n.includes("1 phase")
+            );
+          }
         );
 
         const inverterProducts = solarTechSupplier?.products.filter(
-          (p) => p.subcategory?.id === inverter3FasSub?.id
+          (p) => p.subcategory?.id === inverterSubcategory?.id
         );
-        if (!inverterProducts || inverterProducts.length === 0) return;
+        if (!inverterProducts || inverterProducts.length === 0) {
+          console.log(`No inverters found for subcategory ${subcategoryName}`);
+          // Remove existing inverters if any, as they might be for the wrong voltage
+          setCalculatorState((prev) => ({
+            ...prev,
+            items: prev.items.filter((item) => !item.id.startsWith("inverter")),
+          }));
+          return;
+        }
 
         const parsePower = (name: string) => {
           const match = name.match(/(\d+\.?\d*)\s?kW/i);
@@ -511,7 +543,13 @@ export default function CalculatorResults({
     }
 
     fetchBestInverter();
-  }, [installerGroupId, solarData?.kwp, suppliersAndProducts, allCategories]);
+  }, [
+    installerGroupId,
+    solarData?.kwp,
+    solarData?.voltage,
+    suppliersAndProducts,
+    allCategories,
+  ]);
 
   useEffect(() => {
     if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
@@ -577,7 +615,12 @@ export default function CalculatorResults({
       const selectedMount = mountItems.find(
         (item) => item.product.id === updates.productId
       );
-      if (selectedMount && selectedMount.roof_type && setSolarData && solarData) {
+      if (
+        selectedMount &&
+        selectedMount.roof_type &&
+        setSolarData &&
+        solarData
+      ) {
         setSolarData({
           ...solarData,
           selectedRoofType: selectedMount.roof_type.name,
