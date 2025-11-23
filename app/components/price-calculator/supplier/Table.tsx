@@ -65,6 +65,17 @@ export default function SupplierTable({
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  const [collapsedSuppliers, setCollapsedSuppliers] = useState<
+    Record<string, boolean>
+  >({});
+
+  const toggleSupplier = (id: string) => {
+    setCollapsedSuppliers((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   const supabase = createSupabaseAdminClient();
 
   useEffect(() => {
@@ -293,7 +304,13 @@ export default function SupplierTable({
           return (
             <div key={supplier.id} className="mb-8">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">{supplier.name}</h2>
+                <button
+                  onClick={() => toggleSupplier(supplier.id)}
+                  className="text-left text-xl font-bold"
+                >
+                  {collapsedSuppliers[supplier.id] ? "▼" : "▶"} {supplier.name}
+                </button>
+
                 <button
                   onClick={() => openModal(supplier.id, supplier.name)}
                   className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
@@ -302,57 +319,61 @@ export default function SupplierTable({
                 </button>
               </div>
 
-              {categories.length === 0 ? (
-                <p className="text-gray-500 italic mb-4">
-                  Ingen produkter ennå. Klikk Legg til produkt for å starte.
-                </p>
-              ) : (
-                categories.map((cat) => (
-                  <div key={cat.id} className="mb-4">
-                    <h3 className="text-lg font-bold bg-gray-100 p-2">
-                      {cat.name.toUpperCase()}
-                    </h3>
-                    {cat.subcategories.length > 0 ? (
-                      cat.subcategories.map((subcat) => (
-                        <div key={subcat.id}>
-                          <div className="w-full bg-gray-200 flex justify-between items-center p-2">
-                            <h4 className="font-semibold">
-                              {subcat.name.toUpperCase()}
-                            </h4>
-                            <button
-                              onClick={() =>
-                                openModal(
-                                  supplier.id,
-                                  supplier.name,
-                                  cat.id,
-                                  subcat.id
-                                )
-                              }
-                              className="ml-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                            >
-                              + Legg til produkt
-                            </button>
-                          </div>
+              {collapsedSuppliers[supplier.id] && (
+                <>
+                  {categories.length === 0 ? (
+                    <p className="text-gray-500 italic mb-4">
+                      Ingen produkter ennå. Klikk Legg til produkt for å starte.
+                    </p>
+                  ) : (
+                    categories.map((cat) => (
+                      <div key={cat.id} className="mb-4">
+                        <h3 className="text-lg font-bold bg-gray-100 p-2">
+                          {cat.name.toUpperCase()}
+                        </h3>
+                        {cat.subcategories.length > 0 ? (
+                          cat.subcategories.map((subcat) => (
+                            <div key={subcat.id}>
+                              <div className="w-full bg-gray-200 flex justify-between items-center p-2">
+                                <h4 className="font-semibold">
+                                  {subcat.name.toUpperCase()}
+                                </h4>
+                                <button
+                                  onClick={() =>
+                                    openModal(
+                                      supplier.id,
+                                      supplier.name,
+                                      cat.id,
+                                      subcat.id
+                                    )
+                                  }
+                                  className="ml-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                                >
+                                  + Legg til produkt
+                                </button>
+                              </div>
+                              <ProductTable
+                                products={subcat.products}
+                                onDelete={(productId) =>
+                                  handleDeleteProduct(supplier.id, productId)
+                                }
+                                onPriceChange={handlePriceChange}
+                              />
+                            </div>
+                          ))
+                        ) : (
                           <ProductTable
-                            products={subcat.products}
+                            products={cat.products}
                             onDelete={(productId) =>
                               handleDeleteProduct(supplier.id, productId)
                             }
                             onPriceChange={handlePriceChange}
                           />
-                        </div>
-                      ))
-                    ) : (
-                      <ProductTable
-                        products={cat.products}
-                        onDelete={(productId) =>
-                          handleDeleteProduct(supplier.id, productId)
-                        }
-                        onPriceChange={handlePriceChange}
-                      />
-                    )}
-                  </div>
-                ))
+                        )}
+                      </div>
+                    ))
+                  )}
+                </>
               )}
             </div>
           );

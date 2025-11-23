@@ -5,12 +5,13 @@ import ElectricalInstallationTable from "@/app/components/price-calculator/elect
 import CalculatorResults from "@/app/components/price-calculator/result/CalculatorResults";
 import SupplierMarkupsTable from "@/app/components/price-calculator/supplier/SupplierMarkupsTable";
 import SupplierTable from "@/app/components/price-calculator/supplier/Table";
-import WorkTables from "@/app/components/price-calculator/work/WorkTables";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { getSuppliersWithProducts, getSuppliers } from "@/lib/api";
 import { Supplier, SupplierWithProducts } from "@/types/price_table";
 import { useEffect, useState } from "react";
 import { SolarData } from "@/app/components/SolarDataView";
+import MountingTable from "@/app/components/price-calculator/work/MountingTable";
+import VolumeReductionsTable from "@/app/components/price-calculator/work/VolumeReductionsTable";
 
 export default function PriceTablePage() {
   const { installerGroupId } = useInstallerGroup();
@@ -54,17 +55,29 @@ export default function PriceTablePage() {
 
   return (
     <div className="flex gap-2 p-2">
-      <div className="w-full">
-        <CalculatorResults
-          suppliers={suppliers}
-          suppliersAndProducts={suppliersAndProducts}
-          solarData={solarData}
-          setSolarData={setSolarData}
-        />
-        <ElectricalInstallationTable installerGroupId={installerGroupId} />
-        <WorkTables suppliersAndProducts={suppliersAndProducts} />
-        <SupplierMarkupsTable />
-        <SupplierTable suppliersAndProducts={suppliersAndProducts} />
+      <div className="w-full flex flex-col gap-32">
+        <div>
+          <CalculatorResults
+            suppliers={suppliers}
+            suppliersAndProducts={suppliersAndProducts}
+            solarData={solarData}
+            setSolarData={setSolarData}
+          />
+        </div>
+
+        <div>
+          <VolumeReductionsTable installerGroupId={installerGroupId} />
+          <ElectricalInstallationTable installerGroupId={installerGroupId} />
+          <MountingTable
+            suppliersAndProducts={suppliersAndProducts}
+            installerGroupId={installerGroupId}
+          />
+          <SupplierMarkupsTable />
+        </div>
+
+        <div>
+          <SupplierTable suppliersAndProducts={suppliersAndProducts} />
+        </div>
       </div>
     </div>
   );
