@@ -299,7 +299,10 @@ export default function SupplierTable({
     <>
       <div className="overflow-auto p-2">
         {suppliers.map((supplier) => {
-          const categories = buildCategoriesFromProducts(supplier.products);
+          const categories = buildCategoriesFromProducts(
+            supplier.products,
+            allCategories
+          );
 
           return (
             <div key={supplier.id} className="mb-8">
@@ -524,12 +527,16 @@ export default function SupplierTable({
   );
 }
 
-function buildCategoriesFromProducts(products: Product[]) {
+function buildCategoriesFromProducts(
+  products: Product[],
+  allCategories: CategoryWithSubcategories[]
+) {
   const categoryMap = new Map<
     string,
     {
       id: string;
       name: string;
+      index?: number;
       products: Product[];
       subcategories: Map<
         string,
@@ -537,6 +544,16 @@ function buildCategoriesFromProducts(products: Product[]) {
       >;
     }
   >();
+
+  const categoryIndexLookup = Object.fromEntries(
+    allCategories.map((c) => [c.id, c.index])
+  );
+
+  const subcategoryIndexLookup = Object.fromEntries(
+    allCategories.flatMap((c) =>
+      (c.subcategories ?? []).map((s) => [s.id, s.index])
+    )
+  );
 
   products.forEach((product) => {
     if (!product.category) return;
@@ -547,10 +564,12 @@ function buildCategoriesFromProducts(products: Product[]) {
       categoryMap.set(categoryKey, {
         id: product.category.id,
         name: product.category.name,
+        index: categoryIndexLookup[product.category.id],
         products: [],
         subcategories: new Map(),
       });
     }
+
     const category = categoryMap.get(categoryKey)!;
 
     if (product.subcategory) {
@@ -560,7 +579,7 @@ function buildCategoriesFromProducts(products: Product[]) {
         category.subcategories.set(subcatKey, {
           id: product.subcategory.id,
           name: product.subcategory.name,
-          index: product.subcategory.index,
+          index: subcategoryIndexLookup[product.subcategory.id],
           products: [],
         });
       }
@@ -571,16 +590,27 @@ function buildCategoriesFromProducts(products: Product[]) {
     }
   });
 
-  return Array.from(categoryMap.values()).map((cat) => ({
+  const sorter = (
+    a: { index?: number | null; name: string },
+    b: { index?: number | null; name: string }
+  ) => {
+    const aHasIndex = a.index != null;
+    const bHasIndex = b.index != null;
+
+    if (aHasIndex && bHasIndex) {
+      return a.index! - b.index!;
+    }
+    if (aHasIndex) return -1;
+    if (bHasIndex) return 1;
+
+    return a.name.localeCompare(b.name);
+  };
+
+  const categories = Array.from(categoryMap.values()).sort(sorter);
+
+  return categories.map((cat) => ({
     ...cat,
-    subcategories: Array.from(cat.subcategories.values()).sort((a, b) => {
-      if (a.index !== undefined && b.index !== undefined) {
-        return a.index - b.index;
-      }
-      if (a.index !== undefined) return -1;
-      if (b.index !== undefined) return 1;
-      return 0;
-    }),
+    subcategories: Array.from(cat.subcategories.values()).sort(sorter),
   }));
 }
 

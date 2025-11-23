@@ -12,6 +12,7 @@ export interface Supplier {
   id: string;
   name: string;
   category: string;
+  index?: number;
 }
 
 export interface SupplierCategory {
@@ -22,6 +23,7 @@ export interface SupplierCategory {
 export interface ProductCategory {
   id: string;
   name: string;
+  index?: number;
 }
 
 export interface ProductSubcategory {
