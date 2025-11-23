@@ -14,6 +14,12 @@ export default function FacilityInfo({
 }: FacilityInfoProps) {
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
 
+  const [voltage, setVoltage] = useState(230);
+  const voltageOptions = [
+    { label: "230V", value: 230 },
+    { label: "400V", value: 400 },
+  ];
+
   useEffect(() => {
     const fetchData = async () => {
       const data = await getRoofTypes();
@@ -104,6 +110,23 @@ export default function FacilityInfo({
                   {roofTypes.map((roof) => (
                     <option key={roof.id} value={roof.name}>
                       {roof.name}
+                    </option>
+                  ))}
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td className="border p-1 w-1/2">Spenning</td>
+              <td className="border p-1 w-1/2">
+                <select
+                  value={voltage}
+                  onChange={(e) => setVoltage(Number(e.target.value))}
+                  className=" w-full"
+                >
+                  {voltageOptions.map((volt) => (
+                    <option key={volt.label} value={volt.value}>
+                      {volt.label}
                     </option>
                   ))}
                 </select>
