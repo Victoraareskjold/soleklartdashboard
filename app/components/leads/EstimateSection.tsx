@@ -9,7 +9,10 @@ interface EstimateSectionProps {
   setSolarData: React.Dispatch<React.SetStateAction<SolarData>>;
 }
 
-export default function EstimateSection({ solarData }: EstimateSectionProps) {
+export default function EstimateSection({
+  solarData,
+  setSolarData,
+}: EstimateSectionProps) {
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
   const [suppliersAndProducts, setSuppliersAndProducts] = useState<
     SupplierWithProducts[] | null
@@ -30,6 +33,7 @@ export default function EstimateSection({ solarData }: EstimateSectionProps) {
         suppliers={suppliers}
         suppliersAndProducts={suppliersAndProducts}
         solarData={solarData}
+        setSolarData={setSolarData}
       />
     </>
   );
