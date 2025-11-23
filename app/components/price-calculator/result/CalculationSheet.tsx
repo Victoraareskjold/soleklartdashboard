@@ -8,8 +8,10 @@ import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useEffect, useState } from "react";
 import {
   getElectricalInstallationItems,
+  getMountVolumeReductions,
   getSuppliersWithCategories,
 } from "@/lib/api";
+import { MountVolumeReductionType } from "@/lib/types";
 import { toast } from "react-toastify";
 import { ElectricalInstallationItem } from "../supplier/Table";
 import { SolarData } from "../../SolarDataView";
@@ -33,6 +35,9 @@ export default function CalculationSheet({
   >([]);
   const [eletricalData, setEletricalData] = useState<
     ElectricalInstallationItem[]
+  >([]);
+  const [mountVolumeReductions, setMountVolumeReductions] = useState<
+    MountVolumeReductionType[]
   >([]);
 
   const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>(
@@ -62,12 +67,16 @@ export default function CalculationSheet({
     if (!installerGroupId) return;
     const fetchData = async () => {
       try {
-        const data = await getSuppliersWithCategories(installerGroupId);
-        const electricalData = await getElectricalInstallationItems(
-          installerGroupId
-        );
-        setSuppliersWithCategories(data);
+        const [categoriesData, electricalData, reductionsData] =
+          await Promise.all([
+            getSuppliersWithCategories(installerGroupId),
+            getElectricalInstallationItems(installerGroupId),
+            getMountVolumeReductions(installerGroupId),
+          ]);
+
+        setSuppliersWithCategories(categoriesData);
         setEletricalData(electricalData);
+        setMountVolumeReductions(reductionsData);
       } catch (error) {
         toast.error("Error fetching data:");
         console.error(error);
@@ -157,11 +166,22 @@ export default function CalculationSheet({
     return sum + finalPrice * (markup / 100);
   }, 0);
 
-  const totalMountingMarkup = mountingItems.reduce((sum, item) => {
-    const finalPrice = getFinalPrice(item.id, item.price);
-    const markup = getCategoryMarkup(item.category || "");
-    return sum + finalPrice * (markup / 100);
-  }, 0);
+  const totalMountingCost = mountingItems.reduce(
+    (sum, item) => sum + getFinalPrice(item.id, item.price),
+    0
+  );
+
+  const panelCount = solarData?.totalPanels || 0;
+  const applicableReduction = mountVolumeReductions.find(
+    (r) => panelCount >= r.amount && panelCount <= r.amount2
+  );
+  const reductionPercentage = applicableReduction?.reduction || 0;
+  const reductionAmount = totalMountingCost * (reductionPercentage / 100);
+
+  const updatedMountingCost = totalMountingCost - reductionAmount;
+  const mountingMarkupPercent = getCategoryMarkup("feste");
+  const totalMountingMarkup =
+    updatedMountingCost * (mountingMarkupPercent / 100);
 
   const total = items.reduce((sum, item) => {
     const finalPrice = getFinalPrice(item.id, item.price);
@@ -466,6 +486,16 @@ export default function CalculationSheet({
               </tr>
             );
           })}
+          {reductionAmount > 0 && (
+            <tr className="text-gray-600">
+              <td colSpan={4} className="p-2">
+                Volumreduksjon ({reductionPercentage}%)
+              </td>
+              <td className="p-2 text-right">
+                -{reductionAmount.toFixed(0)} kr
+              </td>
+            </tr>
+          )}
           <tr className="text-gray-600">
             <td colSpan={4} className="p-2">
               Total montering påslag
@@ -669,7 +699,13 @@ export default function CalculationSheet({
           <tr className="bg-gray-50 font-semibold">
             <td className="p-2 text-left">Totalt:</td>
             <td colSpan={4} className="p-2 text-right">
-              {totalWithInstallation.toFixed(0)} kr
+              {(
+                totalWithInstallation -
+                reductionAmount +
+                (totalMountingMarkup -
+                  totalMountingCost * (mountingMarkupPercent / 100))
+              ).toFixed(0)}{" "}
+              kr
             </td>
           </tr>
         </tbody>
