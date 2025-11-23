@@ -628,21 +628,22 @@ export default function CalculatorResults({
       }
     }
 
+    if (
+      itemId === "solcellepanel" &&
+      updates.productName &&
+      setSolarData &&
+      solarData
+    ) {
+      setSolarData({
+        ...solarData,
+        selectedPanelType: updates.productName,
+      });
+      localStorage.setItem("defaultPanel", updates.productName);
+    }
+
     setCalculatorState((prev) => {
       const updatedItems = prev.items.map((item) => {
         if (item.id === itemId) {
-          if (
-            itemId === "solcellepanel" &&
-            updates.productName &&
-            setSolarData &&
-            solarData
-          ) {
-            setSolarData({
-              ...solarData,
-              selectedPanelType: updates.productName,
-            });
-            localStorage.setItem("defaultPanel", updates.productName);
-          }
           return { ...item, ...updates };
         }
         return item;
