@@ -354,8 +354,17 @@ export default function CalculationSheet({
   );
   const commissionPercentage = applicableCommission?.commission || 0;
   const commissionAmount = subTotalForCommission * (commissionPercentage / 100);
+  const finalCommissionAmount = getFinalPrice(
+    "team_commission",
+    commissionAmount
+  );
 
-  const grandTotal = subTotalForCommission;
+  const displayCommissionPercentage =
+    priceOverrides["team_commission"] != null
+      ? (finalCommissionAmount / subTotalForCommission) * 100
+      : commissionPercentage;
+
+  const grandTotal = subTotalForCommission + finalCommissionAmount;
 
   const priceOverview = {
     suppliers: supplierItems.map((item) => {
@@ -725,16 +734,25 @@ export default function CalculationSheet({
 
           <tr>
             <td>
-              <h2 className="p-1 font-bold">Soleklart Kommisjon</h2>
+              <h2 className="p-1 font-bold">Soleklart Salgsprovisjon</h2>
             </td>
           </tr>
           {commissionAmount > 0 && (
-            <tr className="text-gray-600">
-              <td colSpan={4} className="p-2">
-                Soleklart Kommisjon ({commissionPercentage}%)
+            <tr>
+              <td className="p-2">
+                Kommisjon ({displayCommissionPercentage.toFixed(0)}%)
               </td>
+              <td className="p-2 text-right"></td>
+              <td className="p-2 text-right"></td>
+              <td className="p-2 text-right"></td>
               <td className="p-2 text-right">
-                {commissionAmount.toFixed(0)} kr
+                <input
+                  className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
+                  value={finalCommissionAmount.toFixed(0)}
+                  onChange={(e) =>
+                    updatePriceOverride("team_commission", e.target.value)
+                  }
+                />
               </td>
             </tr>
           )}
