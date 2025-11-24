@@ -47,7 +47,7 @@ export default function FacilityInfo({
     <table className="border border-collapse w-1/4 h-fit">
       <thead>
         <tr>
-          <td colSpan={2} className="p-2 text-center">
+          <td colSpan={2} className="p-2 text-center bg-gray-50">
             <h2>Info om anlegget</h2>
           </td>
         </tr>

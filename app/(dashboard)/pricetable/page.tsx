@@ -71,9 +71,6 @@ export default function PriceTablePage() {
 
         {/* Pricing Rules and Installation Tables Section */}
         <div className="bg-white shadow-lg rounded-xl p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Prisregler og Installasjonstabeller
-          </h2>
           <div className="space-y-8">
             <SupplierMarkupsTable />
             <ElectricalInstallationTable installerGroupId={installerGroupId} />

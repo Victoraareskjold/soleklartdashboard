@@ -111,6 +111,26 @@ export default function ElectricalInstallationTable({
     }
   };
 
+  const mainCategories = allCategories
+    .map((cat) => ({
+      ...cat,
+      items: items.filter((item) => item.category?.id === cat.id),
+    }))
+    .filter(
+      (cat) =>
+        cat.items.length > 0 && cat.name.toLowerCase() !== "tilleggskostnader"
+    );
+
+  const additionalCostsCategory = allCategories
+    .map((cat) => ({
+      ...cat,
+      items: items.filter((item) => item.category?.id === cat.id),
+    }))
+    .find(
+      (cat) =>
+        cat.items.length > 0 && cat.name.toLowerCase() === "tilleggskostnader"
+    );
+
   return (
     <>
       <div className="overflow-auto">
@@ -123,24 +143,39 @@ export default function ElectricalInstallationTable({
             + Legg til produkt
           </button>
         </div>
-        {allCategories
-          .map((cat) => ({
-            ...cat,
-            items: items.filter((item) => item.category?.id === cat.id),
-          }))
-          .filter((cat) => cat.items.length > 0)
-          .map((cat) => (
-            <div key={cat.id}>
-              <h3 className="text-lg font-bold bg-gray-100 p-2">
-                {cat.name.toUpperCase()}
-              </h3>
-              <ProductTable
-                items={cat.items}
-                onDelete={handleDeleteItem}
-                onPriceChange={handlePriceChange}
-              />
-            </div>
-          ))}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Left column - Main categories */}
+          <div>
+            {mainCategories.map((cat) => (
+              <div key={cat.id} className="mb-4">
+                <h3 className="text-lg font-bold bg-gray-100 p-2">
+                  {cat.name.toUpperCase()}
+                </h3>
+                <ProductTable
+                  items={cat.items}
+                  onDelete={handleDeleteItem}
+                  onPriceChange={handlePriceChange}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Right column - Additional costs */}
+          <div>
+            {additionalCostsCategory && (
+              <div className="mb-4">
+                <h3 className="text-lg font-bold bg-gray-100 p-2">
+                  {additionalCostsCategory.name.toUpperCase()}
+                </h3>
+                <ProductTable
+                  items={additionalCostsCategory.items}
+                  onDelete={handleDeleteItem}
+                  onPriceChange={handlePriceChange}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Add Product Modal */}
@@ -290,7 +325,6 @@ function ProductTable({
           <th className="border p-1 w-72 text-left">
             {getPriceColumnHeader()} (eks. mva)
           </th>
-          <th className="border p-1 w-72 text-left">Total pris</th>
           <th className="border p-1 w-10">🗑️</th>
         </tr>
       </thead>
@@ -316,16 +350,6 @@ function ProductTable({
                   if (e.key === "Enter") e.currentTarget.blur();
                 }}
                 value={localPrices[item.id]}
-              />
-            </td>
-
-            <td className="border">
-              <input
-                className="w-full p-1"
-                type="text"
-                value={item.price_per}
-                readOnly
-                disabled
               />
             </td>
             <td className="border">

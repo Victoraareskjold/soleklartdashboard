@@ -60,11 +60,13 @@ export default function SupplierMarkupsTable() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <table className="w-full border-collapse border border-gray-300">
+    <table className="w-full">
       <thead>
         <tr>
-          <th colSpan={2} className="border p-2 bg-gray-100">
-            PÅSLAG AV MATERIELL OG TJENESTER
+          <th className="text-left">
+            <h2 className="text-xl font-bold mb-4">
+              PÅSLAG AV MATERIELL OG TJENESTER
+            </h2>
           </th>
         </tr>
         <tr className="bg-gray-100">

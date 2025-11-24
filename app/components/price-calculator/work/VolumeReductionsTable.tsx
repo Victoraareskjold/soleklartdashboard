@@ -65,13 +65,15 @@ export default function VolumeReductionsTable({
     <table className="w-full">
       <thead>
         <tr>
-          <h2 className="text-xl font-bold mb-4">
-            VOLUMREDUKSJON MONTERING (KOSTNAD PR.PANEL)
-          </h2>
+          <th className="w-1/2 text-left">
+            <h2 className="text-xl font-bold mb-4">
+              VOLUMREDUKSJON MONTERING (KOSTNAD PR.PANEL)
+            </h2>
+          </th>
         </tr>
         <tr className="bg-gray-100">
-          <th className="border p-2 w-1/2">Antall</th>
-          <th className="border p-2 w-1/2">Reduksjon %</th>
+          <th className="border p-2">Antall</th>
+          <th className="border p-2">Reduksjon %</th>
         </tr>
       </thead>
       <tbody>
