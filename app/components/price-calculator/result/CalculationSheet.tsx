@@ -69,6 +69,11 @@ export default function CalculationSheet({
     return category?.markup_percentage || 0;
   };
 
+  const calculateEnovaSupport = () => {
+    const eligibleKwp = Math.min(solarData?.kwp ?? 0, 15);
+    return eligibleKwp * 2500;
+  };
+
   useEffect(() => {
     if (!installerGroupId || !teamId) return;
     const fetchData = async () => {
@@ -364,7 +369,14 @@ export default function CalculationSheet({
       ? (finalCommissionAmount / subTotalForCommission) * 100
       : commissionPercentage;
 
-  const grandTotal = subTotalForCommission + finalCommissionAmount;
+  const calculatedEnovaSupport = calculateEnovaSupport();
+  const finalEnovaSupportAmount = getFinalPrice(
+    "enova_support",
+    calculatedEnovaSupport
+  );
+
+  const grandTotal =
+    subTotalForCommission + finalCommissionAmount - finalEnovaSupportAmount;
 
   const priceOverview = {
     suppliers: supplierItems.map((item) => {
@@ -427,6 +439,7 @@ export default function CalculationSheet({
       }),
     },
     total: grandTotal,
+    "total inkl. alt": grandTotal * 1.25 - calculatedEnovaSupport,
   };
 
   /* console.log(JSON.stringify(priceOverview, null, 2)); */
@@ -756,11 +769,49 @@ export default function CalculationSheet({
               </td>
             </tr>
           )}
-
-          <tr className="bg-gray-50 font-semibold">
-            <td className="p-2 text-left">Totalt:</td>
-            <td colSpan={4} className="p-2 text-right">
-              {grandTotal.toFixed(0)} kr
+          <tr>
+            <td className="p-2"></td>
+          </tr>
+          <tr>
+            <td className="p-2">Total kostnad eks. mva</td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
+          </tr>
+          <tr>
+            <td className="p-2">Total kostnad inkl. mva</td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right">
+              {(grandTotal * 1.25).toFixed(0)} kr
+            </td>
+          </tr>
+          <tr>
+            <td className="p-2"></td>
+          </tr>
+          <tr>
+            <td className="p-2">Enova støtte</td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right">
+              {calculatedEnovaSupport.toFixed(0)} kr
+            </td>
+          </tr>
+          <tr>
+            <td className="p-2"></td>
+          </tr>
+          <tr>
+            <td className="p-2">
+              Total kostnad inkl. mva og Enova-støtte(privat)
+            </td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right"></td>
+            <td className="p-2 text-right">
+              {(grandTotal * 1.25 - calculatedEnovaSupport).toFixed(0)} kr
             </td>
           </tr>
         </tbody>
