@@ -5,13 +5,15 @@ import {
 } from "@/types/price_table";
 import { CalculatorState } from "./CalculatorResults";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
+import { useTeam } from "@/context/TeamContext";
 import { useEffect, useState } from "react";
 import {
   getElectricalInstallationItems,
   getMountVolumeReductions,
   getSuppliersWithCategories,
+  getTeamCommission,
 } from "@/lib/api";
-import { MountVolumeReductionType } from "@/lib/types";
+import { MountVolumeReductionType, TeamCommissionType } from "@/lib/types";
 import { toast } from "react-toastify";
 import { ElectricalInstallationItem } from "../supplier/Table";
 import { SolarData } from "../../SolarDataView";
@@ -30,6 +32,7 @@ export default function CalculationSheet({
   solarData,
 }: CalculationSheetProps) {
   const { installerGroupId } = useInstallerGroup();
+  const { teamId } = useTeam();
   const [suppliersWithCategories, setSuppliersWithCategories] = useState<
     SupplierCategory[]
   >([]);
@@ -39,6 +42,9 @@ export default function CalculationSheet({
   const [mountVolumeReductions, setMountVolumeReductions] = useState<
     MountVolumeReductionType[]
   >([]);
+  const [teamCommissions, setTeamCommissions] = useState<TeamCommissionType[]>(
+    []
+  );
 
   const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>(
     {}
@@ -64,19 +70,25 @@ export default function CalculationSheet({
   };
 
   useEffect(() => {
-    if (!installerGroupId) return;
+    if (!installerGroupId || !teamId) return;
     const fetchData = async () => {
       try {
-        const [categoriesData, electricalData, reductionsData] =
-          await Promise.all([
-            getSuppliersWithCategories(installerGroupId),
-            getElectricalInstallationItems(installerGroupId),
-            getMountVolumeReductions(installerGroupId),
-          ]);
+        const [
+          categoriesData,
+          electricalData,
+          reductionsData,
+          teamCommissionsData,
+        ] = await Promise.all([
+          getSuppliersWithCategories(installerGroupId),
+          getElectricalInstallationItems(installerGroupId),
+          getMountVolumeReductions(installerGroupId),
+          getTeamCommission(teamId),
+        ]);
 
         setSuppliersWithCategories(categoriesData);
         setEletricalData(electricalData);
         setMountVolumeReductions(reductionsData);
+        setTeamCommissions(teamCommissionsData);
       } catch (error) {
         toast.error("Error fetching data:");
         console.error(error);
@@ -84,7 +96,7 @@ export default function CalculationSheet({
     };
 
     fetchData();
-  }, [installerGroupId]);
+  }, [installerGroupId, teamId]);
 
   const items = calculatorState.items
     .flatMap((item) => {
@@ -330,11 +342,20 @@ export default function CalculationSheet({
       );
     }, 0);
 
-  const grandTotal =
+  const subTotalForCommission =
     totalWithInstallation +
     totalSupplierMarkup +
     totalMountingMarkup -
     reductionAmount;
+
+  const applicableCommission = teamCommissions.find(
+    (c) =>
+      panelCount >= c.amount && (c.amount2 ? panelCount <= c.amount2 : true)
+  );
+  const commissionPercentage = applicableCommission?.commission || 0;
+  const commissionAmount = subTotalForCommission * (commissionPercentage / 100);
+
+  const grandTotal = subTotalForCommission;
 
   const priceOverview = {
     suppliers: supplierItems.map((item) => {
@@ -701,6 +722,22 @@ export default function CalculationSheet({
               {totalInstallationMarkup.toFixed(0)} kr
             </td>
           </tr>
+
+          <tr>
+            <td>
+              <h2 className="p-1 font-bold">Soleklart Kommisjon</h2>
+            </td>
+          </tr>
+          {commissionAmount > 0 && (
+            <tr className="text-gray-600">
+              <td colSpan={4} className="p-2">
+                Soleklart Kommisjon ({commissionPercentage}%)
+              </td>
+              <td className="p-2 text-right">
+                {commissionAmount.toFixed(0)} kr
+              </td>
+            </tr>
+          )}
 
           <tr className="bg-gray-50 font-semibold">
             <td className="p-2 text-left">Totalt:</td>

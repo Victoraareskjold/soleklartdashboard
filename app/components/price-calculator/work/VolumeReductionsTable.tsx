@@ -72,7 +72,7 @@ export default function VolumeReductionsTable({
           </th>
         </tr>
         <tr className="bg-gray-100">
-          <th className="border p-2">Antall</th>
+          <th className="border p-2">Antall Paneler</th>
           <th className="border p-2">Reduksjon %</th>
         </tr>
       </thead>

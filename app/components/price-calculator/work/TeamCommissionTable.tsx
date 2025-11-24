@@ -54,14 +54,12 @@ export default function TeamCommissionTable({
       <thead>
         <tr>
           <th className="w-1/2 text-left">
-            <h2 className="text-xl font-bold mb-4">
-              TEAMPROVISJON
-            </h2>
+            <h2 className="text-xl font-bold mb-4">SOLEKLART KOMMISJON</h2>
           </th>
         </tr>
         <tr className="bg-gray-100">
-          <th className="border p-2">Antall</th>
-          <th className="border p-2">Provisjon %</th>
+          <th className="border p-2">Antall Paneler</th>
+          <th className="border p-2">Kommisjon %</th>
         </tr>
       </thead>
       <tbody>
