@@ -12,9 +12,12 @@ import { useEffect, useState } from "react";
 import { SolarData } from "@/app/components/SolarDataView";
 import MountingTable from "@/app/components/price-calculator/work/MountingTable";
 import VolumeReductionsTable from "@/app/components/price-calculator/work/VolumeReductionsTable";
+import TeamCommissionTable from "@/app/components/price-calculator/work/TeamCommissionTable";
+import { useTeam } from "@/context/TeamContext";
 
 export default function PriceTablePage() {
   const { installerGroupId } = useInstallerGroup();
+  const { teamId } = useTeam();
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
   const [suppliersAndProducts, setSuppliersAndProducts] = useState<
     SupplierWithProducts[] | null
@@ -50,7 +53,13 @@ export default function PriceTablePage() {
     setLoading(false);
   }, []);
 
-  if (loading || !suppliers || !suppliersAndProducts || !installerGroupId)
+  if (
+    loading ||
+    !suppliers ||
+    !suppliersAndProducts ||
+    !installerGroupId ||
+    !teamId
+  )
     return <LoadingScreen />;
 
   return (
@@ -79,6 +88,7 @@ export default function PriceTablePage() {
               installerGroupId={installerGroupId}
             />
             <VolumeReductionsTable installerGroupId={installerGroupId} />
+            <TeamCommissionTable teamId={teamId} />
           </div>
         </div>
 

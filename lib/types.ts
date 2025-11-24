@@ -142,3 +142,11 @@ export interface MountVolumeReductionType {
   amount2: number;
   reduction: number;
 }
+
+export interface TeamCommissionType {
+  id: string;
+  amount: number;
+  amount2?: number;
+  commission: number;
+  index: number;
+}

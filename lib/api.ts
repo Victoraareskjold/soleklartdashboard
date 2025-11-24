@@ -15,6 +15,7 @@ import {
   Note,
   RoofType,
   Team,
+  TeamCommissionType,
 } from "./types";
 import {
   CategoryWithSubcategories,
@@ -341,6 +342,26 @@ export const updateMountVolumeReductions = async (
     "PATCH",
     {
       installer_group_id: installerGroupId,
+      ...data,
+    }
+  );
+};
+
+export const getTeamCommission = async (teamId: string) => {
+  return apiRequest<TeamCommissionType[]>(
+    `/api/price_table/team_commission?teamId=${teamId}`
+  );
+};
+
+export const updateTeamCommission = async (
+  teamId: string,
+  data: TeamCommissionType
+) => {
+  return apiRequest<TeamCommissionType>(
+    `/api/price_table/team_commission`,
+    "PATCH",
+    {
+      team_id: teamId,
       ...data,
     }
   );
