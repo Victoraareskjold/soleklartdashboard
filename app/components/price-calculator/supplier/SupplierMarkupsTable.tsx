@@ -1,4 +1,5 @@
 import {
+  getInstallerGroup,
   getSuppliersWithCategories,
   updateSuppliersWithCategories,
 } from "@/lib/api";
@@ -7,12 +8,15 @@ import { toast } from "react-toastify";
 import LoadingScreen from "../../LoadingScreen";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { SupplierCategory } from "@/types/price_table";
+import Image from "next/image";
+import { InstallerGroup } from "@/lib/types";
 
 export default function SupplierMarkupsTable() {
   const { installerGroupId } = useInstallerGroup();
   const [suppliersWithCategories, setSuppliersWithCategories] = useState<
     SupplierCategory[]
   >([]);
+  const [installerData, setInstallerData] = useState<InstallerGroup | null>();
 
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +26,9 @@ export default function SupplierMarkupsTable() {
       setLoading(true);
       try {
         const data = await getSuppliersWithCategories(installerGroupId);
+        const data2 = await getInstallerGroup(installerGroupId);
         setSuppliersWithCategories(data);
+        setInstallerData(data2);
       } catch (error) {
         toast.error("Error fetching data:");
         console.error(error);
@@ -57,54 +63,69 @@ export default function SupplierMarkupsTable() {
     }
   };
 
+  const getLogoPath = (name: string) => {
+    const filename = name.toLowerCase().replace(/\s+/g, "");
+    return `/installerLogos/${filename}.png`;
+  };
+
   if (loading) return <LoadingScreen />;
 
   return (
-    <table className="w-full">
-      <thead>
-        <tr>
-          <th className="text-left">
-            <h2 className="text-xl font-bold mb-4">
-              PÅSLAG AV MATERIELL OG TJENESTER
-            </h2>
-          </th>
-        </tr>
-        <tr className="bg-gray-100">
-          <th className="border p-2">Tjeneste</th>
-          <th className="border p-2">Påslag %</th>
-        </tr>
-      </thead>
-      <tbody>
-        {suppliersWithCategories.map((sup) => {
-          return (
-            <tr key={sup.name}>
-              <td className="p-1 border">
-                <p>{sup.name}</p>
-              </td>
-              <td className="border p-1">
-                <input
-                  type="text"
-                  className="w-12 p-1 rounded"
-                  value={sup.markup_percentage}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    setSuppliersWithCategories((prev) =>
-                      prev.map((x) =>
-                        x.name === sup.name
-                          ? { ...x, markup_percentage: val }
-                          : x
-                      )
-                    );
-                  }}
-                  onBlur={() =>
-                    handleSaveSupplierMarkups(sup.name, sup.markup_percentage)
-                  }
-                />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <div className="flex flex-row">
+      {installerData?.name && (
+        <div className="mb-6 flex flex-col items-left gap-4 w-128">
+          <h2 className="text-xl font-bold">
+            PÅSLAG AV MATERIELL OG TJENESTER
+          </h2>
+          <div className="relative w-full justify-center h-full">
+            <Image
+              fill
+              alt={installerData.name + " logo"}
+              src={getLogoPath(installerData.name)}
+              className="object-contain"
+            />
+          </div>
+        </div>
+      )}
+      <table className="w-full mt-12">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border p-2">Tjeneste</th>
+            <th className="border p-2">Påslag %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {suppliersWithCategories.map((sup) => {
+            return (
+              <tr key={sup.name}>
+                <td className="p-1 border">
+                  <p>{sup.name}</p>
+                </td>
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    className="w-12 p-1 rounded"
+                    value={sup.markup_percentage}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      setSuppliersWithCategories((prev) =>
+                        prev.map((x) =>
+                          x.name === sup.name
+                            ? { ...x, markup_percentage: val }
+                            : x
+                        )
+                      );
+                    }}
+                    onBlur={() =>
+                      handleSaveSupplierMarkups(sup.name, sup.markup_percentage)
+                    }
+                  />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
