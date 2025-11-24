@@ -31,7 +31,6 @@ export default function ElectricalInstallationTable({
     category_id: "",
     name: "",
     price_per: "",
-    extra_costs: "",
   });
 
   useEffect(() => {
@@ -47,7 +46,6 @@ export default function ElectricalInstallationTable({
       category_id: "",
       name: "",
       price_per: "",
-      extra_costs: "",
     });
   };
 
@@ -57,7 +55,6 @@ export default function ElectricalInstallationTable({
       category_id: "",
       name: "",
       price_per: "",
-      extra_costs: "",
     });
   };
 
@@ -69,7 +66,6 @@ export default function ElectricalInstallationTable({
       category_id: formData.category_id,
       name: formData.name,
       price_per: Number(formData.price_per),
-      extra_costs: Number(formData.extra_costs) || 0,
     };
 
     try {
@@ -117,7 +113,7 @@ export default function ElectricalInstallationTable({
 
   return (
     <>
-      <div className="overflow-auto p-2">
+      <div className="overflow-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">ELEKTRISK INSTALLASJON ⚡</h2>
           <button
@@ -134,8 +130,10 @@ export default function ElectricalInstallationTable({
           }))
           .filter((cat) => cat.items.length > 0)
           .map((cat) => (
-            <div key={cat.id} className="mb-8">
-              <h3 className="text-lg font-bold bg-gray-100 p-2">{cat.name}</h3>
+            <div key={cat.id}>
+              <h3 className="text-lg font-bold bg-gray-100 p-2">
+                {cat.name.toUpperCase()}
+              </h3>
               <ProductTable
                 items={cat.items}
                 onDelete={handleDeleteItem}
@@ -218,27 +216,6 @@ export default function ElectricalInstallationTable({
                 />
               </div>
 
-              {/* Extra costs, kun for BATTERI */}
-              {allCategories.find((cat) => cat.id === formData.category_id)
-                ?.name === "batteri" && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">
-                    Smådeler kostnad
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.extra_costs ?? ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        extra_costs: e.target.value,
-                      })
-                    }
-                    className="w-full border rounded p-2"
-                  />
-                </div>
-              )}
-
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -288,17 +265,32 @@ function ProductTable({
   const handleDelete = async (productId: string) => {
     onDelete(productId);
   }; */
+  const getPriceColumnHeader = () => {
+    const categoryName = items[0]?.category?.name?.toLowerCase();
+
+    switch (categoryName) {
+      case "solcelleanlegg":
+        return "Pris pr. Inverter";
+      case "batteri":
+        return "Pris pr. Batterisystem";
+      case "søknad":
+        return "Pris pr. Søknad";
+      case "tilleggskostnader":
+        return "Pris pr. Tilleggskostnad";
+      default:
+        return "Pris pr.";
+    }
+  };
 
   return (
     <table className="w-full border-collapse border border-gray-300">
       <thead>
         <tr className="bg-gray-100">
-          <th className="border p-1 max-w-full">Navn</th>
-          <th className="border p-1 w-64">Pris pr.</th>
-          {items[0]?.category?.name === "batteri" ? (
-            <th className="border p-1 w-64">Smådeler</th>
-          ) : null}
-          <th className="border p-1 w-64">Total pris</th>
+          <th className="border p-1 max-w-full text-left">Navn</th>
+          <th className="border p-1 w-72 text-left">
+            {getPriceColumnHeader()} (eks. mva)
+          </th>
+          <th className="border p-1 w-72 text-left">Total pris</th>
           <th className="border p-1 w-10">🗑️</th>
         </tr>
       </thead>
@@ -326,26 +318,12 @@ function ProductTable({
                 value={localPrices[item.id]}
               />
             </td>
-            {item.category?.name === "batteri" ? (
-              <td className="border p-1">
-                <input
-                  className="w-full p-1"
-                  value={item.extra_costs || 0}
-                  type="text"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  readOnly
-                />
-              </td>
-            ) : null}
+
             <td className="border">
               <input
                 className="w-full p-1"
                 type="text"
-                value={item.price_per + (item.extra_costs || 0)}
+                value={item.price_per}
                 readOnly
                 disabled
               />

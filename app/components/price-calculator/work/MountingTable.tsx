@@ -154,13 +154,9 @@ export default function MountingTable({
 
   return (
     <div>
+      <h2 className="text-xl font-bold mb-4">MONTERING ⚙️</h2>
       <table className="w-full border-collapse border border-gray-300">
         <thead>
-          <tr>
-            <th colSpan={4} className="border p-2 bg-gray-100">
-              MONTERING ⚙️
-            </th>
-          </tr>
           <tr className="bg-gray-100">
             <th className="border p-2">Leverandør</th>
             <th className="border p-2">Taktype</th>

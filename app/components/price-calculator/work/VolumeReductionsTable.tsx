@@ -62,16 +62,16 @@ export default function VolumeReductionsTable({
   if (loading) return <LoadingScreen />;
 
   return (
-    <table className="w-full border-collapse border border-gray-300">
+    <table className="w-full">
       <thead>
         <tr>
-          <th colSpan={2} className="border p-2 bg-gray-100">
+          <h2 className="text-xl font-bold mb-4">
             VOLUMREDUKSJON MONTERING (KOSTNAD PR.PANEL)
-          </th>
+          </h2>
         </tr>
         <tr className="bg-gray-100">
-          <th className="border p-2">Antall</th>
-          <th className="border p-2">Reduksjon %</th>
+          <th className="border p-2 w-1/2">Antall</th>
+          <th className="border p-2 w-1/2">Reduksjon %</th>
         </tr>
       </thead>
       <tbody>
