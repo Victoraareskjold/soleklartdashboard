@@ -75,15 +75,13 @@ export default function PriceTablePage() {
             Prisregler og Installasjonstabeller
           </h2>
           <div className="space-y-8">
-            {" "}
-            {/* Added space-y for internal spacing between tables */}
-            <VolumeReductionsTable installerGroupId={installerGroupId} />
+            <SupplierMarkupsTable />
             <ElectricalInstallationTable installerGroupId={installerGroupId} />
             <MountingTable
               suppliersAndProducts={suppliersAndProducts}
               installerGroupId={installerGroupId}
             />
-            <SupplierMarkupsTable />
+            <VolumeReductionsTable installerGroupId={installerGroupId} />
           </div>
         </div>
 

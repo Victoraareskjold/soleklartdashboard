@@ -330,6 +330,12 @@ export default function CalculationSheet({
       );
     }, 0);
 
+  const grandTotal =
+    totalWithInstallation +
+    totalSupplierMarkup +
+    totalMountingMarkup -
+    reductionAmount;
+
   const priceOverview = {
     suppliers: supplierItems.map((item) => {
       const markup = getCategoryMarkup(item.category || "");
@@ -390,7 +396,7 @@ export default function CalculationSheet({
         };
       }),
     },
-    total: totalWithInstallation,
+    total: grandTotal,
   };
 
   /* console.log(JSON.stringify(priceOverview, null, 2)); */
@@ -699,13 +705,7 @@ export default function CalculationSheet({
           <tr className="bg-gray-50 font-semibold">
             <td className="p-2 text-left">Totalt:</td>
             <td colSpan={4} className="p-2 text-right">
-              {(
-                totalWithInstallation -
-                reductionAmount +
-                (totalMountingMarkup -
-                  totalMountingCost * (mountingMarkupPercent / 100))
-              ).toFixed(0)}{" "}
-              kr
+              {grandTotal.toFixed(0)} kr
             </td>
           </tr>
         </tbody>
