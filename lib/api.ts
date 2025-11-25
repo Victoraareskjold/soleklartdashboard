@@ -14,6 +14,7 @@ import {
   MountVolumeReductionType,
   Note,
   RoofType,
+  Session,
   Team,
   TeamCommissionType,
 } from "./types";
@@ -377,4 +378,8 @@ export const addUserToInstallerGroupOrTeam = async (
     "POST",
     { userId, code }
   );
+};
+
+export const getRole = async (userId: string) => {
+  return apiRequest<Session>(`/api/auth/session?userId=${userId}`);
 };

@@ -2,6 +2,7 @@ import { TeamProvider } from "@/context/TeamContext";
 import "../globals.css";
 import Navbar from "../components/Navbar";
 import { InstallerGroupProvider } from "@/context/InstallerGroupContext";
+import { RoleProvider } from "@/context/RoleProvider";
 
 export default function DashboardLayout({
   children,
@@ -9,11 +10,13 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <TeamProvider>
-      <InstallerGroupProvider>
-        <Navbar />
-        <div>{children}</div>
-      </InstallerGroupProvider>
-    </TeamProvider>
+    <RoleProvider>
+      <TeamProvider>
+        <InstallerGroupProvider>
+          <Navbar />
+          <div>{children}</div>
+        </InstallerGroupProvider>
+      </TeamProvider>
+    </RoleProvider>
   );
 }

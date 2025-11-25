@@ -3,9 +3,11 @@ import { useTeam } from "@/context/TeamContext";
 import { getTeam } from "@/lib/api";
 import { Team } from "@/lib/types";
 import { useEffect, useState } from "react";
+import { useRoles } from "@/context/RoleProvider";
 
 export default function TeamPage() {
   const { teamId } = useTeam();
+  const { teamRole, loading } = useRoles();
   const [teamData, setTeamData] = useState<Team>();
 
   useEffect(() => {
@@ -15,6 +17,14 @@ export default function TeamPage() {
       .then(setTeamData)
       .catch((err) => console.error("Failed to fetch teams:", err));
   }, [teamId]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (teamRole !== "admin") {
+    return <div>You do not have permission to view this page.</div>;
+  }
 
   if (!teamData) return null;
 

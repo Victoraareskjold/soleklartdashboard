@@ -1,16 +1,17 @@
-export interface User {
+export interface Base {
   id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface User extends Base {
   email: string;
   name?: string;
   password_hash?: string;
-  created_at: string;
 }
 
-export interface Team {
-  id: string;
+export interface Team extends Base {
   name: string;
-  leader_id: string;
-  created_at: string;
   members?: TeamMember[];
 }
 
@@ -21,12 +22,24 @@ export interface TeamMember {
   created_at?: string;
 }
 
-export interface InstallerGroup {
-  id: string;
+export interface InstallerGroup extends Base {
   team_id: string;
   name: string;
-  manager_id?: string | null;
-  created_at: string;
+}
+
+export interface InstallerGroupMember {
+  user_id: string;
+  name: string;
+  role: string;
+  installer_group_id: string;
+  created_at?: string;
+}
+
+export interface Session {
+  user_id: string;
+  team_id: string;
+  team_role: "admin" | "member" | "installer";
+  installer_groups: InstallerGroup[];
 }
 
 export interface Lead {
@@ -149,4 +162,11 @@ export interface TeamCommissionType {
   amount2?: number;
   commission: number;
   index: number;
+}
+
+export interface UserRole {
+  role: string;
+  team_id: string | null;
+  team_role: string | null;
+  installer_groups: string | null;
 }
