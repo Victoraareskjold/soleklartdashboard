@@ -2,16 +2,6 @@ import { createSupabaseClient } from "@/utils/supabase/client";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const userId = url.searchParams.get("userId");
-
-  if (!userId) {
-    return NextResponse.json(
-      { error: "Missing userId parameter" },
-      { status: 400 }
-    );
-  }
-
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,48 +9,52 @@ export async function GET(req: NextRequest) {
 
   const client = createSupabaseClient(token);
 
-  // Fetch team membership
-  const { data: teamMember, error: teamError } = await client
-    .from("team_members")
-    .select("*, teams(*)")
-    .eq("user_id", userId)
+  // Hent den autentiserte brukeren fra Supabase Auth
+  const {
+    data: { user: authUser },
+    error: authError,
+  } = await client.auth.getUser();
+
+  if (authError || !authUser) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Finn brukeren i users tabellen basert på email
+  const { data: user, error: userError } = await client
+    .from("users")
+    .select("id")
+    .eq("email", authUser.email)
     .single();
 
-  // Fetch installer group memberships
-  const { data: installerGroupMemberships, error: groupError } = await client
-    .from("installer_group_members")
-    .select("*, installer_groups(*)")
-    .eq("user_id", userId);
-
-  if (groupError) {
+  if (userError || !user) {
     return NextResponse.json(
-      { error: "Failed to fetch installer group memberships" },
-      { status: 500 }
+      { error: "User not found in database" },
+      { status: 404 }
     );
   }
 
-  if (teamError || !teamMember) {
-    if (installerGroupMemberships && installerGroupMemberships.length > 0) {
-      const session = {
-        user_id: userId,
-        team_id: installerGroupMemberships[0].installer_groups.team_id,
-        team_role: "installer",
-        installer_groups: installerGroupMemberships || [],
-      };
-      return NextResponse.json(session);
-    }
+  const userId = user.id;
 
+  // Hent team membership med installer_group info hvis relevant
+  const { data: teamMember, error: teamError } = await client
+    .from("team_members")
+    .select("*, teams(*), installer_groups(*)")
+    .eq("user_id", userId)
+    .single();
+
+  if (teamError || !teamMember) {
     return NextResponse.json(
       { error: "User is not part of a team" },
       { status: 404 }
     );
   }
 
+  // Bygg session basert på rolle
   const session = {
     user_id: userId,
     team_id: teamMember.team_id,
     team_role: teamMember.role,
-    installer_groups: installerGroupMemberships || [],
+    installer_group: teamMember.installer_groups || null,
   };
 
   return NextResponse.json(session);

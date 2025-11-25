@@ -1,5 +1,6 @@
 "use client";
 
+import { useRoles } from "@/context/RoleProvider";
 import { useTeam } from "@/context/TeamContext";
 import { getTeams } from "@/lib/api";
 import { Team } from "@/lib/types";
@@ -7,6 +8,7 @@ import { useEffect, useState } from "react";
 
 export default function TeamSelector() {
   const { teamId, setTeamId } = useTeam();
+  const { teamRole } = useRoles();
   const [teams, setTeams] = useState<Team[]>([]);
 
   useEffect(() => {
@@ -15,7 +17,7 @@ export default function TeamSelector() {
       .catch((err) => console.error("Failed to fetch teams:", err));
   }, []);
 
-  if (teamId) return null;
+  if (teamId || teamRole == "installer") return null;
 
   return (
     <select

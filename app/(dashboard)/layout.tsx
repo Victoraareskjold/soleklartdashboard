@@ -10,13 +10,13 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <RoleProvider>
-      <TeamProvider>
-        <InstallerGroupProvider>
+    <TeamProvider>
+      <InstallerGroupProvider>
+        <RoleProvider>
           <Navbar />
           <div>{children}</div>
-        </InstallerGroupProvider>
-      </TeamProvider>
-    </RoleProvider>
+        </RoleProvider>
+      </InstallerGroupProvider>
+    </TeamProvider>
   );
 }

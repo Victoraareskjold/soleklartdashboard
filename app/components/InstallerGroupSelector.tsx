@@ -6,9 +6,11 @@ import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { InstallerGroup } from "@/lib/types";
 import { getInstallerGroups } from "@/lib/api";
 import TeamSelector from "./TeamSelector";
+import { useRoles } from "@/context/RoleProvider";
 
 export default function InstallerGroupSelector() {
   const { teamId } = useTeam();
+  const { teamRole } = useRoles();
   const { installerGroupId, setInstallerGroupId } = useInstallerGroup();
   const [groups, setGroups] = useState<InstallerGroup[]>([]);
 
@@ -25,6 +27,8 @@ export default function InstallerGroupSelector() {
       .catch(console.error);
   }, [teamId, installerGroupId, setInstallerGroupId]);
 
+  console.log(teamRole);
+  if (teamRole === "installer") return null;
   if (!teamId) return <TeamSelector />;
 
   return (

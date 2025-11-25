@@ -4,24 +4,13 @@ export async function getInstallerGroups(
   client: SupabaseClient,
   teamId: string
 ) {
-  const { data: groups, error } = await client
+  const { data: installerGroups, error } = await client
     .from("installer_groups")
     .select("*")
     .eq("team_id", teamId);
   if (error) throw error;
 
-  const groupsWithMembers = await Promise.all(
-    groups.map(async (group) => {
-      const { data: members, error: membersError } = await client
-        .from("installer_group_members")
-        .select("user_id, role")
-        .eq("installer_group_id", group.id);
-      if (membersError) throw membersError;
-      return { ...group, members };
-    })
-  );
-
-  return groupsWithMembers;
+  return installerGroups;
 }
 
 export async function getInstallerGroup(
@@ -35,13 +24,7 @@ export async function getInstallerGroup(
     .single();
   if (error) throw error;
 
-  const { data: members, error: membersError } = await client
-    .from("installer_group_members")
-    .select("user_id, role")
-    .eq("installer_group_id", groupId);
-  if (membersError) throw membersError;
-
-  return { ...group, members };
+  return { ...group };
 }
 
 export async function createInstallerGroup(

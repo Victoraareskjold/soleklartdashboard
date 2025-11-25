@@ -9,12 +9,9 @@ import React, {
 } from "react";
 import { useAuth } from "./AuthProvider";
 import { getRole } from "@/lib/api";
-import { InstallerGroup } from "@/lib/types";
 
 interface RoleContextType {
-  teamId: string | null;
   teamRole: string | null;
-  installerGroups: InstallerGroup[];
   loading: boolean;
   refetch: () => void;
 }
@@ -23,9 +20,8 @@ const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [teamId, setTeamId] = useState<string | null>(null);
   const [teamRole, setTeamRole] = useState<string | null>(null);
-  const [installerGroups, setInstallerGroups] = useState<InstallerGroup[]>([]);
+
   const [loading, setLoading] = useState(true);
 
   const fetchSession = async () => {
@@ -34,9 +30,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       try {
         const data = await getRole(user.id);
         if (data) {
-          setTeamId(data.team_id);
           setTeamRole(data.team_role);
-          setInstallerGroups(data.installer_groups);
         }
       } catch (error) {
         console.error("Failed to fetch session:", error);
@@ -58,9 +52,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <RoleContext.Provider
-      value={{ teamId, teamRole, installerGroups, loading, refetch }}
-    >
+    <RoleContext.Provider value={{ teamRole, loading, refetch }}>
       {children}
     </RoleContext.Provider>
   );

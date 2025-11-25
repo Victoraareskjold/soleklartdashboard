@@ -1,4 +1,6 @@
 "use client";
+import { getTeams } from "@/lib/api";
+import { Team } from "@/lib/types";
 import {
   createContext,
   useContext,
@@ -10,16 +12,40 @@ import {
 interface TeamContextType {
   teamId?: string;
   setTeamId: (id: string) => void;
+  teams?: Team[];
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
 
 export const TeamProvider = ({ children }: { children: ReactNode }) => {
   const [teamId, setTeamIdState] = useState<string>();
+  const [teams, setTeams] = useState<Team[]>();
 
   useEffect(() => {
-    const storedTeamId = localStorage.getItem("teamId");
-    if (storedTeamId) setTeamIdState(storedTeamId);
+    const initializeTeamId = async () => {
+      try {
+        const fetchedTeams = await getTeams();
+        setTeams(fetchedTeams);
+
+        // Sjekk først localStorage
+        const storedTeamId = localStorage.getItem("teamId");
+        if (storedTeamId) {
+          setTeamIdState(storedTeamId);
+          return;
+        }
+
+        // Hvis ingen lagret teamId, sett teams[0] som default
+        if (fetchedTeams && fetchedTeams.length > 0) {
+          const defaultTeamId = fetchedTeams[0].id;
+          setTeamIdState(defaultTeamId);
+          localStorage.setItem("teamId", defaultTeamId);
+        }
+      } catch (err) {
+        console.error("Failed to fetch teams:", err);
+      }
+    };
+
+    initializeTeamId();
   }, []);
 
   const setTeamId = (teamId: string) => {
@@ -28,7 +54,7 @@ export const TeamProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <TeamContext.Provider value={{ teamId, setTeamId }}>
+    <TeamContext.Provider value={{ teamId, setTeamId, teams }}>
       {children}
     </TeamContext.Provider>
   );

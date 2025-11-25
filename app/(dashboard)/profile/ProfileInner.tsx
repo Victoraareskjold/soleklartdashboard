@@ -52,10 +52,24 @@ export default function ProfilePageInner() {
     exchangeCode();
   }, [code, user, installerGroupId]);
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Logout failed:", error);
+      toast.error("Kunne ikke logge ut");
+      return;
+    }
+
+    toast.success("Logget ut");
+    window.location.href = "/";
+  };
+
   return (
     <div>
       <p>{user?.id}</p>
       <ConnectOutlook />
+      <button onClick={handleLogout}>Logg ut</button>
     </div>
   );
 }

@@ -87,7 +87,6 @@ CREATE TABLE public.installer_groups (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
 team_id uuid NOT NULL,
 name text NOT NULL,
-manager_id uuid,
 created_at timestamp without time zone NOT NULL DEFAULT now(),
 CONSTRAINT installer_groups_pkey PRIMARY KEY (id),
 CONSTRAINT installer_groups_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id),
@@ -227,7 +226,6 @@ CONSTRAINT team_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.use
 CREATE TABLE public.teams (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
 name text NOT NULL,
-leader_id uuid NOT NULL,
 created_at timestamp without time zone NOT NULL DEFAULT now(),
 CONSTRAINT teams_pkey PRIMARY KEY (id),
 CONSTRAINT teams_leader_id_fkey FOREIGN KEY (leader_id) REFERENCES public.users(id)

@@ -38,7 +38,7 @@ export interface InstallerGroupMember {
 export interface Session {
   user_id: string;
   team_id: string;
-  team_role: "admin" | "member" | "installer";
+  team_role: "admin" | "member" | "installer" | "viewer";
   installer_groups: InstallerGroup[];
 }
 

@@ -75,13 +75,8 @@ export const getTaggableUsers = async (
     .select("user_id, user:user_id(name)")
     .eq("team_id", lead.team_id);
 
-  const { data: groupMembers } = await client
-    .from("installer_group_members")
-    .select("user_id, user:user_id(name)")
-    .eq("installer_group_id", lead.installer_group_id);
-
   const map: Record<string, { id: string; name: string }> = {};
-  [...(teamMembers ?? []), ...(groupMembers ?? [])].forEach((m) => {
+  [...(teamMembers ?? [])].forEach((m) => {
     const userName = Array.isArray(m.user)
       ? m.user[0]?.name
       : (m.user as User)?.name;

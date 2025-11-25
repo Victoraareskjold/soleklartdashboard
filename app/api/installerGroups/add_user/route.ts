@@ -15,9 +15,9 @@ export async function POST(req: Request) {
         { error: "missing parameters" },
         { status: 400 }
       );
-
+    /* Todo herererer:! */
     const { data: team, error: teamError } = await client
-      .from("installer_group_members")
+      .from("team_members")
       .insert({ installer_group_id: code, user_id: userId, role: "member" })
       .select()
       .single();
