@@ -210,7 +210,7 @@ export default function ElectricalInstallationTable({
                   <option value="">Velg kategori...</option>
                   {allCategories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
-                      {cat.name}
+                      {cat.name.charAt(0).toUpperCase() + cat.name.slice(1)}{" "}
                     </option>
                   ))}
                 </select>
