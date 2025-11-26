@@ -103,11 +103,11 @@ export default function TeamCommissionTable({
               </td>
               <td className="border p-1">
                 <input
-                  type="text"
-                  className="w-12 p-1 rounded"
+                  type="number"
+                  className="w-16 p-1 rounded"
                   value={r.commission}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
+                    const val = parseFloat(e.target.value) || 0;
                     setTeamCommissions((prev) =>
                       prev.map((x) =>
                         x.index === r.index ? { ...x, commission: val } : x

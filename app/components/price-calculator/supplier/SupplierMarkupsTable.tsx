@@ -103,11 +103,11 @@ export default function SupplierMarkupsTable() {
                 </td>
                 <td className="border p-1">
                   <input
-                    type="text"
-                    className="w-12 p-1 rounded"
+                    type="number"
+                    className="w-16 p-1 rounded"
                     value={sup.markup_percentage}
                     onChange={(e) => {
-                      const val = parseInt(e.target.value) || 0;
+                      const val = parseFloat(e.target.value) || 0;
                       setSuppliersWithCategories((prev) =>
                         prev.map((x) =>
                           x.name === sup.name
