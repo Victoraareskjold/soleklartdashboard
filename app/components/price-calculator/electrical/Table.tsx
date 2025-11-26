@@ -284,8 +284,14 @@ function ProductTable({
   onPriceChange: (productId: string, newPrice: string) => void;
 }) {
   const [localPrices, setLocalPrices] = useState(
-    Object.fromEntries(items.map((i) => [i.id, String(i.price_per)]))
+    Object.fromEntries(items.map((i) => [i.id, String(i.price_per ?? "")]))
   );
+
+  useEffect(() => {
+    setLocalPrices(
+      Object.fromEntries(items.map((i) => [i.id, String(i.price_per ?? "")]))
+    );
+  }, [items]);
 
   const handleChange = (id: string, value: string) => {
     if (/^\d*\.?\d*$/.test(value) || value === "") {
@@ -349,7 +355,7 @@ function ProductTable({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") e.currentTarget.blur();
                 }}
-                value={localPrices[item.id]}
+                value={localPrices[item.id] ?? ""}
               />
             </td>
             <td className="border">

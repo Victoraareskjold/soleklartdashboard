@@ -211,8 +211,7 @@ export default function CalculationSheet({
 
   const søknadTotal = søknadItems.reduce((sum, item) => {
     const base = item.price_per || 0;
-    const extra = item.extra_costs || 0;
-    return sum + base + extra;
+    return sum + base;
   }, 0);
 
   const electricalMarkup = getCategoryMarkup("elektrisk installasjon");
@@ -223,8 +222,7 @@ export default function CalculationSheet({
 
   const solcelleAnleggBaseTotal = solcelleAnleggItems.reduce((sum, item) => {
     const base = item.price_per || 0;
-    const extra = item.extra_costs || 0;
-    return sum + base + extra;
+    return sum + base;
   }, 0);
 
   const inverterCount = supplierItems
@@ -243,8 +241,7 @@ export default function CalculationSheet({
   const selectedBattery = batteryOptions.find(
     (battery) => battery.id === selectedBatteryId
   );
-  const batteryBasePrice =
-    (selectedBattery?.price_per || 0) + (selectedBattery?.extra_costs || 0);
+  const batteryBasePrice = selectedBattery?.price_per || 0;
 
   const additionalCostOptions = eletricalData.filter(
     (item) => item.category?.name?.toLowerCase() === "tilleggskostnader"
@@ -297,8 +294,7 @@ export default function CalculationSheet({
 
   const additionalCostsMarkup = additionalCosts.reduce((sum, ac, index) => {
     const selectedItem = additionalCostOptions.find((i) => i.id === ac.id);
-    const base =
-      (selectedItem?.price_per || 0) + (selectedItem?.extra_costs || 0);
+    const base = selectedItem?.price_per || 0;
     const overrideId = `additional_${index}`;
     return (
       sum +
@@ -337,8 +333,7 @@ export default function CalculationSheet({
     batteryFinal * (1 + electricalMarkup / 100) +
     additionalCosts.reduce((sum, ac, index) => {
       const selectedItem = additionalCostOptions.find((i) => i.id === ac.id);
-      const base =
-        (selectedItem?.price_per || 0) + (selectedItem?.extra_costs || 0);
+      const base = selectedItem?.price_per || 0;
       const overrideId = `additional_${index}`;
       return (
         sum +
@@ -426,8 +421,7 @@ export default function CalculationSheet({
       },
       additionalCosts: additionalCosts.map((ac, index) => {
         const selectedItem = additionalCostOptions.find((i) => i.id === ac.id);
-        const base =
-          (selectedItem?.price_per || 0) + (selectedItem?.extra_costs || 0);
+        const base = selectedItem?.price_per || 0;
         const overrideId = `additional_${index}`;
         const finalPrice = getFinalPrice(overrideId, base * ac.quantity);
         return {
@@ -623,9 +617,7 @@ export default function CalculationSheet({
                   <option value="">Arbeidsmetode</option>
                   {batteryOptions.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name} (
-                      {((b.price_per || 0) + (b.extra_costs || 0)).toFixed(0)}{" "}
-                      kr)
+                      {b.name} ({(b.price_per || 0).toFixed(0)} kr)
                     </option>
                   ))}
                 </select>
@@ -657,8 +649,7 @@ export default function CalculationSheet({
             const selectedItem = additionalCostOptions.find(
               (i) => i.id === ac.id
             );
-            const base =
-              (selectedItem?.price_per || 0) + (selectedItem?.extra_costs || 0);
+            const base = selectedItem?.price_per || 0;
             const defaultPrice = base * ac.quantity;
             const overrideId = `additional_${index}`;
 
@@ -685,11 +676,7 @@ export default function CalculationSheet({
                     <option value="">Velg tilleggskostnad</option>
                     {additionalCostOptions.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.name} (
-                        {(
-                          (item.price_per || 0) + (item.extra_costs || 0)
-                        ).toFixed(0)}{" "}
-                        kr)
+                        {item.name} ({(item.price_per || 0).toFixed(0)} kr)
                       </option>
                     ))}
                   </select>

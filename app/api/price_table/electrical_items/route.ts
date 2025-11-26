@@ -28,8 +28,7 @@ export async function GET(req: Request) {
           installer_group_id,
           category:electrical_installation_categories(id, name),
           name,
-          price_per,
-          extra_costs
+          price_per
         `
       )
       .eq("installer_group_id", installerGroupId);

@@ -12,7 +12,6 @@ category_id uuid NOT NULL,
 name text NOT NULL,
 price_per numeric NOT NULL DEFAULT '0'::numeric,
 id uuid NOT NULL DEFAULT gen_random_uuid(),
-extra_costs numeric NOT NULL DEFAULT '0'::numeric,
 CONSTRAINT electrical_installation_items_pkey PRIMARY KEY (id),
 CONSTRAINT electrician_installation_items_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.electrical_installation_categories(id),
 CONSTRAINT electrical_installation_items_installer_group_id_fkey FOREIGN KEY (installer_group_id) REFERENCES public.installer_groups(id)

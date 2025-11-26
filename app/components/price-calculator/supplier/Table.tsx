@@ -34,7 +34,6 @@ export interface ElectricalInstallationItem {
   installer_group_id: string;
   name: string;
   price_per: number;
-  extra_costs?: number | null;
   category?: {
     id: string;
     name: string;
