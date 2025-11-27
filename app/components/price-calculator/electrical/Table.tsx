@@ -111,15 +111,45 @@ export default function ElectricalInstallationTable({
     }
   };
 
+  const sortOrder = ["solcelleanlegg", "batteri", "søknad"];
+  const søknadOrder = ["ingen", "delvis", "full"];
+
+  const getSortedItems = (
+    catName: string,
+    items: ElectricalInstallationItem[]
+  ) => {
+    if (catName.toLowerCase() === "søknad") {
+      return [...items].sort((a, b) => {
+        const an = søknadOrder.findIndex((x) =>
+          a.name.toLowerCase().includes(x)
+        );
+        const bn = søknadOrder.findIndex((x) =>
+          b.name.toLowerCase().includes(x)
+        );
+        return (an === -1 ? 999 : an) - (bn === -1 ? 999 : bn);
+      });
+    }
+
+    return items;
+  };
+
   const mainCategories = allCategories
-    .map((cat) => ({
-      ...cat,
-      items: items.filter((item) => item.category?.id === cat.id),
-    }))
+    .map((cat) => {
+      const catItems = items.filter((item) => item.category?.id === cat.id);
+      return {
+        ...cat,
+        items: getSortedItems(cat.name, catItems),
+      };
+    })
     .filter(
       (cat) =>
         cat.items.length > 0 && cat.name.toLowerCase() !== "tilleggskostnader"
-    );
+    )
+    .sort((a, b) => {
+      const ai = sortOrder.indexOf(a.name.toLowerCase());
+      const bi = sortOrder.indexOf(b.name.toLowerCase());
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
 
   const additionalCostsCategory = allCategories
     .map((cat) => ({

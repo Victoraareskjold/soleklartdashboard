@@ -29,7 +29,7 @@ export default function PriceTablePage() {
       "";
     return {
       selectedPanelType: defaultPanelType,
-      totalPanels: 24,
+      totalPanels: 1,
       selectedRoofType: "Enkeltkrummet takstein",
       checkedRoofData: [
         {
