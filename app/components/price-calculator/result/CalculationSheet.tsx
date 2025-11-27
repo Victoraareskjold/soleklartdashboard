@@ -461,8 +461,8 @@ export default function CalculationSheet({
             const markup = getCategoryMarkup(item.category || "");
             const displayValue =
               item.category === "feste"
-                ? item.product
-                : `${item.name} - ${item.supplier}`;
+                ? `${item.name} - ${item.product} - ${item.supplier}`
+                : `${item.name} - ${item.product} - ${item.supplier}`;
             return (
               <tr key={item.id}>
                 <td className="p-2">{displayValue}</td>
