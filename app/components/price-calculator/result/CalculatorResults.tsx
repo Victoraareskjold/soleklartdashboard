@@ -153,6 +153,30 @@ export default function CalculatorResults({
     productId: "",
   });
 
+  useEffect(() => {
+    const panels = solarData?.totalPanels ?? 0;
+    if (panels > 0) {
+      setCalculatorState((prev) => {
+        const panelItem = prev.items.find(
+          (item) => item.id === "solcellepanel"
+        );
+        if (panelItem && panelItem.quantity === panels) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          items: prev.items.map((item) => {
+            if (item.id === "solcellepanel" || item.id === "feste") {
+              return { ...item, quantity: panels };
+            }
+            return item;
+          }),
+        };
+      });
+    }
+  }, [solarData?.totalPanels]);
+
   // koble kategorier
   useEffect(() => {
     if (allCategories.length === 0) return;
@@ -695,7 +719,7 @@ export default function CalculatorResults({
     );
     if (panelItem) {
       setSolarData((prev) => {
-        if (!prev) return prev!;
+        if (!prev || prev.totalPanels === panelItem.quantity) return prev;
         return {
           ...prev,
           totalPanels: panelItem.quantity,

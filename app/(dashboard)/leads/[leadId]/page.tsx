@@ -1,15 +1,20 @@
 "use client";
 import { SolarData } from "@/app/components/SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
-import { getEstimate, getLead, getRoofTypes, updateLead } from "@/lib/api";
-import { mapEstimateToSolarData } from "@/lib/mappers";
+import {
+  getEstimatesByLeadId,
+  getLead,
+  getRoofTypes,
+  updateLead,
+} from "@/lib/api";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
 import EstimateSection from "@/app/components/leads/EstimateSection";
-import { RoofType } from "@/lib/types";
+import { Estimate, RoofType } from "@/lib/types";
+import Link from "next/link";
 
 interface InputProps {
   label: string;
@@ -66,9 +71,7 @@ export default function LeadPage() {
 
   // States
   const [loading, setLoading] = useState(true);
-  const [hasEstimate, setHasEstimate] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [estimateId, setEstimateId] = useState("");
 
   // Input
   const [email, setEmail] = useState("");
@@ -119,8 +122,9 @@ export default function LeadPage() {
     imageUrl: "",
     voltage: 0,
   });
+  const [estimates, setEstimates] = useState<Estimate[]>();
 
-  const [activeRoute, setActiveRoute] = useState("Estimat");
+  const [activeRoute, setActiveRoute] = useState("Aktivitet");
   const routes = ["Aktivitet", "Merknader", "E-poster"];
 
   useEffect(() => {
@@ -137,14 +141,8 @@ export default function LeadPage() {
         setAddress(data.address ?? "");
         setOwnConsumtion(data.own_consumption || 0);
       }),
-      getEstimate(leadIdStr).then((data) => {
-        setEstimateId(data.id);
-        if (data) {
-          setSolarData(mapEstimateToSolarData(data));
-          setHasEstimate(true);
-        } else {
-          setHasEstimate(false);
-        }
+      getEstimatesByLeadId(leadIdStr).then((data) => {
+        setEstimates(data ?? []);
       }),
       getRoofTypes().then((data) => {
         setRoofTypes(data ?? []);
@@ -155,6 +153,7 @@ export default function LeadPage() {
   }, [leadIdStr, installerGroupId]);
 
   const [roofType, setRoofType] = useState("");
+
   useEffect(() => {
     if (!solarData || !roofTypes.length) return;
 
@@ -203,7 +202,7 @@ export default function LeadPage() {
       if (event.data?.type === "PVMAP_DATA") {
         const payload = event.data.payload;
         setSolarData(payload);
-        setHasEstimate(true);
+        setActiveRoute("Estimat");
       }
     };
 
@@ -214,6 +213,10 @@ export default function LeadPage() {
   const handleToggleModal = (e: React.FormEvent) => {
     e.preventDefault();
     setIsModalOpen(!isModalOpen);
+  };
+
+  const handleCreateNewEstimate = () => {
+    setIsModalOpen(true);
   };
 
   return (
@@ -360,9 +363,8 @@ export default function LeadPage() {
           <LeadEmailSection leadId={leadIdStr!} leadEmail={email} />
         )}
 
-        {activeRoute === "Estimat" && hasEstimate && (
+        {activeRoute === "Estimat" && (
           <div>
-            <div className="flex gap-2"></div>
             <EstimateSection
               solarData={solarData}
               setSolarData={setSolarData}
@@ -371,21 +373,37 @@ export default function LeadPage() {
         )}
       </section>
       <section className="w-1/4 p-2">
-        <h1>Noe tekst osv</h1>
+        <h1>Estimater</h1>
         <div className="flex gap-2">
-          <button
-            className="bg-[#FF8E4C] text-white rounded p-2 px-3 w-46"
-            onClick={() => setActiveRoute("Estimat")}
-          >
-            {hasEstimate ? "Vis tilbud" : "Opprett nytt tilbud"}
-          </button>
+          <ul>
+            {estimates?.map((e) => (
+              <li className="underline" key={e.id}>
+                <Link
+                  target="_blank"
+                  // TODO: ekte link
+                  href={`https://www.lynelektrosol.no?estimateId=${e.id}`}
+                >
+                  {e.created_at
+                    ? new Date(e.created_at).toLocaleDateString("NO")
+                    : "N/A"}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
-        <button
+        {/* <button
           className="py-2 px-3 bg-slate-100"
           onClick={handleToggleModal}
           disabled={loading}
         >
           Åpne pvmap
+        </button> */}
+        <button
+          className="py-2 px-3 bg-slate-100"
+          onClick={handleCreateNewEstimate}
+          disabled={loading}
+        >
+          Opprett nytt estimat
         </button>
       </section>
       {/* Modals */}

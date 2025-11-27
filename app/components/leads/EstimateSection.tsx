@@ -27,6 +27,8 @@ export default function EstimateSection({
     });
   }, []);
 
+  console.log(solarData);
+
   return (
     <>
       <CalculatorResults
