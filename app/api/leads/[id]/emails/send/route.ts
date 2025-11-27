@@ -176,6 +176,30 @@ export async function POST(
       );
     }
 
+    // Store sent email in database immediately
+    // For new emails, we need to wait a moment and fetch it from Graph API
+    // For replies, we already have the message ID
+    if (isReply && sentMessageId && conversationId) {
+      try {
+        await client.from("email_messages").insert({
+          installer_group_id: installerGroupId,
+          lead_id: leadId,
+          message_id: sentMessageId,
+          conversation_id: conversationId,
+          subject: subject,
+          from_address: account.email,
+          to_addresses: [lead.email],
+          body_preview: body.substring(0, 255),
+          body: body,
+          received_at: new Date().toISOString(),
+          has_attachments: false,
+        });
+      } catch (error) {
+        console.error("Error storing sent email:", error);
+        // Don't fail the request if storage fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: "Email sent successfully",

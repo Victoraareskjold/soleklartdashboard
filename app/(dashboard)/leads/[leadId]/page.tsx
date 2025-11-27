@@ -1,14 +1,8 @@
 "use client";
 import { SolarData } from "@/app/components/SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
-import {
-  getEstimate,
-  getLead,
-  getRoofTypes,
-  updateEstimate,
-  updateLead,
-} from "@/lib/api";
-import { mapEstimateToSolarData, mapSolarDataToEstimate } from "@/lib/mappers";
+import { getEstimate, getLead, getRoofTypes, updateLead } from "@/lib/api";
+import { mapEstimateToSolarData } from "@/lib/mappers";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -197,10 +191,6 @@ export default function LeadPage() {
         phone,
         address,
       });
-      if (hasEstimate && estimateId && leadIdStr) {
-        const mappedSolarData = mapSolarDataToEstimate(solarData, leadIdStr);
-        await updateEstimate(estimateId, mappedSolarData);
-      }
     } catch (err) {
       console.error("Failed to update:", err);
     } finally {
@@ -336,6 +326,13 @@ export default function LeadPage() {
             />
           </tbody>
         </table>
+        <button
+          className="py-2 px-3 bg-orange-300"
+          onClick={handleUpdate}
+          disabled={loading}
+        >
+          {loading ? "Lagrer..." : "Lagre"}
+        </button>
       </section>
       {/* Center section */}
       <section className="w-full bg-blue-100 p-2 [min-height:calc(100vh-3rem)]">
@@ -365,22 +362,7 @@ export default function LeadPage() {
 
         {activeRoute === "Estimat" && hasEstimate && (
           <div>
-            <div className="flex gap-2">
-              <button
-                className="py-2 px-3 bg-slate-100"
-                onClick={handleToggleModal}
-                disabled={loading}
-              >
-                Åpne pvmap
-              </button>
-              <button
-                className="py-2 px-3 bg-orange-300"
-                onClick={handleUpdate}
-                disabled={loading}
-              >
-                {loading ? "Lagrer..." : "Lagre"}
-              </button>
-            </div>
+            <div className="flex gap-2"></div>
             <EstimateSection
               solarData={solarData}
               setSolarData={setSolarData}
@@ -398,6 +380,13 @@ export default function LeadPage() {
             {hasEstimate ? "Vis tilbud" : "Opprett nytt tilbud"}
           </button>
         </div>
+        <button
+          className="py-2 px-3 bg-slate-100"
+          onClick={handleToggleModal}
+          disabled={loading}
+        >
+          Åpne pvmap
+        </button>
       </section>
       {/* Modals */}
       {isModalOpen && (
