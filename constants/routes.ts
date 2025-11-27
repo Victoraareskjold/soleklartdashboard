@@ -2,7 +2,7 @@ export const CLIENT_ROUTES = {
   AUTH: "/auth",
   ONBOARDING: "/onboarding",
 
-  DASHBOARD: "/overview",
+  DASHBOARD: "/",
 
   LEADS: "/leads",
   CREATE_LEAD: "/leads/create",

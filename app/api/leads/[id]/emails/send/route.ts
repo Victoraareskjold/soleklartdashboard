@@ -27,7 +27,7 @@ export async function POST(
     // Get lead details
     const { data: lead, error: leadError } = await client
       .from("leads")
-      .select("email, name")
+      .select("email, person_info")
       .eq("id", leadId)
       .single();
 
@@ -108,7 +108,7 @@ export async function POST(
             {
               emailAddress: {
                 address: lead.email,
-                name: lead.name,
+                name: lead.person_info,
               },
             },
           ],
@@ -152,7 +152,7 @@ export async function POST(
             {
               emailAddress: {
                 address: lead.email,
-                name: lead.name,
+                name: lead.person_info,
               },
             },
           ],
