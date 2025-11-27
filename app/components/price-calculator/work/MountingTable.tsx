@@ -158,10 +158,9 @@ export default function MountingTable({
       <table className="w-full border-collapse border border-gray-300">
         <thead>
           <tr className="bg-gray-100">
-            <th className="border p-2">Leverandør</th>
-            <th className="border p-2">Taktype</th>
-            <th className="border p-2">Arbeid pr. panel</th>
-            <th className="border p-2">Total pris inkl. mva</th>
+            <th className="border p-2">Leverandører</th>
+            <th className="border p-2">Taktype og valgt feste</th>
+            <th className="border p-2">Arbeid pr. panel montert (eks. mva)</th>
           </tr>
         </thead>
         <tbody>
@@ -172,9 +171,6 @@ export default function MountingTable({
               pricePer: "0",
             };
             const mountOptions = getMountOptions(local.supplierId);
-            const selectedProduct = mountOptions.find(
-              (p) => p.id === local.productId
-            );
 
             return (
               <tr key={roof.id}>
@@ -233,20 +229,6 @@ export default function MountingTable({
                       updateLocalData(roof.id, "pricePer", e.target.value)
                     }
                     onBlur={() => handleSave(roof.id)}
-                    className="w-full p-1 rounded"
-                  />
-                </td>
-
-                <td className="border p-1">
-                  <input
-                    type="text"
-                    value={
-                      selectedProduct?.price_ex_vat
-                        ? (parseFloat(local.pricePer) * 1.25).toFixed(2)
-                        : 0
-                    }
-                    readOnly
-                    disabled
                     className="w-full p-1 rounded"
                   />
                 </td>
