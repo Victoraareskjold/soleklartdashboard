@@ -12,6 +12,7 @@ category_id uuid NOT NULL,
 name text NOT NULL,
 price_per numeric NOT NULL DEFAULT '0'::numeric,
 id uuid NOT NULL DEFAULT gen_random_uuid(),
+extra_costs numeric NOT NULL DEFAULT '0'::numeric,
 CONSTRAINT electrical_installation_items_pkey PRIMARY KEY (id),
 CONSTRAINT electrician_installation_items_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.electrical_installation_categories(id),
 CONSTRAINT electrical_installation_items_installer_group_id_fkey FOREIGN KEY (installer_group_id) REFERENCES public.installer_groups(id)
@@ -72,24 +73,13 @@ coverage_percentage numeric,
 CONSTRAINT estimates_pkey PRIMARY KEY (id),
 CONSTRAINT estimates_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id)
 );
-CREATE TABLE public.installer_group_members (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-installer_group_id uuid NOT NULL,
-user_id uuid NOT NULL,
-role text NOT NULL CHECK (role = ANY (ARRAY['installer'::text, 'viewer'::text])),
-created_at timestamp without time zone NOT NULL DEFAULT now(),
-CONSTRAINT installer_group_members_pkey PRIMARY KEY (id),
-CONSTRAINT installer_group_members_installer_group_id_fkey FOREIGN KEY (installer_group_id) REFERENCES public.installer_groups(id),
-CONSTRAINT installer_group_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
-);
 CREATE TABLE public.installer_groups (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
 team_id uuid NOT NULL,
 name text NOT NULL,
 created_at timestamp without time zone NOT NULL DEFAULT now(),
 CONSTRAINT installer_groups_pkey PRIMARY KEY (id),
-CONSTRAINT installer_groups_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id),
-CONSTRAINT installer_groups_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES public.users(id)
+CONSTRAINT installer_groups_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id)
 );
 CREATE TABLE public.lead_note_tags (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -171,12 +161,14 @@ CONSTRAINT mounting_volume_reduction_installer_group_id_fkey FOREIGN KEY (instal
 CREATE TABLE public.product_categories (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
 name text NOT NULL,
+index numeric,
 CONSTRAINT product_categories_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.product_subcategories (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
 category_id uuid NOT NULL,
 name text NOT NULL,
+index numeric,
 CONSTRAINT product_subcategories_pkey PRIMARY KEY (id),
 CONSTRAINT product_subcategories_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.product_categories(id)
 );
@@ -210,7 +202,18 @@ CREATE TABLE public.suppliers (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
 name text NOT NULL,
 category text,
+index numeric,
 CONSTRAINT suppliers_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.team_commission (
+id uuid NOT NULL DEFAULT gen_random_uuid(),
+amount numeric NOT NULL DEFAULT '0'::numeric,
+amount2 numeric DEFAULT '0'::numeric,
+commission numeric NOT NULL DEFAULT '0'::numeric,
+index numeric,
+team_id uuid NOT NULL,
+CONSTRAINT team_commission_pkey PRIMARY KEY (id),
+CONSTRAINT soleklart_commission_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id)
 );
 CREATE TABLE public.team_members (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -218,16 +221,17 @@ team_id uuid NOT NULL,
 user_id uuid NOT NULL,
 role text NOT NULL DEFAULT 'member'::text CHECK (role = ANY (ARRAY['member'::text, 'admin'::text, 'installer'::text])),
 created_at timestamp without time zone NOT NULL DEFAULT now(),
+installer_group_id uuid,
 CONSTRAINT team_members_pkey PRIMARY KEY (id),
 CONSTRAINT team_members_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id),
-CONSTRAINT team_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+CONSTRAINT team_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+CONSTRAINT team_members_installer_group_id_fkey FOREIGN KEY (installer_group_id) REFERENCES public.installer_groups(id)
 );
 CREATE TABLE public.teams (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
 name text NOT NULL,
 created_at timestamp without time zone NOT NULL DEFAULT now(),
-CONSTRAINT teams_pkey PRIMARY KEY (id),
-CONSTRAINT teams_leader_id_fkey FOREIGN KEY (leader_id) REFERENCES public.users(id)
+CONSTRAINT teams_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.users (
 id uuid NOT NULL DEFAULT gen_random_uuid(),

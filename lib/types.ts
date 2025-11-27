@@ -170,3 +170,17 @@ export interface UserRole {
   team_role: string | null;
   installer_groups: string | null;
 }
+
+export interface EmailAccount extends Base {
+  user_id: string;
+  installer_group_id: string;
+  provider: "outlook" | "gmail";
+  email: string;
+  access_token: string;
+  refresh_token: string;
+  id_token?: string;
+  scope?: string;
+  token_type: string;
+  expires_at: string; // ISO 8601 string
+  ext_expires_at?: string; // ISO 8601 string
+}

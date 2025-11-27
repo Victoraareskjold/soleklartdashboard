@@ -27,7 +27,6 @@ export default function InstallerGroupSelector() {
       .catch(console.error);
   }, [teamId, installerGroupId, setInstallerGroupId]);
 
-  console.log(teamRole);
   if (teamRole === "installer") return null;
   if (!teamId) return <TeamSelector />;
 

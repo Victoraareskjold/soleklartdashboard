@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
-import { supabase } from "@/lib/supabase";
+import { getRefreshedEmailAccount } from "@/lib/graph";
 
 export async function POST(
   req: NextRequest,
@@ -38,18 +38,15 @@ export async function POST(
       );
     }
 
-    // Get email account credentials
-    const { data: account, error: accountError } = await supabase
-      .from("email_accounts")
-      .select("access_token, email")
-      .eq("user_id", userId)
-      .eq("installer_group_id", installerGroupId)
-      .eq("provider", "outlook")
-      .single();
+    // Get email account credentials, refreshing if necessary
+    const account = await getRefreshedEmailAccount(userId, installerGroupId);
 
-    if (accountError || !account) {
+    if (!account) {
       return NextResponse.json(
-        { error: "No Outlook connection found for user" },
+        {
+          error:
+            "No valid Outlook connection found for user. Please reconnect on the profile page.",
+        },
         { status: 404 }
       );
     }
@@ -177,30 +174,6 @@ export async function POST(
         { error: "Failed to send email", details: errorData },
         { status: graphRes.status }
       );
-    }
-
-    // Store sent email in database immediately
-    // For new emails, we need to wait a moment and fetch it from Graph API
-    // For replies, we already have the message ID
-    if (isReply && sentMessageId && conversationId) {
-      try {
-        await client.from("email_messages").insert({
-          installer_group_id: installerGroupId,
-          lead_id: leadId,
-          message_id: sentMessageId,
-          conversation_id: conversationId,
-          subject: subject,
-          from_address: account.email,
-          to_addresses: [lead.email],
-          body_preview: body.substring(0, 255),
-          body: body,
-          received_at: new Date().toISOString(),
-          has_attachments: false,
-        });
-      } catch (error) {
-        console.error("Error storing sent email:", error);
-        // Don't fail the request if storage fails
-      }
     }
 
     return NextResponse.json({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
-import { supabase } from "@/lib/supabase";
+import { getRefreshedEmailAccount } from "@/lib/graph";
 
 interface MicrosoftGraphEmail {
   id: string;
@@ -63,18 +63,15 @@ export async function POST(
       );
     }
 
-    // Get email account credentials
-    const { data: account, error: accountError } = await supabase
-      .from("email_accounts")
-      .select("access_token, refresh_token, expires_at, email")
-      .eq("user_id", userId)
-      .eq("installer_group_id", installerGroupId)
-      .eq("provider", "outlook")
-      .single();
+    // Get email account credentials, refreshing if necessary
+    const account = await getRefreshedEmailAccount(userId, installerGroupId);
 
-    if (accountError || !account) {
+    if (!account) {
       return NextResponse.json(
-        { error: "No Outlook connection found for user" },
+        {
+          error:
+            "No valid Outlook connection found for user. Please reconnect on the profile page.",
+        },
         { status: 404 }
       );
     }
