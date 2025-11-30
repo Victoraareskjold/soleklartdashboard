@@ -184,7 +184,7 @@ export default function CalculationSheet({
   }, 0);
 
   const totalMountingCost = mountingItems.reduce(
-    (sum, item) => sum + getFinalPrice(item.id, item.price),
+    (sum, item) => sum + getFinalPrice(item.id, item.price) * item.quantity,
     0
   );
 
