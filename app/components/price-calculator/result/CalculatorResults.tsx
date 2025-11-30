@@ -27,6 +27,7 @@ export interface CalculatorItem {
   defaultSupplier?: string;
   defaultProduct?: string;
   mountPricePer?: number;
+  index?: number;
 }
 
 export interface CalculatorState {
@@ -80,6 +81,7 @@ export default function CalculatorResults({
         supplierId: "",
         productId: "",
         defaultSupplier: "Solar Technologies Scandinavia AS",
+        index: 1,
       },
       {
         id: "feste",
@@ -89,6 +91,7 @@ export default function CalculatorResults({
         supplierId: "",
         productId: "",
         defaultSupplier: "Solar Technologies Scandinavia AS",
+        index: 2,
       },
       {
         id: "inverter",
@@ -98,6 +101,7 @@ export default function CalculatorResults({
         supplierId: "",
         productId: "",
         defaultSupplier: "Solar Technologies Scandinavia AS",
+        index: 3,
       },
       {
         id: "stillase",
@@ -107,6 +111,7 @@ export default function CalculatorResults({
         supplierId: "ba4f75fd-26fd-44ef-9c18-25110d3b4448",
         productId: "1557c4ef-2e78-41ef-904c-8113d8ba76cd",
         defaultSupplier: "Stillase Moss AS",
+        index: 4,
       },
       /* {
       {
@@ -271,6 +276,7 @@ export default function CalculatorResults({
               quantity: 1,
               supplierId: "c15b13b3-21d5-4e7b-a6e3-e6047e17c830",
               productId: "",
+              index: 8,
             },
           ],
         };
@@ -315,6 +321,7 @@ export default function CalculatorResults({
               quantity: 1,
               supplierId: solarCrane.supplierId,
               productId: solarCrane.id,
+              index: 7,
             },
           ],
         };
@@ -351,6 +358,7 @@ export default function CalculatorResults({
                   roofTypeName: matchingMount.roof_type.name,
                   mountProductName: matchingMount.product.name,
                   mountPricePer: matchingMount.product.price_ex_vat,
+                  index: 2,
                 }
               : item
           ),
@@ -408,6 +416,7 @@ export default function CalculatorResults({
               quantity: count36,
               supplierId: standardPall.supplierId,
               productId: standardPall.id,
+              index: 5,
             });
           }
 
@@ -419,6 +428,7 @@ export default function CalculatorResults({
               quantity: count100,
               supplierId: europaPall.supplierId,
               productId: europaPall.id,
+              index: 6,
             });
           }
 
@@ -558,6 +568,7 @@ export default function CalculatorResults({
             quantity: s.quantity,
             supplierId: solarTechSupplier!.id,
             productId: s.product.id,
+            index: 3,
           }));
           return { ...prev, items: [...itemsWithoutInverter, ...newItems] };
         });
@@ -607,12 +618,16 @@ export default function CalculatorResults({
       items: [
         ...prev.items,
         {
-          id,
-          displayName: category?.name || "Nytt utstyr",
+          id: id,
+          displayName:
+            `${category?.name.charAt(0).toUpperCase()}${category?.name.slice(
+              1
+            )}` || "Nytt utstyr",
           categoryId: newItem.categoryId!,
           quantity: newItem.quantity || 1,
           supplierId: newItem.supplierId || "",
           productId: newItem.productId || "",
+          index: newItem.index,
         },
       ],
     }));
@@ -783,16 +798,23 @@ export default function CalculatorResults({
             </tr>
           </thead>
           <tbody>
-            {calculatorState.items.map((item) => (
-              <CalculatorRow
-                key={item.id}
-                item={item}
-                suppliers={suppliers}
-                suppliersAndProducts={suppliersAndProducts}
-                allCategories={allCategories}
-                onUpdate={(updates) => updateItem(item.id, updates)}
-              />
-            ))}
+            {calculatorState.items
+              .sort((a, b) => {
+                const ai = a.index ?? Infinity;
+                const bi = b.index ?? Infinity;
+                return ai - bi;
+              })
+
+              .map((item) => (
+                <CalculatorRow
+                  key={item.id}
+                  item={item}
+                  suppliers={suppliers}
+                  suppliersAndProducts={suppliersAndProducts}
+                  allCategories={allCategories}
+                  onUpdate={(updates) => updateItem(item.id, updates)}
+                />
+              ))}
           </tbody>
         </table>
 
