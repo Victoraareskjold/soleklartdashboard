@@ -32,7 +32,7 @@ export async function getTeam(client: SupabaseClient, teamId: string) {
 
   const { data: members, error: membersError } = await client
     .from("team_members")
-    .select("user_id, role, users(name)")
+    .select("user_id, role, installer_group_id, users(name)")
     .eq("team_id", teamId);
   if (membersError) throw membersError;
 
@@ -40,6 +40,7 @@ export async function getTeam(client: SupabaseClient, teamId: string) {
     user_id: m.user_id,
     role: m.role,
     name: (m.users as unknown as { name: string } | null)?.name ?? "Ukjent",
+    installer_group_id: m.installer_group_id,
   }));
 
   return { ...team, members: formattedMembers };

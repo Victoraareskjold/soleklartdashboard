@@ -20,6 +20,7 @@ export interface TeamMember {
   name: string;
   role: string;
   created_at?: string;
+  installer_group_id?: string;
 }
 
 export interface InstallerGroup extends Base {
