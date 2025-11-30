@@ -175,6 +175,21 @@ export default function CalculationSheet({
 
   const supplierItems = items.filter((i) => i.source === "supplier");
 
+  // Sort supplierItems based on the key order of categoryMapping
+  const categoryOrder = Object.keys(categoryMapping);
+  supplierItems.sort((a, b) => {
+    const indexA = categoryOrder.indexOf(a.category);
+    const indexB = categoryOrder.indexOf(b.category);
+
+    if (indexA !== indexB) {
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
+
   const mountingItems = items.filter((i) => i.source === "mounting");
 
   const totalSupplierMarkup = supplierItems.reduce((sum, item) => {
