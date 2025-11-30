@@ -71,13 +71,13 @@ export default function SupplierMarkupsTable() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <div className="flex flex-row">
+    <div className="flex flex-col">
       {installerData?.name && (
-        <div className="mb-6 flex flex-col items-left gap-4 w-128">
+        <div className="flex flex-row items-center gap-4 w-full">
           <h2 className="text-xl font-bold">
             PÅSLAG AV MATERIELL OG TJENESTER
           </h2>
-          <div className="relative w-full justify-center h-full">
+          <div className="relative w-64 self-left justify-center h-8">
             <Image
               fill
               alt={installerData.name + " logo"}
@@ -87,7 +87,7 @@ export default function SupplierMarkupsTable() {
           </div>
         </div>
       )}
-      <table className="w-full mt-12">
+      <table className="w-full mt-4">
         <thead>
           <tr className="bg-gray-100">
             <th className="border p-2">Tjeneste</th>
