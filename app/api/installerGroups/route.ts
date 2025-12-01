@@ -11,6 +11,9 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const teamId = url.searchParams.get("team_id");
+    const installer_group_id = url.searchParams.get("installer_group_id");
+    const teamRole = url.searchParams.get("teamRole");
+
     if (!teamId)
       return NextResponse.json(
         { error: "team_id is required" },
@@ -18,8 +21,16 @@ export async function GET(req: Request) {
       );
 
     const client = createSupabaseClient(token);
-
     const groups = await getInstallerGroups(client, teamId);
+
+    if (installer_group_id) {
+      if (teamRole === "installer") {
+        return NextResponse.json(
+          groups.filter((groups) => groups.id === installer_group_id) ?? []
+        );
+      }
+      return NextResponse.json(groups);
+    }
     return NextResponse.json(groups);
   } catch (err) {
     console.error("GET /api/installerGroups error:", err);

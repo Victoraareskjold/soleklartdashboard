@@ -17,7 +17,9 @@ export default function TeamSelector() {
       .catch((err) => console.error("Failed to fetch teams:", err));
   }, []);
 
-  if (teamId || teamRole == "installer") return null;
+  if (!teamRole) return null;
+
+  if (teamId || teamRole === "installer") return null;
 
   return (
     <select

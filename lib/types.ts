@@ -40,7 +40,7 @@ export interface Session {
   user_id: string;
   team_id: string;
   team_role: "admin" | "member" | "installer" | "viewer";
-  installer_groups: InstallerGroup[];
+  installer_group_id: string | null;
 }
 
 export interface Lead {

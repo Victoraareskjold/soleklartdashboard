@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     user_id: userId,
     team_id: teamMember.team_id,
     team_role: teamMember.role,
-    installer_group: teamMember.installer_groups || null,
+    installer_group_id: teamMember.installer_group_id || null,
   };
 
   return NextResponse.json(session);

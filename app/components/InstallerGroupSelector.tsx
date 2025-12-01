@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useTeam } from "@/context/TeamContext";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
@@ -10,14 +9,14 @@ import { useRoles } from "@/context/RoleProvider";
 
 export default function InstallerGroupSelector() {
   const { teamId } = useTeam();
-  const { teamRole } = useRoles();
+  const { teamRole, installer_group_id } = useRoles();
   const { installerGroupId, setInstallerGroupId } = useInstallerGroup();
+
   const [groups, setGroups] = useState<InstallerGroup[]>([]);
 
   useEffect(() => {
-    if (!teamId) return;
-
-    getInstallerGroups(teamId)
+    if (!teamId || !teamRole) return;
+    getInstallerGroups(teamId, installer_group_id, teamRole)
       .then((fetched) => {
         setGroups(fetched);
         if (!installerGroupId && fetched.length > 0) {
@@ -25,10 +24,29 @@ export default function InstallerGroupSelector() {
         }
       })
       .catch(console.error);
-  }, [teamId, installerGroupId, setInstallerGroupId]);
+  }, [
+    teamId,
+    installerGroupId,
+    setInstallerGroupId,
+    installer_group_id,
+    teamRole,
+  ]);
 
-  if (teamRole === "installer") return null;
+  const getInstallerGroupName = (groups: InstallerGroup[]) => {
+    const group = groups.find((group) => group.id === installerGroupId);
+    if (!group) return "";
+
+    return group.name
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .replace(/\.[a-z]{2,}$/, "");
+  };
+
   if (!teamId) return <TeamSelector />;
+  if (!teamRole) return null;
+  if (teamRole === "installer") {
+    return <p className="text-xl px-2 py-1">{getInstallerGroupName(groups)}</p>;
+  }
 
   return (
     <select

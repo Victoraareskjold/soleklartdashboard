@@ -8,8 +8,9 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const teamId = url.searchParams.get("teamId");
     const installerGroupId = url.searchParams.get("installerGroupId");
+    const teamRole = url.searchParams.get("teamRole");
 
-    if (!teamId || !installerGroupId) {
+    if (!teamId || !installerGroupId || !teamRole) {
       return NextResponse.json(
         { error: "Missing teamId or installerGroupId parameter" },
         { status: 400 }
@@ -24,6 +25,12 @@ export async function GET(req: Request) {
     const client = createSupabaseClient(token);
     const leads = await getLeads(client, teamId, installerGroupId);
 
+    if (teamRole === "installer") {
+      return NextResponse.json(
+        leads.filter((lead) => lead.installer_group_id !== installerGroupId) ??
+          []
+      );
+    }
     return NextResponse.json(leads ?? []);
   } catch (err) {
     console.error("GET /api/leads error:", err);

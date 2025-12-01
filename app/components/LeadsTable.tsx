@@ -12,19 +12,22 @@ import {
 } from "@hello-pangea/dnd";
 import { toast } from "react-toastify";
 import LeadCard from "./LeadCard";
+import { useRoles } from "@/context/RoleProvider";
 
 export default function LeadsTable() {
   const { teamId } = useTeam();
   const { installerGroupId } = useInstallerGroup();
+  const { teamRole } = useRoles();
+
   const [leads, setLeads] = useState<Lead[]>([]);
 
   useEffect(() => {
-    if (!teamId || !installerGroupId) return;
+    if (!teamId || !installerGroupId || !teamRole) return;
 
-    getLeads(teamId, installerGroupId)
+    getLeads(teamId, installerGroupId, teamRole)
       .then(setLeads)
       .catch((err) => console.error("Failed to fetch leads:", err));
-  }, [installerGroupId, teamId]);
+  }, [installerGroupId, teamId, teamRole]);
 
   const grouped = LEAD_STATUSES.reduce((acc, status) => {
     acc[status] = leads.filter((lead) => lead.status === status);

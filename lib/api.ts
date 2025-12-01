@@ -64,9 +64,13 @@ export const getTeam = async (teamId: string): Promise<Team> => {
 
 // InstallerGroups
 export const getInstallerGroups = async (
-  teamId: string
+  teamId: string,
+  installer_group_id: string | null,
+  teamRole: string
 ): Promise<InstallerGroup[]> => {
-  return apiRequest<InstallerGroup[]>(`/api/installerGroups?team_id=${teamId}`);
+  return apiRequest<InstallerGroup[]>(
+    `/api/installerGroups?team_id=${teamId}&installer_group_id=${installer_group_id}&teamRole=${teamRole}`
+  );
 };
 
 // Single installerGroup
@@ -79,9 +83,10 @@ export const getInstallerGroup = async (
 // Leads
 export const getLeads = async (
   teamId: string,
-  installerGroupId: string
+  installerGroupId: string,
+  teamRole: string
 ): Promise<Lead[]> => {
-  const query = new URLSearchParams({ teamId, installerGroupId });
+  const query = new URLSearchParams({ teamId, installerGroupId, teamRole });
   return apiRequest<Lead[]>(`/api/leads?${query.toString()}`);
 };
 
