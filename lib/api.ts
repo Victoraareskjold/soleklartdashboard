@@ -388,3 +388,15 @@ export const addUserToInstallerGroupOrTeam = async (
 export const getRole = async (userId: string) => {
   return apiRequest<Session>(`/api/auth/session?userId=${userId}`);
 };
+
+export type AddTeamMemberPayload = {
+  name: string;
+  email: string;
+  role: string;
+  team_id: string;
+  installer_group_id: string;
+};
+
+export const addUserToTeam = async (data: AddTeamMemberPayload) => {
+  return apiRequest(`/api/teams/add-member`, "POST", data);
+};
