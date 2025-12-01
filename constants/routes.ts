@@ -3,6 +3,7 @@ export const CLIENT_ROUTES = {
   ONBOARDING: "/onboarding",
 
   DASHBOARD: "/",
+  OVERVIEW: "/",
 
   LEADS: "/leads",
   CREATE_LEAD: "/leads/create",

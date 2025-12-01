@@ -1,6 +1,6 @@
 "use client";
 import { useTeam } from "@/context/TeamContext";
-import { getInstallerGroup, getTeam, addUserToTeam } from "@/lib/api";
+import { getInstallerGroup, getTeam } from "@/lib/api";
 import { Team } from "@/lib/types";
 import { useEffect, useMemo, useState } from "react";
 import { useRoles } from "@/context/RoleProvider";
@@ -13,13 +13,6 @@ export default function TeamPage() {
   const [installerGroupNames, setInstallerGroupNames] = useState<
     Record<string, string>
   >({});
-
-  const [modalGroupId, setModalGroupId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    role: "installer",
-  });
 
   useEffect(() => {
     if (!teamId) return;
@@ -85,28 +78,6 @@ export default function TeamPage() {
     }
   }, [groupIds, installerGroupNames]);
 
-  const handleAddMember = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!modalGroupId || !teamId) return;
-
-    try {
-      await addUserToTeam({
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        team_id: teamId,
-        installer_group_id: modalGroupId,
-      });
-
-      // Refresh data
-      getTeam(teamId).then(setTeamData);
-      setModalGroupId(null);
-      setFormData({ name: "", email: "", role: "installer" });
-    } catch (error) {
-      console.error("Failed to add member:", error);
-    }
-  };
-
   if (!teamData) return null;
 
   const teamMembers = teamData.members?.filter(
@@ -154,89 +125,9 @@ export default function TeamPage() {
                 </div>
               ))}
             </div>
-            <button onClick={() => setModalGroupId(groupId)}>
-              Legg til medlem
-            </button>
           </div>
         ))}
       </div>
-      <>
-        {modalGroupId && (
-          <div
-            className="fixed inset-0 bg-black/20 flex items-center justify-center z-50"
-            onClick={() => setModalGroupId(null)}
-          >
-            <div
-              className="bg-white rounded-lg p-6 w-[500px] max-h-[90vh] overflow-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="text-xl font-bold mb-2">Legg til medlem</h2>
-
-              <form onSubmit={handleAddMember}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Navn</label>
-                  <input
-                    type="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full border rounded p-2"
-                    required
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">
-                    E-post
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full border rounded p-2"
-                    required
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">
-                    Rolle
-                  </label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) =>
-                      setFormData({ ...formData, role: e.target.value })
-                    }
-                    className="w-full border rounded p-2"
-                  >
-                    <option value="installer">Installør</option>
-                    <option value="viewer">Viewer</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setModalGroupId(null)}
-                    className="px-4 py-2 border rounded hover:bg-gray-100"
-                  >
-                    Avbryt
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
-                  >
-                    Legg til
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </>
     </div>
   );
 }

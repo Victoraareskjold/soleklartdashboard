@@ -2,23 +2,31 @@
 
 import { CLIENT_ROUTES } from "@/constants/routes";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 export default function AuthPage() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const installerGroupId = searchParams.get("inviteLink");
+
+  useEffect(() => {
+    if (installerGroupId) {
+      setIsLogin(false);
+    }
+  }, [installerGroupId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
 
     try {
       if (isLogin) {
@@ -27,7 +35,7 @@ export default function AuthPage() {
           password,
         });
         if (error) throw error;
-        router.push(CLIENT_ROUTES.DASHBOARD);
+        router.push(CLIENT_ROUTES.OVERVIEW);
       }
 
       if (!isLogin) {
@@ -36,7 +44,7 @@ export default function AuthPage() {
             email,
             password,
             options: {
-              emailRedirectTo: `${window.location.origin}/${CLIENT_ROUTES.ONBOARDING}`,
+              emailRedirectTo: `${window.location.origin}/${CLIENT_ROUTES.DASHBOARD}`,
             },
           });
         if (signUpError) throw signUpError;
@@ -47,11 +55,24 @@ export default function AuthPage() {
           const { error: userError } = await supabase.from("users").insert({
             id: userId,
             email,
-            name: "",
+            name,
           });
           if (userError) throw userError;
+
+          const { error: teamMemberError } = await supabase
+            .from("team_members")
+            .insert({
+              team_id: "13eaf450-c3d1-4b1b-912e-084c173f3398",
+              user_id: userId,
+              role: "installer",
+              installer_group_id: installerGroupId,
+            });
+          if (teamMemberError) throw teamMemberError;
         }
 
+        setName("");
+        setEmail("");
+        setPassword("");
         toast.success("Please check your email to verify your account");
       }
     } catch (err) {
@@ -69,9 +90,20 @@ export default function AuthPage() {
           {isLogin ? "Log in" : "Sign up"}
         </h2>
 
-        {message && <p className="mb-4 text-red-500">{message}</p>}
-
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div>
+              <label className="block mb-1 font-semibold">Name</label>
+              <input
+                type="text"
+                className="w-full border p-2 rounded"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+          )}
+
           <div>
             <label className="block mb-1 font-semibold">Email</label>
             <input
