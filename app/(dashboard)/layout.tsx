@@ -3,8 +3,6 @@ import "../globals.css";
 import Navbar from "../components/Navbar";
 import { InstallerGroupProvider } from "@/context/InstallerGroupContext";
 import { RoleProvider } from "@/context/RoleProvider";
-import { Suspense } from "react";
-import LoadingScreen from "../components/LoadingScreen";
 
 export default function DashboardLayout({
   children,
@@ -17,8 +15,8 @@ export default function DashboardLayout({
         <RoleProvider>
           <div className="flex flex-row">
             <Navbar />
-            <div className="p-2 bg-gray-50 min-h-screen w-full flex flex-col">
-              {children}
+            <div className="bg-gray-50 min-h-screen w-full flex flex-col ml-64">
+              <div className="p-2">{children}</div>
             </div>
           </div>
         </RoleProvider>

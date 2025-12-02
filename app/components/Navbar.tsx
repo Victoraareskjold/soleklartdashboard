@@ -19,7 +19,7 @@ export default function Navbar() {
   if (!teamRole) return null;
 
   return (
-    <nav className="flex flex-col max-w-64 gap-4 p-2 border-r-2 border-slate-200">
+    <nav className="flex flex-col w-64 gap-4 p-2 border-r-2 border-slate-200 fixed h-screen">
       <div className="flex gap-2">
         <InstallerGroupSelector />
       </div>
