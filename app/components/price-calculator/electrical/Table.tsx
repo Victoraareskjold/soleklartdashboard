@@ -112,7 +112,7 @@ export default function ElectricalInstallationTable({
   };
 
   const sortOrder = ["solcelleanlegg", "batteri", "søknad"];
-  const søknadOrder = ["ingen", "delvis", "full"];
+  const søknadOrder = ["uten", "delevis", "full"];
 
   const getSortedItems = (
     catName: string,

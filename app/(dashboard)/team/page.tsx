@@ -4,6 +4,7 @@ import { getInstallerGroup, getTeam } from "@/lib/api";
 import { Team } from "@/lib/types";
 import { useEffect, useMemo, useState } from "react";
 import { useRoles } from "@/context/RoleProvider";
+import { Copy } from "lucide-react";
 
 export default function TeamPage() {
   const { teamId } = useTeam();
@@ -84,6 +85,12 @@ export default function TeamPage() {
     (member) => member.role === "admin" || member.role === "member"
   );
 
+  const copyId = (groupId: string) => {
+    navigator.clipboard.writeText(
+      `www.soleklartdashboard.vercel.app/auth?inviteLink=${groupId}`
+    );
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -110,9 +117,16 @@ export default function TeamPage() {
       <div className="flex flex-row gap-2">
         {Object.entries(membersByInstallerGroup).map(([groupId, members]) => (
           <div key={groupId} className="mb-6">
-            <h2 className="font-semibold mb-2">
-              {installerGroupNames[groupId] || "Laster..."}
-            </h2>
+            <div className="flex justify-between items-center">
+              <h2 className="font-semibold mb-2">
+                {installerGroupNames[groupId] || "Laster..."}
+              </h2>
+              <Copy
+                onClick={() => copyId(groupId)}
+                className="cursor-pointer"
+                size={16}
+              />
+            </div>
 
             <div className="flex flex-row gap-2 flex-wrap">
               {members?.map((member) => (
