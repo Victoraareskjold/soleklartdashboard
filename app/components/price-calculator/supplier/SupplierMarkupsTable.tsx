@@ -99,7 +99,7 @@ export default function SupplierMarkupsTable() {
             return (
               <tr key={sup.name}>
                 <td className="p-1 border">
-                  <p>{sup.name}</p>
+                  <p>{sup.name.charAt(0).toUpperCase() + sup.name.slice(1)}</p>
                 </td>
                 <td className="border p-1">
                   <input

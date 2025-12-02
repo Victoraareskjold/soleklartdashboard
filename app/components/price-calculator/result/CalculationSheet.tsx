@@ -199,7 +199,7 @@ export default function CalculationSheet({
   }, 0);
 
   const totalMountingCost = mountingItems.reduce(
-    (sum, item) => sum + getFinalPrice(item.id, item.price) * item.quantity,
+    (sum, item) => sum + getFinalPrice(item.id, item.price),
     0
   );
 
@@ -380,13 +380,12 @@ export default function CalculationSheet({
       : commissionPercentage;
 
   const calculatedEnovaSupport = calculateEnovaSupport();
-  const finalEnovaSupportAmount = getFinalPrice(
+  /* const finalEnovaSupportAmount = getFinalPrice(
     "enova_support",
     calculatedEnovaSupport
-  );
+  ); */
 
-  const grandTotal =
-    subTotalForCommission + finalCommissionAmount - finalEnovaSupportAmount;
+  const grandTotal = subTotalForCommission + finalCommissionAmount;
 
   const priceOverview = {
     suppliers: supplierItems.map((item) => {
@@ -536,7 +535,7 @@ export default function CalculationSheet({
                 <td className="p-2 text-right">{markup} %</td>
                 <td className="p-2 text-right">
                   {(
-                    getFinalPrice(item.id, item.price) *
+                    (getFinalPrice(item.id, item.price) - reductionAmount) *
                     (1 + markup / 100)
                   ).toFixed(0)}{" "}
                   kr

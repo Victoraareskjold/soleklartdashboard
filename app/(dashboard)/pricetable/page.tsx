@@ -27,8 +27,13 @@ export default function PriceTablePage() {
     const defaultPanelType =
       (typeof window !== "undefined" && localStorage.getItem("defaultPanel")) ||
       "";
+    const defaultInverterSupplierId =
+      (typeof window !== "undefined" &&
+        localStorage.getItem("defaultInverterSupplier")) ||
+      "";
     return {
       selectedPanelType: defaultPanelType,
+      defaultInverterSupplierId,
       totalPanels: 1,
       selectedRoofType: "Enkeltkrummet takstein",
       checkedRoofData: [

@@ -80,7 +80,7 @@ export default function CalculatorResults({
         quantity: solarData?.totalPanels || 1,
         supplierId: "",
         productId: "",
-        defaultSupplier: "Solar Technologies Scandinavia AS",
+        defaultSupplier: "Nordic Solergy AS",
         index: 1,
       },
       {
@@ -98,9 +98,9 @@ export default function CalculatorResults({
         displayName: "Inverter",
         categoryId: "",
         quantity: 1,
-        supplierId: "",
+        supplierId: solarData?.defaultInverterSupplierId || "",
         productId: "",
-        defaultSupplier: "Solar Technologies Scandinavia AS",
+        defaultSupplier: "Nordic Solergy AS",
         index: 3,
       },
       {
@@ -460,7 +460,7 @@ export default function CalculatorResults({
 
       try {
         const totalKwp = solarData.kwp; // kWp
-        const desiredCapacity = totalKwp * 0.87; // 87 % av total kWp
+        const desiredCapacity = totalKwp * 0.85; // 85 % av total kWp
 
         const solarTechSupplier = suppliersAndProducts.find(
           (s) => s.name.toLowerCase() === "solar technologies scandinavia as"
@@ -497,9 +497,11 @@ export default function CalculatorResults({
           }
         );
 
+        // TODO: ikke bare let etter solarTechSupplier -> bruk suppliersAndProeuct.filter(invertercategory)
         const inverterProducts = solarTechSupplier?.products.filter(
           (p) => p.subcategory?.id === inverterSubcategory?.id
         );
+        console.log(inverterProducts);
         if (!inverterProducts || inverterProducts.length === 0) {
           console.log(`No inverters found for subcategory ${subcategoryName}`);
           // Remove existing inverters if any, as they might be for the wrong voltage
@@ -539,8 +541,8 @@ export default function CalculatorResults({
           0
         );
 
-        // Ikke legg til invertere hvis totalen er for lav (<70 % av ønsket kapasitet)
-        const minAcceptable = desiredCapacity * 0.7;
+        // Ikke legg til invertere hvis totalen er for lav (<85 % av ønsket kapasitet)
+        const minAcceptable = desiredCapacity * 0.85;
         if (totalSelectedPower < minAcceptable) {
           console.log(
             `Kunne ikke dekke ønsket kapasitet (${desiredCapacity.toFixed(
@@ -678,6 +680,15 @@ export default function CalculatorResults({
         selectedPanelType: updates.productName,
       });
       localStorage.setItem("defaultPanel", updates.productName);
+    }
+
+    if (
+      itemId === "inverter" &&
+      updates.supplierId &&
+      setSolarData &&
+      solarData
+    ) {
+      localStorage.setItem("defaultInverterSupplier", updates.supplierId);
     }
 
     setCalculatorState((prev) => {

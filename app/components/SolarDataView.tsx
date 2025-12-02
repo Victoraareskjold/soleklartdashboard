@@ -22,6 +22,7 @@ export interface SolarData {
   coveragePercentage?: number;
   kwp?: number;
   voltage?: number;
+  defaultInverterSupplierId?: string;
 }
 
 interface SolarDataViewProps {
