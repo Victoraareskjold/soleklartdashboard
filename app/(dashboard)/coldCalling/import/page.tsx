@@ -1,13 +1,41 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getTeam } from "@/lib/api"; // or your API function
+import { useTeam } from "@/context/TeamContext";
+import { toast } from "react-toastify";
 
 type Lead = {
   [key: string]: string;
 };
 
+type TeamMember = {
+  user_id: string;
+  name: string;
+  role: string;
+};
+
 export default function ImportPage() {
+  const { teamId } = useTeam();
+
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Lead[] | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [selectedMember, setSelectedMember] = useState<string>("");
+
+  // Fetch team members on mount
+  useEffect(() => {
+    if (!teamId) return;
+
+    getTeam(teamId)
+      .then((team) => {
+        const members = team.members?.filter(
+          (member: TeamMember) =>
+            member.role === "admin" || member.role === "member"
+        );
+        setTeamMembers(members || []);
+      })
+      .catch((err) => console.error("Failed to fetch team members:", err));
+  }, [teamId]);
 
   async function handleUpload() {
     if (!file) return;
@@ -30,15 +58,15 @@ export default function ImportPage() {
     await fetch("/api/import/commit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ leads: preview }),
+      body: JSON.stringify({ leads: preview, assignedTo: selectedMember }),
     });
 
-    setPreview(null); // valgfritt
+    toast.success("Leads lagret!");
+    setPreview(null);
   }
 
   const headers = ["Adresse", "Navn", "Rolle", "Firmanavn", "Mobil", "Telefon"];
   const fields = ["address", "name", "role", "company", "mobile", "phone"];
-
   const [sliceAmount, setSliceAmount] = useState(5);
 
   return (
@@ -53,9 +81,20 @@ export default function ImportPage() {
       />
       <button onClick={handleUpload}>Forhåndsvis</button>
 
-      <select>
-        <option>Elliot</option>
+      {/* Team member select */}
+      <select
+        value={selectedMember}
+        onChange={(e) => setSelectedMember(e.target.value)}
+        className="border p-2 my-2 rounded-md"
+      >
+        <option value="">Velg teammedlem</option>
+        {teamMembers.map((member) => (
+          <option key={member.user_id} value={member.user_id}>
+            {member.name}
+          </option>
+        ))}
       </select>
+
       {preview && (
         <>
           <div className="max-h-128 overflow-scroll border-slate-400 border-2">
