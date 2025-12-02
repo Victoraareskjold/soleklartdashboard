@@ -13,8 +13,12 @@ export default function DashboardLayout({
     <TeamProvider>
       <InstallerGroupProvider>
         <RoleProvider>
-          <Navbar />
-          <div>{children}</div>
+          <div className="flex flex-row">
+            <Navbar />
+            <div className="p-2 bg-gray-50 min-h-screen w-full flex flex-col">
+              {children}
+            </div>
+          </div>
         </RoleProvider>
       </InstallerGroupProvider>
     </TeamProvider>

@@ -19,11 +19,11 @@ export default function Navbar() {
   if (!teamRole) return null;
 
   return (
-    <nav className="flex gap-4 items-center px-2 h-12 items-center justify-between">
+    <nav className="flex flex-col max-w-64 gap-4 p-2 border-r-2 border-slate-200">
       <div className="flex gap-2">
         <InstallerGroupSelector />
       </div>
-      <div className="flex gap-2 items-center">
+      <div className="flex flex-col gap-2">
         {teamRole !== "installer" ? (
           NAVBAR_ROUTES.map((route) => (
             <Link
@@ -46,7 +46,7 @@ export default function Navbar() {
 
         {teamRole !== "installer" && (
           <button
-            className="bg-slate-100 p-2 rounded-full aspect-square text-slate-700 font-medium text-sm"
+            className="bg-slate-100 p-2 h-10 items-center w-10 rounded-full aspect-square text-slate-700 font-medium text-sm"
             onClick={openMentions}
           >
             <BellIcon />

@@ -68,8 +68,8 @@ export default function PriceTablePage() {
     return <LoadingScreen />;
 
   return (
-    <div className="flex gap-2 p-2 bg-gray-50 min-h-screen">
-      <div className="w-full flex flex-col gap-12 py-8 mx-auto">
+    <div className="flex gap-2 min-h-screen">
+      <div className="w-full flex flex-col gap-12 mx-auto">
         {/* Calculator Results Section */}
         <div className="bg-white shadow-lg rounded-xl p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">
