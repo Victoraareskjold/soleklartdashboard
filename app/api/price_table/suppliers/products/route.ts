@@ -34,17 +34,28 @@ export async function GET(req: Request) {
       return null;
     };
 
+    const parsePanelWatt = (name: string): number | null => {
+      // Matcher f.eks.:
+      // 420W, 420 W, 420Wp, 420 Wp, 420 WP, 420 wp
+      const match = name.match(/(\d+(?:[.,]\d+)?)\s?W[pP]?/i);
+      if (match) return parseFloat(match[1].replace(",", "."));
+      return null;
+    };
+
     suppliers.forEach((supplier) => {
       supplier.products.sort((a, b) => {
         const aIsInverter = a.category?.name.toLowerCase() === "inverter";
         const bIsInverter = b.category?.name.toLowerCase() === "inverter";
+
+        const aIsPanel = a.category?.name.toLowerCase() === "solcellepanel";
+        const bIsPanel = b.category?.name.toLowerCase() === "solcellepanel";
 
         if (aIsInverter && bIsInverter) {
           const powerA = parsePower(a.name);
           const powerB = parsePower(b.name);
 
           if (powerA !== null && powerB !== null) {
-            if (powerA !== powerB) return powerA - powerB; // ascending power
+            if (powerA !== powerB) return powerA - powerB;
           } else if (powerA !== null) {
             return -1;
           } else if (powerB !== null) {
@@ -54,6 +65,22 @@ export async function GET(req: Request) {
 
         if (aIsInverter && !bIsInverter) return -1;
         if (!aIsInverter && bIsInverter) return 1;
+
+        if (aIsPanel && bIsPanel) {
+          const wattA = parsePanelWatt(a.name);
+          const wattB = parsePanelWatt(b.name);
+
+          if (wattA !== null && wattB !== null) {
+            if (wattA !== wattB) return wattA - wattB;
+          } else if (wattA !== null) {
+            return -1;
+          } else if (wattB !== null) {
+            return 1;
+          }
+        }
+
+        if (aIsPanel && !bIsPanel) return -1;
+        if (!aIsPanel && bIsPanel) return 1;
 
         // Fallback to existing sort order (from DB) or name
         const aIndex = a.subcategory?.index ?? Infinity;

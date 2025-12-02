@@ -536,8 +536,6 @@ export default function CalculatorResults({
           .filter((p) => p.power > 0)
           .sort((a, b) => b.power - a.power);
 
-        console.log(sorted);
-
         let remaining = desiredCapacity;
         const selected: { product: (typeof sorted)[0]; quantity: number }[] =
           [];
@@ -567,13 +565,6 @@ export default function CalculatorResults({
           );
           return;
         }
-
-        console.log("Desired:", desiredCapacity.toFixed(2), "kWp");
-        console.log("Total valgt:", totalSelectedPower.toFixed(2), "kW");
-        console.log(
-          "Valgte invertere:",
-          selected.map((s) => `${s.quantity}× ${s.product.name}`)
-        );
 
         setCalculatorState((prev) => {
           const itemsWithoutInverter = prev.items.filter(
