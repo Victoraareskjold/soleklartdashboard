@@ -24,15 +24,12 @@ export default function PriceTablePage() {
   >(null);
   const [loading, setLoading] = useState(true);
   const [solarData, setSolarData] = useState<SolarData>(() => {
-    const defaultPanelType =
-      (typeof window !== "undefined" && localStorage.getItem("defaultPanel")) ||
-      "";
     const defaultInverterSupplierId =
       (typeof window !== "undefined" &&
         localStorage.getItem("defaultInverterSupplier")) ||
       "";
     return {
-      selectedPanelType: defaultPanelType,
+      selectedPanelType: "",
       defaultInverterSupplierId,
       totalPanels: 1,
       selectedRoofType: "Enkeltkrummet takstein",
@@ -57,6 +54,22 @@ export default function PriceTablePage() {
     });
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!installerGroupId) return;
+
+    const panelKey = `defaultPanel_${installerGroupId}`;
+    //const inverterKey = `defaultInverterSupplier_${installerGroupId}`;
+
+    const savedPanel = localStorage.getItem(panelKey) || "";
+    //const savedInverter = localStorage.getItem(inverterKey) || "";
+
+    setSolarData((prev) => ({
+      ...prev,
+      selectedPanelType: savedPanel || "",
+      //defaultInverterSupplierId: savedInverter || "",
+    }));
+  }, [installerGroupId]);
 
   if (
     loading ||

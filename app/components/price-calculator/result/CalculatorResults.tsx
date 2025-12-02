@@ -80,7 +80,6 @@ export default function CalculatorResults({
         quantity: solarData?.totalPanels || 1,
         supplierId: "",
         productId: "",
-        defaultSupplier: "Nordic Solergy AS",
         index: 1,
       },
       {
@@ -688,7 +687,10 @@ export default function CalculatorResults({
         ...solarData,
         selectedPanelType: updates.productName,
       });
-      localStorage.setItem("defaultPanel", updates.productName);
+      localStorage.setItem(
+        `defaultPanel_${installerGroupId}`,
+        updates.productName
+      );
     }
 
     if (
