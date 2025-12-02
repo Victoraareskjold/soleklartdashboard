@@ -55,11 +55,11 @@ export default function ImportPage() {
   async function handleCommit() {
     if (!preview) return;
 
-    await fetch("/api/import/commit", {
+    /* await fetch("/api/import/commit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ leads: preview, assignedTo: selectedMember }),
-    });
+    }); */
 
     toast.success("Leads lagret!");
     setPreview(null);
