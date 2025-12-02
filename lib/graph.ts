@@ -33,7 +33,10 @@ export async function getRefreshedEmailAccount(
     .single();
 
   if (accountError) {
-    console.error("Error fetching email account from DB:", accountError.message);
+    console.error(
+      "Error fetching email account from DB:",
+      accountError.message
+    );
     return null;
   }
 
@@ -58,8 +61,7 @@ export async function getRefreshedEmailAccount(
   // 3. If token is expired, refresh it using the refresh_token
   console.log("Outlook access token expired. Refreshing...");
 
-  const tokenUrl =
-    "https://login.microsoftonline.com/common/oauth2/v2.0/token";
+  const tokenUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/token";
 
   const params = new URLSearchParams({
     client_id: process.env.NEXT_PUBLIC_OUTLOOK_CLIENT_ID!,

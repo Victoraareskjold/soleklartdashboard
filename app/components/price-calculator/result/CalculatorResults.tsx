@@ -462,6 +462,10 @@ export default function CalculatorResults({
         const totalKwp = solarData.kwp; // kWp
         const desiredCapacity = totalKwp * 0.85; // 85 % av total kWp
 
+        const allProducts = suppliersAndProducts.flatMap(
+          (supplier) => supplier.products
+        );
+
         const solarTechSupplier = suppliersAndProducts.find(
           (s) => s.name.toLowerCase() === "solar technologies scandinavia as"
         );
@@ -501,7 +505,7 @@ export default function CalculatorResults({
         const inverterProducts = solarTechSupplier?.products.filter(
           (p) => p.subcategory?.id === inverterSubcategory?.id
         );
-        console.log(inverterProducts);
+
         if (!inverterProducts || inverterProducts.length === 0) {
           console.log(`No inverters found for subcategory ${subcategoryName}`);
           // Remove existing inverters if any, as they might be for the wrong voltage

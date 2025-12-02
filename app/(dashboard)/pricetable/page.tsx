@@ -58,14 +58,6 @@ export default function PriceTablePage() {
     setLoading(false);
   }, []);
 
-  console.log(
-    loading,
-    suppliers,
-    suppliersAndProducts,
-    installerGroupId,
-    teamId
-  );
-
   if (
     loading ||
     !suppliers ||
