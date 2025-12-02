@@ -51,7 +51,6 @@ export default function ImportPage() {
   async function handleCommit() {
     if (!preview || !selectedMember || !installerGroupId || !teamId) return;
 
-    console.log("asdasd");
     const res = await fetch("/api/coldCalling/import/commit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -62,7 +61,7 @@ export default function ImportPage() {
         teamId,
       }),
     });
-    console.log(res);
+
     if (!res.ok) {
       toast.error("Error ved opprettelse av leads");
       return;

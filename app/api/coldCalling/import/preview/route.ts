@@ -24,15 +24,16 @@ export async function POST(req: NextRequest) {
   const rows = XLSX.utils.sheet_to_json<ExcelRow>(sheet);
 
   const parsed = rows.map((row) => {
+    const addressParts = [
+      row["Gatenavn"],
+      row["Husnummer"],
+      row["Bokstav"],
+    ].filter(Boolean);
     const address =
-      row["Gatenavn"] +
-      " " +
-      row["Husnummer"] +
-      row["Bokstav"] +
-      "," +
-      " " +
-      row["Poststed"];
-    const name = row["Fornavn"] + " " + row["Etternavn"];
+      addressParts.join(" ") + (row["Poststed"] ? ", " + row["Poststed"] : "");
+
+    const nameParts = [row["Fornavn"], row["Etternavn"]].filter(Boolean);
+    const name = nameParts.join(" ");
 
     return {
       address: address || "Ingen addresse",
