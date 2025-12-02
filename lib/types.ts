@@ -67,6 +67,8 @@ export interface Lead {
   status?: LeadStatus;
   email?: string;
   phone?: string;
+  mobile?: string;
+  role?: string;
 }
 
 export const LEAD_STATUSES = [

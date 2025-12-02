@@ -32,7 +32,6 @@ export default function TeamMemberSelector({
     );
   }, [team?.members]);
 
-  // ✅ Sett defaultUser som valgt når team er lastet og ingen er valgt
   useEffect(() => {
     if (defaultUser && teamMembers.length > 0 && !selectedMember) {
       const isUserInTeam = teamMembers.some(

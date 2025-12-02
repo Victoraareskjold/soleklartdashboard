@@ -5,6 +5,9 @@ import { useTeam } from "@/context/TeamContext";
 import { toast } from "react-toastify";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
 import { Team } from "@/lib/types";
+import { useInstallerGroup } from "@/context/InstallerGroupContext";
+import { useRouter } from "next/navigation";
+import { CLIENT_ROUTES } from "@/constants/routes";
 
 type Lead = {
   [key: string]: string;
@@ -12,6 +15,9 @@ type Lead = {
 
 export default function ImportPage() {
   const { teamId } = useTeam();
+  const { installerGroupId } = useInstallerGroup();
+
+  const router = useRouter();
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Lead[] | null>(null);
@@ -43,16 +49,27 @@ export default function ImportPage() {
   }
 
   async function handleCommit() {
-    if (!preview) return;
+    if (!preview || !selectedMember || !installerGroupId || !teamId) return;
 
-    /* await fetch("/api/import/commit", {
+    console.log("asdasd");
+    const res = await fetch("/api/coldCalling/import/commit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ leads: preview, assignedTo: selectedMember }),
-    }); */
-
+      body: JSON.stringify({
+        leads: preview,
+        assignedTo: selectedMember,
+        installerGroupId,
+        teamId,
+      }),
+    });
+    console.log(res);
+    if (!res.ok) {
+      toast.error("Error ved opprettelse av leads");
+      return;
+    }
     toast.success("Leads lagret!");
     setPreview(null);
+    router.push(CLIENT_ROUTES.COLD_CALLING);
   }
 
   const headers = ["Adresse", "Navn", "Rolle", "Firmanavn", "Mobil", "Telefon"];
