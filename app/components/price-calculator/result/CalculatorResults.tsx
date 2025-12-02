@@ -100,7 +100,6 @@ export default function CalculatorResults({
         quantity: 1,
         supplierId: solarData?.defaultInverterSupplierId || "",
         productId: "",
-        defaultSupplier: "Nordic Solergy AS",
         index: 3,
       },
       {
@@ -462,13 +461,6 @@ export default function CalculatorResults({
         const totalKwp = solarData.kwp; // kWp
         const desiredCapacity = totalKwp * 0.85; // 85 % av total kWp
 
-        const allProducts = suppliersAndProducts.flatMap(
-          (supplier) => supplier.products
-        );
-
-        const solarTechSupplier = suppliersAndProducts.find(
-          (s) => s.name.toLowerCase() === "solar technologies scandinavia as"
-        );
         const inverterCategory = allCategories.find(
           (c) => c.name.toLowerCase() === "inverter"
         );
@@ -501,10 +493,28 @@ export default function CalculatorResults({
           }
         );
 
-        // TODO: ikke bare let etter solarTechSupplier -> bruk suppliersAndProeuct.filter(invertercategory)
-        const inverterProducts = solarTechSupplier?.products.filter(
-          (p) => p.subcategory?.id === inverterSubcategory?.id
-        );
+        const supplierId = solarData.defaultInverterSupplierId;
+        let inverterProducts: ((typeof suppliersAndProducts)[0]["products"][0] & {
+          supplierId: string;
+        })[] = [];
+
+        if (supplierId) {
+          const supplier = suppliersAndProducts.find(
+            (s) => s.id === supplierId
+          );
+          if (supplier) {
+            inverterProducts = supplier.products
+              .filter((p) => p.subcategory?.id === inverterSubcategory?.id)
+              .map((p) => ({ ...p, supplierId: supplier.id }));
+          }
+        } else {
+          // Fallback to all suppliers if no default is set
+          inverterProducts = suppliersAndProducts.flatMap((s) =>
+            s.products
+              .filter((p) => p.subcategory?.id === inverterSubcategory?.id)
+              .map((p) => ({ ...p, supplierId: s.id }))
+          );
+        }
 
         if (!inverterProducts || inverterProducts.length === 0) {
           console.log(`No inverters found for subcategory ${subcategoryName}`);
@@ -525,6 +535,8 @@ export default function CalculatorResults({
           .map((p) => ({ ...p, power: parsePower(p.name) }))
           .filter((p) => p.power > 0)
           .sort((a, b) => b.power - a.power);
+
+        console.log(sorted);
 
         let remaining = desiredCapacity;
         const selected: { product: (typeof sorted)[0]; quantity: number }[] =
@@ -572,7 +584,7 @@ export default function CalculatorResults({
             displayName: "Inverter",
             categoryId: inverterCategory!.id,
             quantity: s.quantity,
-            supplierId: solarTechSupplier!.id,
+            supplierId: s.product.supplierId,
             productId: s.product.id,
             index: 3,
           }));
@@ -590,6 +602,7 @@ export default function CalculatorResults({
     solarData?.voltage,
     suppliersAndProducts,
     allCategories,
+    solarData?.defaultInverterSupplierId,
   ]);
 
   useEffect(() => {
