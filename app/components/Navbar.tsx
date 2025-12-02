@@ -27,7 +27,7 @@ export default function Navbar() {
         {teamRole !== "installer" ? (
           NAVBAR_ROUTES.map((route) => (
             <Link
-              className="bg-slate-100 rounded px-3 py-1 text-slate-700 font-medium text-sm"
+              className="bg-slate-100 rounded p-2 text-slate-700 font-medium text-sm"
               href={route.href}
               key={route.href}
             >
