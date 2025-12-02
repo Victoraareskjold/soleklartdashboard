@@ -1,17 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getTeam } from "@/lib/api"; // or your API function
+import { getTeam } from "@/lib/api";
 import { useTeam } from "@/context/TeamContext";
 import { toast } from "react-toastify";
+import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
+import { Team } from "@/lib/types";
 
 type Lead = {
   [key: string]: string;
-};
-
-type TeamMember = {
-  user_id: string;
-  name: string;
-  role: string;
 };
 
 export default function ImportPage() {
@@ -19,21 +15,15 @@ export default function ImportPage() {
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Lead[] | null>(null);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  const [team, setTeam] = useState<Team>();
   const [selectedMember, setSelectedMember] = useState<string>("");
 
-  // Fetch team members on mount
   useEffect(() => {
     if (!teamId) return;
 
     getTeam(teamId)
-      .then((team) => {
-        const members = team.members?.filter(
-          (member: TeamMember) =>
-            member.role === "admin" || member.role === "member"
-        );
-        setTeamMembers(members || []);
-      })
+      .then(setTeam)
       .catch((err) => console.error("Failed to fetch team members:", err));
   }, [teamId]);
 
@@ -81,19 +71,11 @@ export default function ImportPage() {
       />
       <button onClick={handleUpload}>Forhåndsvis</button>
 
-      {/* Team member select */}
-      <select
-        value={selectedMember}
-        onChange={(e) => setSelectedMember(e.target.value)}
-        className="border p-2 my-2 rounded-md"
-      >
-        <option value="">Velg teammedlem</option>
-        {teamMembers.map((member) => (
-          <option key={member.user_id} value={member.user_id}>
-            {member.name}
-          </option>
-        ))}
-      </select>
+      <TeamMemberSelector
+        team={team}
+        selectedMember={selectedMember}
+        onSelectMember={setSelectedMember}
+      />
 
       {preview && (
         <>

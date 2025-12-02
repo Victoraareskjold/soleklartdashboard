@@ -1,7 +1,31 @@
+"use client";
+import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
+import LoadingScreen from "@/app/components/LoadingScreen";
 import { CLIENT_ROUTES } from "@/constants/routes";
+import { useAuth } from "@/context/AuthProvider";
+import { useTeam } from "@/context/TeamContext";
+import { getTeam } from "@/lib/api";
+import { Team } from "@/lib/types";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function ColdCallingPage() {
+  const { teamId } = useTeam();
+  const { user } = useAuth();
+
+  const [team, setTeam] = useState<Team>();
+  const [selectedMember, setSelectedMember] = useState<string>("");
+
+  useEffect(() => {
+    if (!teamId) return;
+
+    getTeam(teamId)
+      .then(setTeam)
+      .catch((err) => console.error("Failed to fetch team members:", err));
+  }, [teamId]);
+
+  if (!user) return <LoadingScreen />;
+
   return (
     <div>
       <div className="flex flex-row justify-between">
@@ -9,9 +33,12 @@ export default function ColdCallingPage() {
           <h1>Cold Calling</h1>
 
           <div className="flex flex-row gap-2">
-            <select>
-              <option>Elliot</option>
-            </select>
+            <TeamMemberSelector
+              team={team}
+              selectedMember={selectedMember}
+              onSelectMember={setSelectedMember}
+              defaultUser={user.id}
+            />
 
             <select>
               <option>Ringeliste</option>
