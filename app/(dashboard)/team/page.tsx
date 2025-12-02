@@ -75,7 +75,10 @@ export default function TeamPage() {
             className="flex flex-col gap-1 mb-2 bg-slate-100 p-2 rounded-md"
           >
             <p className="w-full">{member.name || "Ingen navn satt"}</p>
-            <p className="opacity-60">{member.role || "Ingen rolle satt"}</p>
+            <p className="opacity-60">
+              {member.role.charAt(0).toUpperCase() + member.role.slice(1) ||
+                "Ingen rolle satt"}
+            </p>
           </div>
         ))}
       </div>
@@ -111,7 +114,8 @@ export default function TeamPage() {
                   >
                     <p>{member.name || "Ingen navn satt"}</p>
                     <p className="opacity-60">
-                      {member.role || "Ingen rolle satt"}
+                      {member.role.charAt(0).toUpperCase() +
+                        member.role.slice(1) || "Ingen rolle satt"}
                     </p>
                   </div>
                 ))}
