@@ -338,6 +338,7 @@ export default function CalculatorResults({
   useEffect(() => {
     async function fetchMountItem() {
       if (!solarData?.selectedRoofType || !installerGroupId) return;
+      console.log(solarData.selectedRoofType, installerGroupId);
       try {
         if (!mountItems || mountItems.length === 0) return;
 

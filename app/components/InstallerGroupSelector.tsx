@@ -19,6 +19,11 @@ export default function InstallerGroupSelector() {
     getInstallerGroups(teamId, installer_group_id, teamRole)
       .then((fetched) => {
         setGroups(fetched);
+        const localGroup = localStorage.getItem("installerGroupId");
+        if (localGroup) {
+          setInstallerGroupId(localGroup);
+          return;
+        }
         if (!installerGroupId && fetched.length > 0) {
           setInstallerGroupId(fetched[0].id);
         }
@@ -42,6 +47,11 @@ export default function InstallerGroupSelector() {
       .replace(/\.[a-z]{2,}$/, "");
   };
 
+  const handleSetInstallerGroup = (group: string) => {
+    setInstallerGroupId(group);
+    localStorage.setItem("installerGroupId", group);
+  };
+
   if (!teamId) return <TeamSelector />;
   if (!teamRole) return null;
   if (teamRole === "installer") {
@@ -51,7 +61,7 @@ export default function InstallerGroupSelector() {
   return (
     <select
       value={installerGroupId ?? ""}
-      onChange={(e) => setInstallerGroupId(e.target.value)}
+      onChange={(e) => handleSetInstallerGroup(e.target.value)}
       className="text-xl rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
     >
       <option value="" disabled>
