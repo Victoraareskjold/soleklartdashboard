@@ -18,7 +18,7 @@ export default function DashboardLayout({
           <div className="flex flex-row">
             <Navbar />
             <div className="p-2 bg-gray-50 min-h-screen w-full flex flex-col">
-              <Suspense fallback={<LoadingScreen />}>{children}</Suspense>
+              {children}
             </div>
           </div>
         </RoleProvider>
