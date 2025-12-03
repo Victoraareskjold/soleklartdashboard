@@ -101,50 +101,69 @@ export default function ColdCallingPage() {
       <div>
         {coldCalls && (
           <>
-            <div className="max-h-128 overflow-scroll border-slate-400 border-2">
-              <table className="border-collapse w-full">
-                <thead>
-                  <tr>
-                    {headers.map((header, index) => (
-                      <th className="border p-2 w-1/6" key={index}>
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {coldCalls
-                    .slice(sliceAmount - 5, sliceAmount)
-                    .map((lead, i) => (
-                      <tr key={i}>
-                        {fields.map((field) => (
-                          <td className="border p-1 w-1/6" key={field}>
-                            {lead[field]}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex flex-row items-center gap-8 justify-center p-2">
-              <button
-                className="flex flex-row items-center gap-2"
-                disabled={sliceAmount <= 5}
-                onClick={() => setSliceAmount(sliceAmount - 5)}
-              >
-                <ChevronLeft size={16} /> Tilbake
-              </button>
-              <button
-                className="flex flex-row items-center gap-2"
-                onClick={() => setSliceAmount(sliceAmount + 5)}
-              >
-                Neste
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            <table className="w-full">
+              <thead>
+                <tr>
+                  {headers.map((header, index) => (
+                    <th className="border p-2 w-1/6" key={index}>
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            </table>
+
+            {coldCalls.slice(sliceAmount - 5, sliceAmount).map((lead, i) => (
+              <div key={i} className="mb-4">
+                <table className="w-full">
+                  <tbody>
+                    <tr aria-hidden="true">
+                      <td colSpan={fields.length} className="h-4"></td>
+                    </tr>
+
+                    <tr>
+                      {fields.map((field) => (
+                        <td className="border p-1 w-1/6" key={field}>
+                          {lead[field]}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Input-rad: 7 like kolonner, 100% bredde */}
+                <div className="grid grid-cols-7">
+                  {Array.from({ length: 7 }).map((_, idx) => (
+                    <div key={idx} className="border p-1">
+                      <input
+                        type="text"
+                        placeholder="E-post"
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </>
         )}
+        <div className="flex flex-row items-center gap-8 justify-center p-2">
+          <button
+            className="flex flex-row items-center gap-2"
+            disabled={sliceAmount <= 5}
+            onClick={() => setSliceAmount(sliceAmount - 5)}
+          >
+            <ChevronLeft size={16} /> Tilbake
+          </button>
+          <button
+            disabled={sliceAmount >= coldCalls.length}
+            className="flex flex-row items-center gap-2"
+            onClick={() => setSliceAmount(sliceAmount + 5)}
+          >
+            Neste
+            <ChevronRight size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );
