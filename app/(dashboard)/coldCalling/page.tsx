@@ -12,6 +12,25 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
+type ColdCallLead = {
+  id: string;
+  person_info: string | null;
+  role: string | null;
+  company: string | null;
+  address: string | null;
+  mobile: string | null;
+  phone: string | null;
+};
+
+type LeadInputFields = {
+  [index: number]: string; // index 0–5
+  status?: string;
+};
+
+type FormData = {
+  [leadId: string]: LeadInputFields;
+};
+
 export default function ColdCallingPage() {
   const { teamId } = useTeam();
   const { installerGroupId } = useInstallerGroup();
@@ -19,7 +38,9 @@ export default function ColdCallingPage() {
 
   const [team, setTeam] = useState<Team>();
   const [selectedMember, setSelectedMember] = useState<string>("");
-  const [coldCalls, setColdCalls] = useState([]);
+  const [coldCalls, setColdCalls] = useState<ColdCallLead[]>([]);
+
+  const [formData, setFormData] = useState<FormData>({});
 
   useEffect(() => {
     if (!teamId) return;
@@ -55,8 +76,25 @@ export default function ColdCallingPage() {
     fetchLeadsForUser();
   }, [installerGroupId, selectedMember, teamId]);
 
+  const handleMove = () => {
+    const completeLeads = coldCalls.filter((lead) => {
+      const data = formData[lead.id];
+      if (!data) return false;
+
+      const filledInputs =
+        Object.keys(data).length === 7 && // 6 inputs + status
+        Object.values(data).every((v) => v && v.trim() !== "");
+
+      return filledInputs;
+    });
+
+    console.log("Leads som skal flyttes:", completeLeads);
+
+    // SEND completeLeads til API her
+  };
+
   const headers = ["Adresse", "Navn", "Rolle", "Firmanavn", "Mobil", "Telefon"];
-  const fields = [
+  const fields: (keyof ColdCallLead)[] = [
     "address",
     "person_info",
     "role",
@@ -67,6 +105,8 @@ export default function ColdCallingPage() {
   const [sliceAmount, setSliceAmount] = useState(5);
 
   if (!user) return <LoadingScreen />;
+
+  console.log(coldCalls);
 
   return (
     <div>
@@ -94,7 +134,7 @@ export default function ColdCallingPage() {
 
         <div className="flex flex-col gap-2">
           <Link href={CLIENT_ROUTES.COLD_CALLING + "/import"}>Importer</Link>
-          <button>Flytt</button>
+          <button onClick={handleMove}>Flytt</button>
         </div>
       </div>
 
@@ -131,17 +171,46 @@ export default function ColdCallingPage() {
                   </tbody>
                 </table>
 
-                {/* Input-rad: 7 like kolonner, 100% bredde */}
                 <div className="grid grid-cols-7">
-                  {Array.from({ length: 7 }).map((_, idx) => (
+                  {Array.from({ length: 6 }).map((_, idx) => (
                     <div key={idx} className="border p-1">
                       <input
                         type="text"
                         placeholder="E-post"
                         className="w-full"
+                        value={formData[lead.id]?.[idx] || ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            [lead.id]: {
+                              ...(prev[lead.id] || {}),
+                              [idx]: e.target.value,
+                            },
+                          }))
+                        }
                       />
                     </div>
                   ))}
+                  <div className="border p-1">
+                    <select
+                      className="w-full"
+                      value={formData[lead.id]?.status || ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          [lead.id]: {
+                            ...(prev[lead.id] || {}),
+                            status: e.target.value,
+                          },
+                        }))
+                      }
+                    >
+                      <option value="">Status</option>
+                      <option value="new">Ny</option>
+                      <option value="contacted">Kontaktet</option>
+                      <option value="not_interested">Ikke interessert</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             ))}
