@@ -1,4 +1,5 @@
 "use client";
+import RenderInputFields from "@/app/components/cold-calling/RenderInputFields";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
 import LoadingScreen from "@/app/components/LoadingScreen";
 import { CLIENT_ROUTES } from "@/constants/routes";
@@ -12,7 +13,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
-type ColdCallLead = {
+export type ColdCallLead = {
   id: string;
   person_info: string | null;
   role: string | null;
@@ -22,13 +23,13 @@ type ColdCallLead = {
   phone: string | null;
 };
 
-type LeadInputFields = {
-  [index: number]: string; // index 0–5
-  status?: string;
+export type FormDataFields = {
+  [index: number]: string;
+  status: string | null;
 };
 
-type FormData = {
-  [leadId: string]: LeadInputFields;
+export type FormData = {
+  [leadId: string]: FormDataFields;
 };
 
 export default function ColdCallingPage() {
@@ -76,20 +77,34 @@ export default function ColdCallingPage() {
     fetchLeadsForUser();
   }, [installerGroupId, selectedMember, teamId]);
 
+  const handleFormDataChange = (
+    leadId: string,
+    fieldKey: string,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [leadId]: {
+        ...(prev[leadId] || {}),
+        [fieldKey]: value,
+      },
+    }));
+  };
+
   const handleMove = () => {
     const completeLeads = coldCalls.filter((lead) => {
       const data = formData[lead.id];
       if (!data) return false;
 
+      // 6 INPUT_FIELDS + 1 status = 7 totalt
       const filledInputs =
-        Object.keys(data).length === 7 && // 6 inputs + status
+        Object.keys(data).length === 7 &&
         Object.values(data).every((v) => v && v.trim() !== "");
 
       return filledInputs;
     });
 
     console.log("Leads som skal flyttes:", completeLeads);
-
     // SEND completeLeads til API her
   };
 
@@ -171,47 +186,11 @@ export default function ColdCallingPage() {
                   </tbody>
                 </table>
 
-                <div className="grid grid-cols-7">
-                  {Array.from({ length: 6 }).map((_, idx) => (
-                    <div key={idx} className="border p-1">
-                      <input
-                        type="text"
-                        placeholder="E-post"
-                        className="w-full"
-                        value={formData[lead.id]?.[idx] || ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            [lead.id]: {
-                              ...(prev[lead.id] || {}),
-                              [idx]: e.target.value,
-                            },
-                          }))
-                        }
-                      />
-                    </div>
-                  ))}
-                  <div className="border p-1">
-                    <select
-                      className="w-full"
-                      value={formData[lead.id]?.status || ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          [lead.id]: {
-                            ...(prev[lead.id] || {}),
-                            status: e.target.value,
-                          },
-                        }))
-                      }
-                    >
-                      <option value="">Status</option>
-                      <option value="new">Ny</option>
-                      <option value="contacted">Kontaktet</option>
-                      <option value="not_interested">Ikke interessert</option>
-                    </select>
-                  </div>
-                </div>
+                <RenderInputFields
+                  lead={lead}
+                  formData={formData}
+                  onFormDataChange={handleFormDataChange}
+                />
               </div>
             ))}
           </>
