@@ -127,8 +127,6 @@ export default function ColdCallingPage() {
     <div>
       <div className="flex flex-row justify-between">
         <div>
-          <h1>Cold Calling</h1>
-
           <div className="flex flex-row gap-2">
             <TeamMemberSelector
               team={team}

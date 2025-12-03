@@ -11,7 +11,9 @@ type ExcelRow = {
   Rolle?: string;
   Firmanavn?: string;
   Mobil?: string;
+  "Mob.Nr."?: string;
   Telefon?: string;
+  "Tlf.Nr."?: string;
 };
 
 export async function POST(req: NextRequest) {
@@ -36,12 +38,12 @@ export async function POST(req: NextRequest) {
     const name = nameParts.join(" ");
 
     return {
-      address: address || "Ingen addresse",
-      name: name || "Ingen navn",
-      role: row["Rolle"] || "Ingen rolle",
-      company: row["Firmanavn"] || "Ingen firma",
-      mobile: row["Mobil"] || "Ingen mobil",
-      phone: row["Telefon"] || "Ingen telefon",
+      address: address || null,
+      name: name || null,
+      role: row["Rolle"] || null,
+      company: row["Firmanavn"] || null,
+      mobile: row["Mobil"] || row["Mob.Nr."] || null,
+      phone: row["Telefon"] || row["Tlf.Nr."] || null,
     };
   });
 

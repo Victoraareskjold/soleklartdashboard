@@ -52,7 +52,7 @@ export default function TeamPage() {
 
   const copyId = (groupId: string, groupName: string) => {
     navigator.clipboard.writeText(
-      `www.soleklartdashboard.vercel.app/auth?inviteLink=${groupId}`
+      `www.soleklart.com/auth?inviteLink=${groupId}`
     );
     toast.success(`Link kopiert for ${groupName}!`);
   };
