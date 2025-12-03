@@ -64,21 +64,13 @@ export interface Lead {
   estimate_id?: Estimate;
   created_at: string;
   updated_at?: string;
-  status?: LeadStatus;
+  status?: number;
   email?: string;
   phone?: string;
   mobile?: string;
   role?: string;
+  note?: string;
 }
-
-export const LEAD_STATUSES = [
-  "new",
-  "contacted",
-  "qualified",
-  "won",
-  "lost",
-] as const;
-export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 export interface Estimate {
   id: string;

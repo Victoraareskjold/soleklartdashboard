@@ -6,8 +6,8 @@ import { CLIENT_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthProvider";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import { getTeam } from "@/lib/api";
-import { Team } from "@/lib/types";
+import { getRoofTypes, getTeam } from "@/lib/api";
+import { RoofType, Team } from "@/lib/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -24,7 +24,6 @@ export type ColdCallLead = {
 };
 
 export type FormDataFields = {
-  [index: number]: string;
   status: string | null;
 };
 
@@ -42,12 +41,14 @@ export default function ColdCallingPage() {
   const [coldCalls, setColdCalls] = useState<ColdCallLead[]>([]);
 
   const [formData, setFormData] = useState<FormData>({});
+  const [roofTypeOptions, setRoofTypeOptions] = useState<RoofType[]>([]);
 
   useEffect(() => {
     if (!teamId) return;
 
-    getTeam(teamId)
-      .then(setTeam)
+    getTeam(teamId).then(setTeam);
+    getRoofTypes()
+      .then(setRoofTypeOptions)
       .catch((err) => console.error("Failed to fetch team members:", err));
   }, [teamId]);
 
@@ -91,21 +92,57 @@ export default function ColdCallingPage() {
     }));
   };
 
-  const handleMove = () => {
-    const completeLeads = coldCalls.filter((lead) => {
-      const data = formData[lead.id];
-      if (!data) return false;
+  const handleMove = async () => {
+    const requiredFields = [
+      "email",
+      "roof_type_id",
+      "own_consumption",
+      "main_fuse",
+      "roof_age",
+      "status",
+    ];
 
-      // 6 INPUT_FIELDS + 1 status = 7 totalt
-      const filledInputs =
-        Object.keys(data).length === 7 &&
-        Object.values(data).every((v) => v && v.trim() !== "");
+    const completeLeads = coldCalls
+      .map((lead) => {
+        const data = formData[lead.id];
+        if (!data) return null;
 
-      return filledInputs;
-    });
+        const allRequiredFilled = requiredFields.every((key) => {
+          const value = (data as Record<string, string | number>)[key];
+          return (
+            value !== undefined &&
+            value !== null &&
+            value.toString().trim() !== ""
+          );
+        });
 
-    console.log("Leads som skal flyttes:", completeLeads);
-    // SEND completeLeads til API her
+        if (!allRequiredFilled) return null;
+
+        return {
+          id: lead.id,
+          ...data,
+        };
+      })
+      .filter(Boolean);
+
+    if (!completeLeads.length) return;
+
+    console.log("Data som skal upsertes:", completeLeads);
+
+    try {
+      const res = await fetch("/api/coldCalling/upsert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(completeLeads),
+      });
+
+      if (!res.ok) throw new Error("Feil ved oppdatering av leads");
+
+      toast.success("Leads oppdatert!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt");
+    }
   };
 
   const headers = ["Adresse", "Navn", "Rolle", "Firmanavn", "Mobil", "Telefon"];
@@ -188,6 +225,7 @@ export default function ColdCallingPage() {
                   lead={lead}
                   formData={formData}
                   onFormDataChange={handleFormDataChange}
+                  roofTypeOptions={roofTypeOptions}
                 />
               </div>
             ))}

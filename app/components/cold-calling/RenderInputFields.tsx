@@ -1,20 +1,22 @@
 "use client";
 
 import { ColdCallLead, FormData } from "@/app/(dashboard)/coldCalling/page";
+import { LeadStatus } from "@/constants/leadStatuses";
+import { RoofType } from "@/lib/types";
 
 type InputField = {
   key: string;
-  type: "text" | "select";
+  type: "text" | "select" | "number";
   placeholder: string;
   label: string;
-  inputType?: string;
-  options?: { value: string; label: string }[];
+  options?: { value: string | number; label: string }[];
 };
 
 type RenderInputFieldsProps = {
   lead: ColdCallLead;
   formData: FormData;
   onFormDataChange: (leadId: string, fieldKey: string, value: string) => void;
+  roofTypeOptions: RoofType[];
 };
 
 const INPUT_FIELDS: InputField[] = [
@@ -25,47 +27,38 @@ const INPUT_FIELDS: InputField[] = [
     label: "E-post",
   },
   {
-    key: "roof_type",
+    key: "roof_type_id",
     type: "select",
-    placeholder: "Taktype",
-    label: "Taktype",
-    options: [
-      { value: "", label: "Velg taktype" },
-      { value: "flat", label: "Flatt tak" },
-      { value: "pitched", label: "Skråtak" },
-      { value: "other", label: "Annet" },
-    ],
+    placeholder: "Taktekke",
+    label: "Taktekke",
   },
   {
     key: "own_consumption",
-    type: "text",
+    type: "number",
     placeholder: "Eget forbruk (kWh)",
     label: "Eget forbruk",
-    inputType: "number",
   },
   {
-    key: "grid_voltage",
+    key: "main_fuse",
     type: "select",
     placeholder: "Nettspenning",
     label: "Nettspenning",
     options: [
-      { value: "", label: "Velg nettspenning" },
-      { value: "230v", label: "230V" },
-      { value: "400v", label: "400V" },
+      { value: 230, label: "230V" },
+      { value: 400, label: "400V" },
     ],
   },
   {
-    key: "roof_area",
-    type: "text",
-    placeholder: "Takflate (m²)",
-    label: "Takflate",
-    inputType: "number",
+    key: "roof_age",
+    type: "number",
+    placeholder: "Alder på tak",
+    label: "Alder på tak",
   },
   {
-    key: "notes",
+    key: "note",
     type: "text",
-    placeholder: "Notater",
-    label: "Notater",
+    placeholder: "Merknad",
+    label: "Merknad",
   },
 ];
 
@@ -73,19 +66,25 @@ export default function RenderInputFields({
   lead,
   formData,
   onFormDataChange,
+  roofTypeOptions,
 }: RenderInputFieldsProps) {
   const renderField = (field: InputField) => {
     const value =
       (formData[lead.id] as Record<string, string>)?.[field.key] || "";
 
-    if (field.type === "select" && field.options) {
+    if (field.type === "select") {
+      const options =
+        field.key === "roof_type_id"
+          ? roofTypeOptions.map((t) => ({ value: t.id, label: t.name }))
+          : field.options || [];
       return (
         <select
           className="w-full"
           value={value}
           onChange={(e) => onFormDataChange(lead.id, field.key, e.target.value)}
         >
-          {field.options.map((option) => (
+          <option value="">Velg {field.label.toLowerCase()}</option>
+          {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -96,7 +95,7 @@ export default function RenderInputFields({
 
     return (
       <input
-        type={field.inputType || "text"}
+        type={field.type || "text"}
         placeholder={field.placeholder}
         className="w-full"
         value={value}
@@ -119,9 +118,11 @@ export default function RenderInputFields({
           onChange={(e) => onFormDataChange(lead.id, "status", e.target.value)}
         >
           <option value="">Status</option>
-          <option value="new">Ny</option>
-          <option value="contacted">Kontaktet</option>
-          <option value="not_interested">Ikke interessert</option>
+          {LeadStatus.map((stat) => (
+            <option key={stat.value} value={stat.value}>
+              {stat.label}
+            </option>
+          ))}
         </select>
       </div>
     </div>
