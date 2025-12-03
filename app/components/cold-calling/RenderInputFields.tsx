@@ -75,7 +75,8 @@ export default function RenderInputFields({
   onFormDataChange,
 }: RenderInputFieldsProps) {
   const renderField = (field: InputField) => {
-    const value = formData[lead.id]?.[field.key] || "";
+    const value =
+      (formData[lead.id] as Record<string, string>)?.[field.key] || "";
 
     if (field.type === "select" && field.options) {
       return (
