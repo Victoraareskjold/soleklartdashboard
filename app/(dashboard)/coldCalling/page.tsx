@@ -2,6 +2,7 @@
 import RenderInputFields from "@/app/components/cold-calling/RenderInputFields";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
 import LoadingScreen from "@/app/components/LoadingScreen";
+import { LeadStatus } from "@/constants/leadStatuses";
 import { CLIENT_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthProvider";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
@@ -44,6 +45,8 @@ export default function ColdCallingPage() {
   const [formData, setFormData] = useState<FormData>({});
   const [roofTypeOptions, setRoofTypeOptions] = useState<RoofType[]>([]);
 
+  const [status, setStatus] = useState(0);
+
   useEffect(() => {
     if (!teamId) return;
 
@@ -61,7 +64,7 @@ export default function ColdCallingPage() {
         userId: selectedMember,
         installerGroupId,
         teamId,
-        status: "0",
+        status: String(status),
       });
 
       const res = await fetch(`/api/coldCalling?${params.toString()}`, {
@@ -78,7 +81,7 @@ export default function ColdCallingPage() {
       setColdCalls(data || []);
     };
     fetchLeadsForUser();
-  }, [installerGroupId, selectedMember, teamId]);
+  }, [installerGroupId, selectedMember, teamId, status]);
 
   const handleFormDataChange = (
     leadId: string,
@@ -158,8 +161,6 @@ export default function ColdCallingPage() {
 
   if (!user) return <LoadingScreen />;
 
-  console.log(coldCalls);
-
   return (
     <div>
       <div className="flex flex-row justify-between">
@@ -172,8 +173,13 @@ export default function ColdCallingPage() {
               defaultUser={user.id}
             />
 
-            <select>
-              <option>Ringeliste</option>
+            <select onChange={(e) => setStatus(Number(e.target.value))}>
+              <option value={0}>Ringeliste</option>
+              {LeadStatus.sort((a, b) => a.value - b.value).map((stat) => (
+                <option key={stat.value} value={stat.value}>
+                  {stat.label}
+                </option>
+              ))}
             </select>
           </div>
 
