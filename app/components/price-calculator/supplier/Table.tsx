@@ -306,12 +306,19 @@ export default function SupplierTable({
           return (
             <div key={supplier.id} className="mb-8">
               <div className="flex justify-between items-center mb-4">
-                <button
-                  onClick={() => toggleSupplier(supplier.id)}
-                  className="text-left text-xl font-bold"
-                >
-                  {collapsedSuppliers[supplier.id] ? "▼" : "▶"} {supplier.name}
-                </button>
+                <div>
+                  <p>
+                    {supplier.category.charAt(0).toUpperCase() +
+                      supplier.category.slice(1)}
+                  </p>
+                  <button
+                    onClick={() => toggleSupplier(supplier.id)}
+                    className="text-left text-xl font-bold"
+                  >
+                    {collapsedSuppliers[supplier.id] ? "▼" : "▶"}{" "}
+                    {supplier.name}{" "}
+                  </button>
+                </div>
 
                 <button
                   onClick={() => openModal(supplier.id, supplier.name)}

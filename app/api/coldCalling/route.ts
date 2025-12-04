@@ -7,8 +7,9 @@ export async function GET(req: NextRequest) {
     const userId = url.searchParams.get("userId");
     const installerGroupId = url.searchParams.get("installerGroupId");
     const teamId = url.searchParams.get("teamId");
+    const status = url.searchParams.get("status");
 
-    if (!userId || !installerGroupId || !teamId) {
+    if (!installerGroupId || !teamId) {
       return NextResponse.json(
         { error: "Mangler parametere" },
         { status: 400 }
@@ -17,13 +18,21 @@ export async function GET(req: NextRequest) {
 
     const supabase = createSupabaseAdminClient();
 
-    // Sett inn alle leads på én gang
-    const { data, error } = await supabase
+    let query = supabase
       .from("leads")
       .select()
-      .eq("assigned_to", userId)
       .eq("installer_group_id", installerGroupId)
-      .eq("team_id", teamId);
+      .eq("team_id", teamId)
+      .eq("status", 0);
+
+    if (userId) {
+      query = query.eq("assigned_to", userId);
+    }
+    if (status) {
+      query = query.eq("status", status);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Supabase error:", error);

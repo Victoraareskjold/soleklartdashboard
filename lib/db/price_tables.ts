@@ -14,6 +14,7 @@ export async function getSuppliersWithProducts(client: SupabaseClient) {
       `
     id,
     name,
+    category,
     products (
       id,
       name,

@@ -127,8 +127,6 @@ export default function ColdCallingPage() {
 
     if (!completeLeads.length) return;
 
-    console.log("Data som skal upsertes:", completeLeads);
-
     try {
       const res = await fetch("/api/coldCalling/upsert", {
         method: "POST",
@@ -138,7 +136,7 @@ export default function ColdCallingPage() {
 
       if (!res.ok) throw new Error("Feil ved oppdatering av leads");
 
-      toast.success("Leads oppdatert!");
+      toast.success("Leads flyttet!");
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt");
