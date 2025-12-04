@@ -37,7 +37,7 @@ export default function ContactsPage() {
   }, [teamId]);
 
   useEffect(() => {
-    if (!selectedMember || !installerGroupId || !teamId) return;
+    if (!installerGroupId || !teamId) return;
 
     const fetchLeadsForUser = async () => {
       const params = new URLSearchParams({
@@ -88,17 +88,25 @@ export default function ContactsPage() {
   return (
     <div>
       <h1>Kontakter</h1>
-      <div className="flex flex-row justify-between">
-        <div className="flex flex-col">
+      <div className="flex flex-row justify-between mb-4">
+        <div className="flex flex-col gap-2">
           <TeamMemberSelector
             team={team}
             selectedMember={selectedMember}
             onSelectMember={setSelectedMember}
             defaultUser={user.id}
           />
-          <input type="text" placeholder="Søk etter navn eller beskrivelse" />
+          <input
+            type="text"
+            placeholder="Søk etter navn eller beskrivelse"
+            className="border p-2 rounded-md"
+          />
         </div>
-        <button>Opprett konktakt</button>
+        <div>
+          <button className="w-42 text-center rounded-sm px-4 py-2 bg-[#FF8E4C] text-white">
+            Opprett konktakt
+          </button>
+        </div>
       </div>
 
       <table className="w-full">

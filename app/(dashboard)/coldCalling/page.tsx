@@ -70,7 +70,7 @@ export default function ColdCallingPage() {
   }, [teamId]);
 
   useEffect(() => {
-    if (!selectedMember || !installerGroupId || !teamId) return;
+    if (!installerGroupId || !teamId) return;
 
     const fetchLeadsForUser = async () => {
       const params = new URLSearchParams({
@@ -204,17 +204,14 @@ export default function ColdCallingPage() {
 
   return (
     <div>
-      <div className="flex flex-row justify-between">
+      <div className="flex flex-row justify-between items-center gap-4 mb-4">
         <div>
-          <div className="flex flex-row gap-2">
-            <TeamMemberSelector
-              team={team}
-              selectedMember={selectedMember}
-              onSelectMember={setSelectedMember}
-              defaultUser={user.id}
-            />
-
-            <select onChange={(e) => setStatus(Number(e.target.value))}>
+          <h1>Cold calling</h1>
+          <div className="flex flex-row gap-2 my-2">
+            <select
+              className="border p-2 rounded-md"
+              onChange={(e) => setStatus(Number(e.target.value))}
+            >
               <option value={0}>Ringeliste</option>
               {LeadStatus.sort((a, b) => a.value - b.value).map((stat) => (
                 <option key={stat.value} value={stat.value}>
@@ -222,18 +219,37 @@ export default function ColdCallingPage() {
                 </option>
               ))}
             </select>
+
+            <TeamMemberSelector
+              team={team}
+              selectedMember={selectedMember}
+              onSelectMember={setSelectedMember}
+              defaultUser={user.id}
+            />
           </div>
 
-          <input type="text" placeholder="Søk etter navn eller beskrivelse" />
+          <input
+            type="text"
+            placeholder="Søk etter navn eller beskrivelse"
+            className="border p-2 rounded-md w-full"
+          />
         </div>
 
-        <div className="w-128 h-32 bg-red-500"></div>
+        <div className="w-full h-32 bg-slate-200"></div>
 
         <div className="flex flex-col gap-2">
           {status === 0 && (
-            <Link href={CLIENT_ROUTES.COLD_CALLING + "/import"}>Importer</Link>
+            <Link
+              className="w-42 text-center rounded-sm px-4 py-2 bg-[#FF8E4C] text-white"
+              href={CLIENT_ROUTES.COLD_CALLING + "/import"}
+            >
+              Importer
+            </Link>
           )}
-          <button onClick={handleMove}>
+          <button
+            className="w-42 text-center rounded-sm px-4 py-2 bg-green-500 text-white"
+            onClick={handleMove}
+          >
             {status >= 5 ? "Flytt til kontakter" : "Flytt"}
           </button>
         </div>

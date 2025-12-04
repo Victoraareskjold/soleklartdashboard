@@ -41,15 +41,16 @@ export default function TeamMemberSelector({
         onSelectMember(defaultUser);
       }
     }
-  }, [defaultUser, teamMembers, selectedMember, onSelectMember]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultUser, teamMembers, onSelectMember]);
 
   return (
     <select
       value={selectedMember}
       onChange={(e) => onSelectMember(e.target.value)}
-      className="border p-2 my-2 rounded-md"
+      className="border p-2 rounded-md"
     >
-      <option value="">Velg teammedlem</option>
+      <option value="">Lead-innhenter</option>
       {teamMembers.map((member) => (
         <option key={member.user_id} value={member.user_id}>
           {member.name}
