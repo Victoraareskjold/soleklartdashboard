@@ -160,6 +160,10 @@ export default function ColdCallingPage() {
 
         if (!allRequiredFilled) return null;
 
+        if (status >= 5) {
+          data.status = "6";
+        }
+
         return {
           id: lead.id,
           ...data,
@@ -226,8 +230,12 @@ export default function ColdCallingPage() {
         <div className="w-128 h-32 bg-red-500"></div>
 
         <div className="flex flex-col gap-2">
-          <Link href={CLIENT_ROUTES.COLD_CALLING + "/import"}>Importer</Link>
-          <button onClick={handleMove}>Flytt</button>
+          {status === 0 && (
+            <Link href={CLIENT_ROUTES.COLD_CALLING + "/import"}>Importer</Link>
+          )}
+          <button onClick={handleMove}>
+            {status >= 5 ? "Flytt til kontakter" : "Flytt"}
+          </button>
         </div>
       </div>
 
