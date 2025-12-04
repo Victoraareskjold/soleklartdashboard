@@ -18,7 +18,7 @@ export const CLIENT_ROUTES = {
 
 export const NAVBAR_ROUTES = [
   { name: "Cold Calling", href: CLIENT_ROUTES.COLD_CALLING },
-  { name: "Contacts", href: CLIENT_ROUTES.CONTACTS },
+  { name: "Kontakter", href: CLIENT_ROUTES.CONTACTS },
   { name: "Avtaler", href: CLIENT_ROUTES.LEADS },
 
   { name: "Priskalkulator", href: CLIENT_ROUTES.PRICETABLE },

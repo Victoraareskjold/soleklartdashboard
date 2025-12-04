@@ -1,7 +1,7 @@
 import { createSupabaseAdminClient } from "@/utils/supabase/client";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
+export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
     const id = body;

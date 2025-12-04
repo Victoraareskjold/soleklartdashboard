@@ -89,7 +89,7 @@ export default function ContactsPage() {
   const handleCreateLead = async (id: string) => {
     try {
       const res = await fetch("/api/coldCalling/contact/upsert", {
-        method: "POST",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(id),
       });

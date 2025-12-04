@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       assigned_to: assignedTo,
       installer_group_id: installerGroupId,
       team_id: teamId,
-      status: null,
+      status: 0,
       created_at: new Date().toISOString(),
     }));
 
