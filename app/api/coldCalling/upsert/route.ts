@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
         email,
         roof_type_id,
         own_consumption,
-        main_fuse,
+        voltage,
         roof_age,
         status,
       } = lead;
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         !email ||
         !roof_type_id ||
         !own_consumption ||
-        !main_fuse ||
+        !voltage ||
         !roof_age ||
         !status
       ) {
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
           email,
           roof_type_id,
           own_consumption,
-          main_fuse,
+          voltage,
           roof_age,
           status,
           updated_at: new Date().toISOString(),

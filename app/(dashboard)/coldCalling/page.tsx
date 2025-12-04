@@ -25,7 +25,7 @@ export type ColdCallLead = {
   email: string | null;
   roof_type_id: string | null;
   own_consumption: number | string | null;
-  main_fuse: number | string | null;
+  voltage: number | string | null;
   roof_age: number | string | null;
   note: string | null;
   status: number | string | null;
@@ -37,7 +37,7 @@ export type FormDataFields = {
   email?: string | null;
   roof_type_id?: string | null;
   own_consumption?: string | null;
-  main_fuse?: string | null;
+  voltage?: string | null;
   roof_age?: string | null;
   note?: string | null;
 };
@@ -103,7 +103,7 @@ export default function ColdCallingPage() {
               email: toStringOrNull(lead.email),
               roof_type_id: toStringOrNull(lead.roof_type_id),
               own_consumption: toStringOrNull(lead.own_consumption),
-              main_fuse: toStringOrNull(lead.main_fuse),
+              voltage: toStringOrNull(lead.voltage),
               roof_age: toStringOrNull(lead.roof_age),
               note: toStringOrNull(lead.note),
               status: toStringOrNull(lead.status),
@@ -139,7 +139,7 @@ export default function ColdCallingPage() {
       "email",
       "roof_type_id",
       "own_consumption",
-      "main_fuse",
+      "voltage",
       "roof_age",
       "status",
     ];

@@ -15,12 +15,12 @@ import LeadCard from "./LeadCard";
 import { useRoles } from "@/context/RoleProvider";
 
 const LEAD_STATUSES = [
-  { value: 6, label: "new" },
-  { value: 7, label: "contacted" },
-  { value: 8, label: "qualified" },
-  { value: 9, label: "won" },
-  { value: 10, label: "lost" },
-  { value: 11, label: "done" },
+  { value: 7, label: "new" },
+  { value: 8, label: "contacted" },
+  { value: 9, label: "qualified" },
+  { value: 10, label: "won" },
+  { value: 11, label: "lost" },
+  { value: 12, label: "done" },
 ];
 
 export default function LeadsTable() {

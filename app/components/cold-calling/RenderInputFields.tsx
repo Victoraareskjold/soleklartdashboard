@@ -39,7 +39,7 @@ const INPUT_FIELDS: InputField[] = [
     label: "Eget forbruk",
   },
   {
-    key: "main_fuse",
+    key: "voltage",
     type: "select",
     placeholder: "Nettspenning",
     label: "Nettspenning",

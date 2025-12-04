@@ -44,7 +44,8 @@ export default function ContactsPage() {
         userId: selectedMember,
         installerGroupId,
         teamId,
-        gtStatus: "5",
+        // Status 6 betyr contact, har ingen annen referanse
+        status: "5",
       });
 
       const res = await fetch(`/api/coldCalling?${params.toString()}`, {
@@ -85,6 +86,23 @@ export default function ContactsPage() {
     (member) => member.user_id === user.id
   );
 
+  const handleCreateLead = async (id: string) => {
+    try {
+      const res = await fetch("/api/coldCalling/contact/upsert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(id),
+      });
+
+      if (!res.ok) throw new Error("Feil ved oppretelse av avtale");
+
+      toast.success("Avtale opprettet!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt");
+    }
+  };
+
   return (
     <div>
       <h1>Kontakter</h1>
@@ -124,8 +142,11 @@ export default function ContactsPage() {
           {coldCalls.map((coldCall) => (
             <tr key={coldCall.id}>
               <td className="w-1/10 border">
-                <button className="w-full bg-[#FF8E4C] h-14 text-white">
-                  Opprett konktakt
+                <button
+                  onClick={() => handleCreateLead(coldCall.id)}
+                  className="w-full bg-[#FF8E4C] h-14 text-white"
+                >
+                  Opprett avtale
                 </button>
               </td>
               {fields.map((field) => (
