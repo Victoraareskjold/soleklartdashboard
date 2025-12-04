@@ -64,13 +64,12 @@ export default function ContactsPage() {
   }, [installerGroupId, selectedMember, teamId]);
 
   const headers = [
-    "",
     "Adresse",
     "Navn",
     "E-post",
     "Mobil",
     "Telefon",
-    "Leadinnhenter",
+    "Lead-innhenter",
   ];
   const fields: (keyof ContactLead)[] = [
     "address",
@@ -105,8 +104,9 @@ export default function ContactsPage() {
       <table>
         <thead>
           <tr>
+            <th className="w-1/10 text-left"></th>
             {headers.map((header, index) => (
-              <th className="border p-2 w-1/6" key={index}>
+              <th className="border p-2 w-1/8 text-left" key={index}>
                 {header}
               </th>
             ))}
@@ -115,15 +115,17 @@ export default function ContactsPage() {
         <tbody>
           {coldCalls.map((coldCall) => (
             <tr key={coldCall.id}>
-              <td className="w-1/8">
-                <button>Opprett konktakt</button>
+              <td className="w-1/10 border">
+                <button className="w-full bg-[#FF8E4C] h-14 text-white">
+                  Opprett konktakt
+                </button>
               </td>
               {fields.map((field) => (
-                <td className="border p-1 w-1/7" key={field}>
+                <td className="border p-1 w-1/8" key={field}>
                   {coldCall[field]}
                 </td>
               ))}
-              <td className="border p-1 w-1/7">
+              <td className="border p-1 w-1/8">
                 {assignedTo?.name ||
                   assignedTo?.user_id ||
                   "Ingen leadinnhenter"}
