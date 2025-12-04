@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     const installerGroupId = url.searchParams.get("installerGroupId");
     const teamId = url.searchParams.get("teamId");
     const status = url.searchParams.get("status");
+    const gtStatus = url.searchParams.get("gtStatus");
 
     if (!installerGroupId || !teamId) {
       return NextResponse.json(
@@ -22,14 +23,16 @@ export async function GET(req: NextRequest) {
       .from("leads")
       .select()
       .eq("installer_group_id", installerGroupId)
-      .eq("team_id", teamId)
-      .eq("status", 0);
+      .eq("team_id", teamId);
 
     if (userId) {
       query = query.eq("assigned_to", userId);
     }
     if (status) {
-      query = query.eq("status", status);
+      query = query.eq("status", parseInt(status));
+    }
+    if (gtStatus) {
+      query = query.gt("status", parseInt(gtStatus));
     }
 
     const { data, error } = await query;

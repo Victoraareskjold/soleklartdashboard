@@ -25,6 +25,7 @@ export type ColdCallLead = {
 
 export type FormDataFields = {
   status: string | null;
+  gtStatus: string | null;
 };
 
 export type FormData = {
@@ -60,6 +61,7 @@ export default function ColdCallingPage() {
         userId: selectedMember,
         installerGroupId,
         teamId,
+        status: "0",
       });
 
       const res = await fetch(`/api/coldCalling?${params.toString()}`, {
