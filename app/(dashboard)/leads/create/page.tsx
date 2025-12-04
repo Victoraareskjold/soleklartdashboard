@@ -93,7 +93,7 @@ export default function CreateLead() {
         email,
         phone,
         address,
-        status: "new",
+        status: 7,
         priority: "iron",
       });
 
