@@ -27,10 +27,11 @@ export async function GET(req: Request) {
 
     if (teamRole === "installer") {
       return NextResponse.json(
-        leads.filter((lead) => lead.installer_group_id !== installerGroupId) ??
+        leads.filter((lead) => lead.installer_group_id === installerGroupId) ??
           []
       );
     }
+    console.log(leads);
     return NextResponse.json(leads ?? []);
   } catch (err) {
     console.error("GET /api/leads error:", err);

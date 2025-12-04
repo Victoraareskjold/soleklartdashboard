@@ -11,10 +11,14 @@ export default function Home() {
       <div className="bg-blue-200 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
         <div className="mb-6">
           <div className="w-16 h-16  rounded-full mx-auto mb-4 flex items-center justify-center">
-            <img src="/soleklartlogo.png" />
+            <img src="/soleklartlogo.png" alt="soleklart logo" />
           </div>
           <div className="flex flex-row items-center gap-2 justify-center">
-            <img src="/soleklartstorlogo.png" className="h-6" />
+            <img
+              src="/soleklartstorlogo.png"
+              alt="soleklart logo"
+              className="h-6"
+            />
             <h1 className="text-3xl font-medium text-[#FAA31A]">Dashbord</h1>
           </div>
           <p className="text-gray-600">Arbeidsflyt gjort enkelt</p>

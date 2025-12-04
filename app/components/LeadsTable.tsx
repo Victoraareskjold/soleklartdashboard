@@ -2,7 +2,7 @@
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
 import { getLeads, updateLead } from "@/lib/api";
-import { Lead, LEAD_STATUSES } from "@/lib/types";
+import { Lead } from "@/lib/types";
 import { useEffect, useState } from "react";
 import {
   DragDropContext,
@@ -13,6 +13,15 @@ import {
 import { toast } from "react-toastify";
 import LeadCard from "./LeadCard";
 import { useRoles } from "@/context/RoleProvider";
+
+const LEAD_STATUSES = [
+  { value: 6, label: "new" },
+  { value: 7, label: "contacted" },
+  { value: 8, label: "qualified" },
+  { value: 9, label: "won" },
+  { value: 10, label: "lost" },
+  { value: 11, label: "done" },
+];
 
 export default function LeadsTable() {
   const { teamId } = useTeam();
@@ -30,25 +39,23 @@ export default function LeadsTable() {
   }, [installerGroupId, teamId, teamRole]);
 
   const grouped = LEAD_STATUSES.reduce((acc, status) => {
-    acc[status] = leads.filter((lead) => lead.status === status);
+    acc[status.value] = leads.filter((lead) => lead.status === status.value);
     return acc;
-  }, {} as Record<string, Lead[]>);
+  }, {} as Record<number, Lead[]>);
 
   const onDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
 
-    const sourceStatus = source.droppableId;
-    const destStatus = destination.droppableId;
+    const sourceStatus = parseInt(source.droppableId);
+    const destStatus = parseInt(destination.droppableId);
 
     // Kun oppdater hvis status faktisk endres
     if (sourceStatus === destStatus) return;
 
     // Oppdater lokal state optimistisk
     const updatedLeads = leads.map((lead) =>
-      lead.id === draggableId
-        ? { ...lead, status: destStatus as Lead["status"] }
-        : lead
+      lead.id === draggableId ? { ...lead, status: destStatus } : lead
     );
     setLeads(updatedLeads);
 
@@ -68,7 +75,7 @@ export default function LeadsTable() {
     <div className="flex gap-4 overflow-x-auto p-4">
       <DragDropContext onDragEnd={onDragEnd}>
         {LEAD_STATUSES.map((status) => (
-          <Droppable key={status} droppableId={status}>
+          <Droppable key={status.value} droppableId={status.value.toString()}>
             {(provided) => (
               <div
                 {...provided.droppableProps}
@@ -76,9 +83,9 @@ export default function LeadsTable() {
                 className="bg-gray-100 rounded-md p-3 min-w-[250px]"
               >
                 <h2 className="font-semibold text-gray-700 mb-3 uppercase text-sm">
-                  {status}
+                  {status.label}
                 </h2>
-                {grouped[status]?.map((lead, index) => (
+                {grouped[status.value]?.map((lead, index) => (
                   <Draggable key={lead.id} draggableId={lead.id} index={index}>
                     {(provided) => (
                       <div
