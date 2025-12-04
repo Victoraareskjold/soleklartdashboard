@@ -76,6 +76,7 @@ export default function LeadPage() {
   // Input
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [mobile, setMobile] = useState("");
   const [personInfo, setPersonInfo] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [company, setCompany] = useState("");
@@ -83,6 +84,7 @@ export default function LeadPage() {
   const [ownConsumtion, setOwnConsumtion] = useState(0);
 
   // Customer info
+  const [voltage, setVoltage] = useState(230);
   const voltageOptions = [
     { label: "230V", value: 230 },
     { label: "400V", value: 400 },
@@ -106,7 +108,7 @@ export default function LeadPage() {
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
   const [roofSlope, setRoofSlope] = useState(0);
 
-  const [roofAge, setRoofAge] = useState(5);
+  const [roofAge, setRoofAge] = useState(0);
 
   const [solarData, setSolarData] = useState<SolarData>({
     totalPanels: 0,
@@ -137,9 +139,17 @@ export default function LeadPage() {
         setEmail(data.email ?? "");
         setPersonInfo(data.person_info ?? "");
         setBirthDate(data.birth_date ?? "");
+        setCompany(data.company ?? "");
         setPhone(data.phone ?? "");
+        setMobile(data.mobile ?? "");
         setAddress(data.address ?? "");
         setOwnConsumtion(data.own_consumption || 0);
+        setVoltage(data.voltage ?? 230);
+        setRoofSlope(data.roof_slope ?? 0);
+        setRoofAge(data.roof_age ?? 0);
+        setRoofType(
+          roofTypes.find((rt) => rt.id === data.roof_type_id)?.name ?? ""
+        );
       }),
       getEstimatesByLeadId(leadIdStr).then((data) => {
         setEstimates(data ?? []);
@@ -150,7 +160,10 @@ export default function LeadPage() {
     ])
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadIdStr, installerGroupId]);
+
+  console.log(roofTypes);
 
   const [roofType, setRoofType] = useState("");
 
@@ -238,6 +251,12 @@ export default function LeadPage() {
               placeholder="Telefon"
             />
             <Input
+              label="Mobil"
+              value={mobile}
+              onChange={setMobile}
+              placeholder="Mobil"
+            />
+            <Input
               label="Personinfo"
               value={personInfo}
               onChange={setPersonInfo}
@@ -275,7 +294,7 @@ export default function LeadPage() {
           <tbody>
             <Input
               label="Spenning (nett)"
-              value={solarData.voltage ?? 230}
+              value={(voltage || solarData.voltage) ?? 230}
               onChange={(val) =>
                 setSolarData((prev) => ({ ...prev, voltage: Number(val) }))
               }
