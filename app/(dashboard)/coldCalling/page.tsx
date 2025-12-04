@@ -22,11 +22,24 @@ export type ColdCallLead = {
   address: string | null;
   mobile: string | null;
   phone: string | null;
+  email: string | null;
+  roof_type_id: string | null;
+  own_consumption: number | string | null;
+  main_fuse: number | string | null;
+  roof_age: number | string | null;
+  note: string | null;
+  status: number | string | null;
 };
 
 export type FormDataFields = {
-  status: string | null;
-  gtStatus: string | null;
+  status?: string | null;
+  gtStatus?: string | null;
+  email?: string | null;
+  roof_type_id?: string | null;
+  own_consumption?: string | null;
+  main_fuse?: string | null;
+  roof_age?: string | null;
+  note?: string | null;
 };
 
 export type FormData = {
@@ -79,6 +92,30 @@ export default function ColdCallingPage() {
 
       const data = await res.json();
       setColdCalls(data || []);
+      if (data) {
+        const initialFormData = data.reduce(
+          (acc: FormData, lead: ColdCallLead) => {
+            const toStringOrNull = (val: string | number | null | undefined) =>
+              val !== null && val !== undefined ? String(val) : null;
+
+            acc[lead.id] = {
+              gtStatus: null,
+              email: toStringOrNull(lead.email),
+              roof_type_id: toStringOrNull(lead.roof_type_id),
+              own_consumption: toStringOrNull(lead.own_consumption),
+              main_fuse: toStringOrNull(lead.main_fuse),
+              roof_age: toStringOrNull(lead.roof_age),
+              note: toStringOrNull(lead.note),
+              status: toStringOrNull(lead.status),
+            };
+            return acc;
+          },
+          {} as FormData
+        );
+        setFormData(initialFormData);
+      } else {
+        setFormData({});
+      }
     };
     fetchLeadsForUser();
   }, [installerGroupId, selectedMember, teamId, status]);

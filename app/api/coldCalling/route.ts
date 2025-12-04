@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("leads")
-      .select()
+      .select("*")
       .eq("installer_group_id", installerGroupId)
       .eq("team_id", teamId);
 

@@ -101,7 +101,7 @@ export default function ContactsPage() {
         <button>Opprett konktakt</button>
       </div>
 
-      <table>
+      <table className="w-full">
         <thead>
           <tr>
             <th className="w-1/10 text-left"></th>
