@@ -8,6 +8,7 @@ import { Team } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
+import { useRouter } from "next/navigation";
 
 export type ContactLead = {
   id: string;
@@ -20,6 +21,8 @@ export type ContactLead = {
 };
 
 export type CreateLead = {
+  team_id: string;
+  installer_group_id: string;
   email: string | null;
   person_info: string | null;
   address: string | null;
@@ -33,13 +36,24 @@ export default function ContactsPage() {
   const { installerGroupId } = useInstallerGroup();
   const { user } = useAuth();
 
+  const router = useRouter();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [team, setTeam] = useState<Team>();
   const [selectedMember, setSelectedMember] = useState<string>("");
   const [coldCalls, setColdCalls] = useState<ContactLead[]>([]);
 
-  const [formData, setFormData] = useState<CreateLead>({} as CreateLead);
+  const [formData, setFormData] = useState<CreateLead>({
+    team_id: teamId!,
+    installer_group_id: installerGroupId!,
+    email: null,
+    person_info: null,
+    address: null,
+    mobile: null,
+    phone: null,
+    assigned_to: selectedMember,
+  });
 
   useEffect(() => {
     if (!teamId) return;
@@ -76,6 +90,10 @@ export default function ContactsPage() {
     };
     fetchLeadsForUser();
   }, [installerGroupId, selectedMember, teamId]);
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, assigned_to: selectedMember }));
+  }, [selectedMember]);
 
   const headers = [
     "Adresse",
@@ -122,6 +140,7 @@ export default function ContactsPage() {
       if (!res.ok) throw new Error("Feil ved oppretelse av avtale");
 
       toast.success("Avtale opprettet!");
+      router.push(`/leads/${id}`);
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt");
@@ -129,16 +148,24 @@ export default function ContactsPage() {
   };
 
   const handleCreateLead = async () => {
+    const createContact = {
+      ...formData,
+      team_id: teamId,
+      installer_group_id: installerGroupId,
+    };
     try {
       const res = await fetch("/api/coldCalling/contact/upsert", {
-        method: "PATCH",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(createContact),
       });
 
       if (!res.ok) throw new Error("Feil ved oppretelse av avtale");
 
+      const data = await res.json();
+
       toast.success("Avtale opprettet!");
+      router.push(`/leads/${data.id}`);
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt");
@@ -226,6 +253,7 @@ export default function ContactsPage() {
                     <input
                       className="border p-1.5 rounded-md"
                       type="text"
+                      placeholder={field.label}
                       value={formData[field.value] ?? ""}
                       onChange={(e) =>
                         setFormData((prev) => ({
@@ -239,6 +267,7 @@ export default function ContactsPage() {
                     <input
                       className="border p-1.5 rounded-md"
                       type="number"
+                      placeholder={field.label}
                       value={formData[field.value] ?? ""}
                       onChange={(e) =>
                         setFormData((prev) => ({
