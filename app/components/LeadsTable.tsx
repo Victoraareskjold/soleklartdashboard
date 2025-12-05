@@ -72,7 +72,7 @@ export default function LeadsTable() {
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto p-4">
+    <div className="flex gap-4 grid grid-cols-5 p-4">
       <DragDropContext onDragEnd={onDragEnd}>
         {LEAD_STATUSES.map((status) => (
           <Droppable key={status.value} droppableId={status.value.toString()}>
@@ -80,7 +80,7 @@ export default function LeadsTable() {
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="bg-gray-100 rounded-md p-3 min-w-[250px]"
+                className="bg-gray-100 rounded-md p-3 min-w-[250px] min-h-42"
               >
                 <h2 className="font-semibold text-gray-700 mb-3 uppercase text-sm">
                   {status.label}
