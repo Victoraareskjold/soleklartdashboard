@@ -371,7 +371,6 @@ function ProductTable({
               <textarea
                 className="w-full p-1"
                 value={item.name}
-                type="text"
                 readOnly
                 disabled
               />
