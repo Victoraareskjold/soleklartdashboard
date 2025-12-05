@@ -368,7 +368,7 @@ function ProductTable({
         {items.map((item) => (
           <tr key={item.id}>
             <td className="border">
-              <input
+              <textarea
                 className="w-full p-1"
                 value={item.name}
                 type="text"
