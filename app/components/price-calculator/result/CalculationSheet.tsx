@@ -53,7 +53,8 @@ export default function CalculationSheet({
   const categoryMapping: Record<string, string> = {
     solcellepanel: "solcellemateriell",
     inverter: "solcellemateriell",
-    feste: "montering",
+    feste: "solcellemateriell",
+    "feste-mount": "montering",
     batteri: "solcellemateriell",
     stillase: "stillase",
     ballastein: "ballastein",
@@ -134,7 +135,7 @@ export default function CalculationSheet({
         name: item.displayName,
         product: product.name,
         supplier: supplier?.name || "Ukjent",
-        category,
+        category: category === "feste" ? "feste" : category,
         quantity: item.quantity,
         source: "supplier",
         price: product.price_ex_vat * item.quantity,
@@ -156,7 +157,7 @@ export default function CalculationSheet({
             name: item.displayName,
             product: product.name,
             supplier: supplier?.name || "Ukjent",
-            category,
+            category: "feste-mount",
             quantity: item.quantity,
             source: "mounting",
             price: mountMatch.price_per * item.quantity,
@@ -211,7 +212,7 @@ export default function CalculationSheet({
   const reductionAmount = totalMountingCost * (reductionPercentage / 100);
 
   const updatedMountingCost = totalMountingCost - reductionAmount;
-  const mountingMarkupPercent = getCategoryMarkup("feste");
+  const mountingMarkupPercent = getCategoryMarkup("feste-mount");
   const totalMountingMarkup =
     updatedMountingCost * (mountingMarkupPercent / 100);
 
