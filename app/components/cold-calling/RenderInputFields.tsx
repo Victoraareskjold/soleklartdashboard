@@ -49,6 +49,12 @@ const INPUT_FIELDS: InputField[] = [
     ],
   },
   {
+    key: "roof_slope",
+    type: "number",
+    placeholder: "Helning på tak",
+    label: "Helning på tak",
+  },
+  {
     key: "roof_age",
     type: "number",
     placeholder: "Alder på tak",
@@ -114,15 +120,15 @@ export default function RenderInputFields({
   };
 
   return (
-    <div className="grid grid-cols-7">
+    <div className="grid grid-cols-10 text-sm items-center">
       {INPUT_FIELDS.map((field) => (
         <div key={field.key} className="border p-1">
           {renderField(field)}
         </div>
       ))}
-      <div className="border">
+      <div className="border text-sm">
         <select
-          className="w-full h-8 p-1"
+          className="w-full h-7 p-1"
           value={formData[lead.id]?.status || ""}
           onChange={(e) => onFormDataChange(lead.id, "status", e.target.value)}
           style={{

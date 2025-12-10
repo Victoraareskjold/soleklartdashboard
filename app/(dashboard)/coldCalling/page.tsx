@@ -136,11 +136,12 @@ export default function ColdCallingPage() {
 
   const handleMove = async () => {
     const requiredFields = [
-      "email",
+      /* "email",
       "roof_type_id",
       "own_consumption",
       "voltage",
-      "roof_age",
+      "roof_slope",
+      "roof_age", */
       "status",
     ];
 
@@ -262,7 +263,7 @@ export default function ColdCallingPage() {
               <thead>
                 <tr>
                   {headers.map((header, index) => (
-                    <th className="border p-2 w-1/6" key={index}>
+                    <th className="border p-2 w-1/6 bg-blue-100" key={index}>
                       {header}
                     </th>
                   ))}
@@ -272,7 +273,7 @@ export default function ColdCallingPage() {
 
             {coldCalls.slice(sliceAmount - 5, sliceAmount).map((lead, i) => (
               <div key={i} className="mb-4">
-                <table className="w-full">
+                <table className="w-full mb-1">
                   <tbody>
                     <tr aria-hidden="true">
                       <td colSpan={fields.length} className="h-4"></td>

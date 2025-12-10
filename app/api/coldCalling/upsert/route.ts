@@ -20,17 +20,18 @@ export async function POST(req: NextRequest) {
         roof_type_id,
         own_consumption,
         voltage,
+        roof_slope,
         roof_age,
         status,
       } = lead;
 
       if (
         !id ||
-        !email ||
+        /* !email ||
         !roof_type_id ||
         !own_consumption ||
         !voltage ||
-        !roof_age ||
+        !roof_age || */
         !status
       ) {
         return NextResponse.json(
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
           roof_type_id,
           own_consumption,
           voltage,
+          roof_slope,
           roof_age,
           status,
           updated_at: new Date().toISOString(),
