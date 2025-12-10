@@ -68,6 +68,15 @@ export default function RenderInputFields({
   onFormDataChange,
   roofTypeOptions,
 }: RenderInputFieldsProps) {
+  const selectedStatus = LeadStatus.find(
+    (s) => String(s.value) === String(formData[lead.id]?.status)
+  );
+
+  const textColor =
+    selectedStatus?.value == null || selectedStatus?.value === 1
+      ? "#000"
+      : "#fff";
+
   const renderField = (field: InputField) => {
     const value =
       (formData[lead.id] as Record<string, string>)?.[field.key] || "";
@@ -111,11 +120,15 @@ export default function RenderInputFields({
           {renderField(field)}
         </div>
       ))}
-      <div className="border p-1">
+      <div className="border">
         <select
-          className="w-full"
+          className="w-full h-8 p-1"
           value={formData[lead.id]?.status || ""}
           onChange={(e) => onFormDataChange(lead.id, "status", e.target.value)}
+          style={{
+            backgroundColor: selectedStatus?.color || "white",
+            color: textColor,
+          }}
         >
           <option value="">Status</option>
           {LeadStatus.map((stat) => (
