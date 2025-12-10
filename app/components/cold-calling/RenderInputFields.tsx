@@ -109,7 +109,14 @@ export default function RenderInputFields({
     }
 
     if (field.type === "textarea") {
-      return <textarea className="w-full min-h-7! h-7 p-1" />;
+      return (
+        <textarea
+          className="w-full min-h-7! h-7 p-1"
+          placeholder={field.placeholder}
+          value={value}
+          onChange={(e) => onFormDataChange(lead.id, field.key, e.target.value)}
+        />
+      );
     }
 
     return (

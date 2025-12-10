@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       const {
         id,
         email,
+        note,
         roof_type_id,
         own_consumption,
         voltage,
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
         .from("leads")
         .update({
           email,
+          note,
           roof_type_id,
           own_consumption,
           voltage,
