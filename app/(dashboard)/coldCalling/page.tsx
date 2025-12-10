@@ -135,42 +135,41 @@ export default function ColdCallingPage() {
   };
 
   const handleMove = async () => {
-    const requiredFields = [
-      /* "email",
-      "roof_type_id",
-      "own_consumption",
-      "voltage",
-      "roof_slope",
-      "roof_age", */
-      "status",
-    ];
-
     const completeLeads = coldCalls
       .map((lead) => {
         const data = formData[lead.id];
         if (!data) return null;
 
-        const allRequiredFilled = requiredFields.every((key) => {
-          const value = (data as Record<string, string | number>)[key];
-          return (
-            value !== undefined &&
-            value !== null &&
-            value.toString().trim() !== ""
-          );
-        });
+        const newStatus = data.status;
 
-        if (!allRequiredFilled) return null;
+        if (newStatus === null || newStatus === undefined) {
+          return null;
+        }
+
+        if (newStatus === String(lead.status)) {
+          return null;
+        }
+
+        const leadUpdateData: { [key: string]: unknown } = { ...data };
+
+        if (newStatus === "") {
+          if (status !== 0) {
+            leadUpdateData.status = "0";
+          } else {
+            return null;
+          }
+        }
 
         if (status >= 5) {
-          data.status = "6";
+          leadUpdateData.status = "6";
         }
 
         return {
           id: lead.id,
-          ...data,
+          ...leadUpdateData,
         };
       })
-      .filter(Boolean);
+      .filter((lead): lead is NonNullable<typeof lead> => lead !== null);
 
     if (!completeLeads.length) return;
 
@@ -184,6 +183,19 @@ export default function ColdCallingPage() {
       if (!res.ok) throw new Error("Feil ved oppdatering av leads");
 
       toast.success("Leads flyttet!");
+      setColdCalls((prev) =>
+        prev.filter((lead) => {
+          const data = formData[lead.id];
+          if (!data) return true;
+
+          const newStatus = data.status;
+
+          if (newStatus === String(lead.status)) return true;
+          if (newStatus === "" && status === 0) return true;
+
+          return false;
+        })
+      );
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt");
