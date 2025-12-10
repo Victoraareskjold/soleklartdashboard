@@ -6,7 +6,7 @@ import { RoofType } from "@/lib/types";
 
 type InputField = {
   key: string;
-  type: "text" | "select" | "number";
+  type: "text" | "select" | "number" | "textarea";
   placeholder: string;
   label: string;
   options?: { value: string | number; label: string }[];
@@ -62,7 +62,7 @@ const INPUT_FIELDS: InputField[] = [
   },
   {
     key: "note",
-    type: "text",
+    type: "textarea",
     placeholder: "Merknad",
     label: "Merknad",
   },
@@ -94,7 +94,7 @@ export default function RenderInputFields({
           : field.options || [];
       return (
         <select
-          className="w-full"
+          className="w-full p-1 h-7"
           value={value}
           onChange={(e) => onFormDataChange(lead.id, field.key, e.target.value)}
         >
@@ -108,11 +108,15 @@ export default function RenderInputFields({
       );
     }
 
+    if (field.type === "textarea") {
+      return <textarea className="w-full min-h-7! h-7 p-1" />;
+    }
+
     return (
       <input
         type={field.type || "text"}
         placeholder={field.placeholder}
-        className="w-full"
+        className="w-full p-1"
         value={value}
         onChange={(e) => onFormDataChange(lead.id, field.key, e.target.value)}
       />
@@ -120,9 +124,9 @@ export default function RenderInputFields({
   };
 
   return (
-    <div className="grid grid-cols-10 text-sm items-center">
+    <div className="grid grid-cols-9 text-sm items-center">
       {INPUT_FIELDS.map((field) => (
-        <div key={field.key} className="border p-1">
+        <div key={field.key} className="border">
           {renderField(field)}
         </div>
       ))}
