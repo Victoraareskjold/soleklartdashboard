@@ -280,7 +280,7 @@ export default function ColdCallingPage() {
               <thead>
                 <tr>
                   {headers.map((header, index) => (
-                    <th className="border p-2 w-1/6 bg-blue-300" key={index}>
+                    <th className="border p-2 w-1/6 bg-blue-500" key={index}>
                       {header}
                     </th>
                   ))}
@@ -296,7 +296,11 @@ export default function ColdCallingPage() {
                       <td colSpan={fields.length} className="h-4"></td>
                     </tr>
 
-                    <tr className={`${i % 2 == 0 ? "bg-blue-100" : ""}`}>
+                    <tr
+                      className={`${
+                        i % 2 == 0 ? "bg-[#82CCEB]" : "bg-[#BFE6F5]"
+                      }`}
+                    >
                       <td
                         className="border p-1 w-1/6 pr-4 relative cursor-pointer"
                         onClick={() => handleCopyAddress(lead.address)}
@@ -318,6 +322,7 @@ export default function ColdCallingPage() {
 
                 <RenderInputFields
                   lead={lead}
+                  index={i}
                   formData={formData}
                   onFormDataChange={handleFormDataChange}
                   roofTypeOptions={roofTypeOptions}

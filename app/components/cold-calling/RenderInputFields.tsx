@@ -14,6 +14,7 @@ type InputField = {
 
 type RenderInputFieldsProps = {
   lead: ColdCallLead;
+  index: number;
   formData: FormData;
   onFormDataChange: (leadId: string, fieldKey: string, value: string) => void;
   roofTypeOptions: RoofType[];
@@ -70,6 +71,7 @@ const INPUT_FIELDS: InputField[] = [
 
 export default function RenderInputFields({
   lead,
+  index,
   formData,
   onFormDataChange,
   roofTypeOptions,
@@ -133,7 +135,12 @@ export default function RenderInputFields({
   return (
     <div className="grid grid-cols-9 text-sm items-center">
       {INPUT_FIELDS.map((field) => (
-        <div key={field.key} className="border">
+        <div
+          key={field.key}
+          className={`${
+            index % 2 == 0 ? "bg-[#82CCEB]" : "bg-[#BFE6F5]"
+          } border`}
+        >
           {renderField(field)}
         </div>
       ))}
