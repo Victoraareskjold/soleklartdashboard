@@ -298,7 +298,7 @@ export default function ColdCallingPage() {
 
                     <tr className={`${i % 2 == 0 ? "bg-blue-100" : ""}`}>
                       <td
-                        className="border p-1 w-1/6 relative cursor-pointer"
+                        className="border p-1 w-1/6 pr-4 relative cursor-pointer"
                         onClick={() => handleCopyAddress(lead.address)}
                       >
                         {lead.address}
