@@ -9,7 +9,7 @@ import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
 import { getRoofTypes, getTeam } from "@/lib/api";
 import { RoofType, Team } from "@/lib/types";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -204,7 +204,6 @@ export default function ColdCallingPage() {
 
   const headers = ["Adresse", "Navn", "Rolle", "Firmanavn", "Mobil", "Telefon"];
   const fields: (keyof ColdCallLead)[] = [
-    "address",
     "person_info",
     "role",
     "company",
@@ -212,6 +211,12 @@ export default function ColdCallingPage() {
     "phone",
   ];
   const [sliceAmount, setSliceAmount] = useState(5);
+
+  const handleCopyAddress = (addr: string | null) => {
+    if (!addr) return;
+    navigator.clipboard.writeText(addr);
+    toast.success("Adresse kopiert til utklippstavle");
+  };
 
   if (!user) return <LoadingScreen />;
 
@@ -292,6 +297,16 @@ export default function ColdCallingPage() {
                     </tr>
 
                     <tr className={`${i % 2 == 0 ? "bg-blue-100" : ""}`}>
+                      <td
+                        className="border p-1 w-1/6 relative cursor-pointer"
+                        onClick={() => handleCopyAddress(lead.address)}
+                      >
+                        {lead.address}
+                        <div className="absolute top-0 right-0 p-1">
+                          <Copy size={14} />
+                        </div>
+                      </td>
+
                       {fields.map((field) => (
                         <td className="border p-1 w-1/6" key={field}>
                           {lead[field]}
