@@ -275,7 +275,7 @@ export default function ColdCallingPage() {
               <thead>
                 <tr>
                   {headers.map((header, index) => (
-                    <th className="border p-2 w-1/6 bg-blue-100" key={index}>
+                    <th className="border p-2 w-1/6 bg-blue-300" key={index}>
                       {header}
                     </th>
                   ))}
@@ -291,7 +291,7 @@ export default function ColdCallingPage() {
                       <td colSpan={fields.length} className="h-4"></td>
                     </tr>
 
-                    <tr>
+                    <tr className={`${i % 2 == 0 ? "bg-blue-100" : ""}`}>
                       {fields.map((field) => (
                         <td className="border p-1 w-1/6" key={field}>
                           {lead[field]}
