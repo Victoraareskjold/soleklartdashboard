@@ -163,8 +163,6 @@ export default function LeadPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadIdStr, installerGroupId]);
 
-  console.log(roofTypes);
-
   const [roofType, setRoofType] = useState("");
 
   useEffect(() => {

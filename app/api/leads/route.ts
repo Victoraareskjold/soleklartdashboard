@@ -31,7 +31,6 @@ export async function GET(req: Request) {
           []
       );
     }
-    console.log(leads);
     return NextResponse.json(leads ?? []);
   } catch (err) {
     console.error("GET /api/leads error:", err);
