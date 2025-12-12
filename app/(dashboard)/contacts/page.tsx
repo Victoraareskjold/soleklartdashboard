@@ -3,8 +3,8 @@ import LoadingScreen from "@/app/components/LoadingScreen";
 import { useAuth } from "@/context/AuthProvider";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import { getTeam } from "@/lib/api";
-import { Team } from "@/lib/types";
+import { getRoofTypes, getTeam } from "@/lib/api";
+import { RoofType, Team } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
@@ -29,6 +29,12 @@ export type CreateLead = {
   mobile: string | null;
   phone: string | null;
   assigned_to: string | null;
+  roof_type_id: string | null;
+  own_consumption: number | null;
+  voltage: number | null;
+  roof_slope: number | null;
+  roof_age: number | null;
+  note: string | null;
 };
 
 export default function ContactsPage() {
@@ -44,6 +50,8 @@ export default function ContactsPage() {
   const [selectedMember, setSelectedMember] = useState<string>("");
   const [coldCalls, setColdCalls] = useState<ContactLead[]>([]);
 
+  const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
+
   const [formData, setFormData] = useState<CreateLead>({
     team_id: teamId!,
     installer_group_id: installerGroupId!,
@@ -53,13 +61,20 @@ export default function ContactsPage() {
     mobile: null,
     phone: null,
     assigned_to: selectedMember,
+    roof_type_id: null,
+    own_consumption: null,
+    voltage: null,
+    roof_slope: null,
+    roof_age: null,
+    note: null,
   });
 
   useEffect(() => {
     if (!teamId) return;
 
-    getTeam(teamId)
-      .then(setTeam)
+    getTeam(teamId).then(setTeam);
+    getRoofTypes()
+      .then(setRoofTypes)
       .catch((err) => console.error("Failed to fetch team members:", err));
   }, [teamId]);
 
@@ -114,13 +129,32 @@ export default function ContactsPage() {
   const formDataFields: {
     label: string;
     value: keyof CreateLead;
-    type: "text" | "select" | "number";
+    type: "text" | "select" | "number" | "textarea";
+    options?: { value: string | number; label: string }[];
   }[] = [
     { label: "E-post", value: "email", type: "text" },
     { label: "Navn", value: "person_info", type: "text" },
     { label: "Mobil", value: "mobile", type: "text" },
     { label: "Telefon", value: "phone", type: "text" },
     { label: "Adresse", value: "address", type: "text" },
+    {
+      label: "Taktekke",
+      value: "roof_type_id",
+      type: "select",
+    },
+    { label: "Eget forbruk", value: "own_consumption", type: "number" },
+    {
+      label: "Nettspenning",
+      value: "voltage",
+      type: "select",
+      options: [
+        { value: 230, label: "230V" },
+        { value: 400, label: "400V" },
+      ],
+    },
+    { label: "Helning på tak", value: "roof_slope", type: "number" },
+    { label: "Alder på tak", value: "roof_age", type: "number" },
+    { label: "Merknad", value: "note", type: "textarea" },
   ];
 
   if (!user || !team) return <LoadingScreen />;
@@ -251,7 +285,7 @@ export default function ContactsPage() {
                   <label>{field.label}</label>
                   {field.type === "text" && (
                     <input
-                      className="border p-1.5 rounded-md"
+                      className="border p-1.5 rounded-md bg-gray-50"
                       type="text"
                       placeholder={field.label}
                       value={formData[field.value] ?? ""}
@@ -265,7 +299,7 @@ export default function ContactsPage() {
                   )}
                   {field.type === "number" && (
                     <input
-                      className="border p-1.5 rounded-md"
+                      className="border p-1.5 rounded-md bg-gray-50"
                       type="number"
                       placeholder={field.label}
                       value={formData[field.value] ?? ""}
@@ -276,6 +310,45 @@ export default function ContactsPage() {
                         }))
                       }
                     />
+                  )}
+                  {field.type === "textarea" && (
+                    <textarea
+                      className="border p-1.5 rounded-md bg-gray-50"
+                      placeholder={field.label}
+                      value={formData[field.value] ?? ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          [field.value]: e.target.value,
+                        }))
+                      }
+                    />
+                  )}
+                  {field.type === "select" && (
+                    <select
+                      className="border p-1.5 rounded-md bg-gray-50"
+                      value={formData[field.value] ?? ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          [field.value]: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Velg {field.label.toLowerCase()}</option>
+
+                      {field.value === "roof_type_id"
+                        ? roofTypes.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))
+                        : (field.options || []).map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                    </select>
                   )}
                 </div>
               ))}
@@ -289,9 +362,19 @@ export default function ContactsPage() {
                 />
               </div>
             </div>
-            <div>
-              <button onClick={handleCreateLead}>Opprett</button>
-              <button onClick={() => setIsModalOpen(false)}>Avbryt</button>
+            <div className="mt-4">
+              <button
+                className="px-8 py-2 bg-[#FF8E4C] text-white rounded-md"
+                onClick={handleCreateLead}
+              >
+                Opprett
+              </button>
+              <button
+                className="px-8 py-2 border border-[#FF8E4C] text-[#FF8E4C] ml-4 rounded-md"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Avbryt
+              </button>
             </div>
           </div>
         </div>
