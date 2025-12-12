@@ -93,9 +93,12 @@ export default function LeadsTable() {
               >
                 <div
                   style={{ backgroundColor: status.color }}
-                  className="p-2 border-b"
+                  className="p-2 border-b flex items-center justify-between min-h-15"
                 >
                   <h2 className="font-semibold text-sm">{status.label}</h2>
+                  <h2 className="font-semibold text-sm">
+                    ({grouped[status.value]?.length || 0}){" "}
+                  </h2>
                 </div>
                 <div className="flex-1 p-2">
                   {grouped[status.value]?.map((lead, index) => (
@@ -109,7 +112,7 @@ export default function LeadsTable() {
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
                           ref={provided.innerRef}
-                          className="bg-white h-full rounded shadow p-3 mb-2"
+                          className="bg-white rounded shadow p-3 mb-2"
                         >
                           <LeadCard lead={lead} />
                         </div>
@@ -118,7 +121,7 @@ export default function LeadsTable() {
                   ))}
                 </div>
                 <div className="p-2 border-t">
-                  <h2 className="font-semibold text-sm text-center">
+                  <h2 className="font-bold text-sm text-center">
                     Totalt: 14 123412 Kr
                   </h2>
                 </div>
