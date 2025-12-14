@@ -43,7 +43,7 @@ const Input = ({
   options = [],
 }: InputProps) => (
   <div className="w-full">
-    <label className="w-1/2 text-sm font-medium text-gray-700">{label}</label>
+    <label className="w-1/2 text-xs font-medium text-gray-700">{label}</label>
     <div className="w-full">
       {input === "input" ? (
         <input
@@ -51,11 +51,11 @@ const Input = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full"
+          className="w-full text-sm"
         />
       ) : (
         <select
-          className="w-full"
+          className="w-full text-sm"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         >
@@ -81,6 +81,7 @@ export default function LeadPage() {
 
   const [team, setTeam] = useState<Team>();
   const [selectedMember, setSelectedMember] = useState<string>("");
+  const [selectedMember2, setSelectedMember2] = useState<string>("");
 
   // States
   const [loading, setLoading] = useState(true);
@@ -99,6 +100,7 @@ export default function LeadPage() {
   const [priority, setPriority] = useState("iron");
   const [role, setRole] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
+  const [createdBy, setCreatedBy] = useState("");
 
   // Customer info
   const [voltage, setVoltage] = useState(230);
@@ -106,7 +108,7 @@ export default function LeadPage() {
     { label: "230V", value: 230 },
     { label: "400V", value: 400 },
   ];
-  const [phase, setPhase] = useState(3);
+  const [phases, setPhases] = useState(3);
   const phaseOptions = [
     { label: "1-fase", value: 1 },
     { label: "3-fase", value: 3 },
@@ -123,6 +125,7 @@ export default function LeadPage() {
     { label: "125 A+", value: 125 },
   ];
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
+  const [roofTypeId, setRoofTypeId] = useState("");
   const [roofSlope, setRoofSlope] = useState(0);
 
   const [roofAge, setRoofAge] = useState(0);
@@ -170,15 +173,16 @@ export default function LeadPage() {
         setAddress(data.address ?? "");
         setOwnConsumtion(data.own_consumption || 0);
         setVoltage(data.voltage ?? 230);
+        setPhases(data.phases ?? 0);
         setRoofSlope(data.roof_slope ?? 0);
         setRoofAge(data.roof_age ?? 0);
-        setRoofType(
-          roofTypes.find((rt) => rt.id === data.roof_type_id)?.name ?? ""
-        );
+        setRoofType(data.roof_type_id ?? "");
         setStatus(data.status ?? 0);
         setPriority(data.priority ?? "iron");
         setRole(data.role ?? "");
         setAssignedTo(data.assigned_to ?? "");
+        setCreatedBy(data.created_by ?? "");
+        setBirthDate(data.birth_date ?? "");
       }),
       getEstimatesByLeadId(leadIdStr).then((data) => {
         setEstimates(data ?? []);
@@ -226,10 +230,20 @@ export default function LeadPage() {
 
     try {
       await updateLead(leadIdStr!, {
-        person_info: personInfo,
-        email,
-        phone,
-        address,
+        mobile: mobile || null,
+        phone: phone || null,
+        email: email || null,
+        address: address || null,
+        person_info: personInfo || null,
+        role: role || null,
+        company: company || null,
+        roof_type_id: roofTypeId || null,
+        own_consumption: ownConsumtion || null,
+        voltage: voltage || null,
+        phases: phases || null,
+        roof_slope: roofSlope || null,
+        roof_age: roofAge || null,
+        birth_date: birthDate || null,
       });
     } catch (err) {
       console.error("Failed to update:", err);
@@ -277,15 +291,38 @@ export default function LeadPage() {
     setIsModalOpen(true);
   };
 
+  const formatDateForInput = (
+    dateString: string | null | undefined
+  ): string => {
+    if (!dateString) return "";
+
+    try {
+      const datePart = dateString.split(" ")[0];
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        return datePart;
+      }
+
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split("T")[0];
+      }
+
+      return "";
+    } catch {
+      return "";
+    }
+  };
+
   if (!user) return <LoadingScreen />;
 
   return (
     <div className="flex flex-row">
       {/* Contact information */}
-      <section className="w-1/2 p-2 flex flex-col gap-6">
+      <section className="w-1/3 p-2 pr-4 flex flex-col gap-6">
         {/*  */}
-        <div>
-          <h1>
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-medium">
             {company || personInfo || "Mangler navn"} -{" "}
             {address || "Mangler adresse"}
           </h1>
@@ -312,7 +349,7 @@ export default function LeadPage() {
             </select>
           </div>
 
-          <div className="w-full gap-2 flex mb-4">
+          <div className="w-full flex justify-between mt-4">
             {sideMenuRoutes.map(({ label, icon: Icon }) => (
               <div key={label} className="text-center">
                 <button
@@ -321,7 +358,7 @@ export default function LeadPage() {
                 >
                   <Icon stroke="#000" />
                 </button>
-                <p>{label}</p>
+                <p className="text-xs mt-2">{label}</p>
               </div>
             ))}
           </div>
@@ -332,7 +369,7 @@ export default function LeadPage() {
         <div className="grid grid-cols-2 border-t border-b border-black py-3 gap-y-3">
           <h3 className="font-medium text-lg">Person info</h3>
           <h3 className="font-medium text-lg">Teknisk info</h3>
-          <div className="pr-4">
+          <div className="pr-4 flex flex-col gap-3">
             <Input
               label="Mobil"
               value={mobile}
@@ -365,7 +402,7 @@ export default function LeadPage() {
             />
             <Input
               label="Fødselsdato"
-              value={birthDate}
+              value={formatDateForInput(birthDate)}
               onChange={setBirthDate}
               type="date"
               placeholder="Fødselsdato"
@@ -384,15 +421,23 @@ export default function LeadPage() {
               placeholder="Firma navn"
             />
           </div>
-          <div className="border-l pl-4">
+          <div className="border-l pl-4 flex flex-col gap-3">
             <Input
               label="Taktype"
-              value={roofType}
-              onChange={(val) =>
-                setSolarData((prev) => ({ ...prev, selectedRoofType: val }))
-              }
+              value={roofTypeId || roofType} // Bruk ID'en
+              onChange={(val) => {
+                setRoofTypeId(val); // Sett ID'en
+                // Finn navnet for å oppdatere solarData
+                const selectedRoof = roofTypes.find((rt) => rt.id === val);
+                if (selectedRoof) {
+                  setSolarData((prev) => ({
+                    ...prev,
+                    selectedRoofType: selectedRoof.name,
+                  }));
+                }
+              }}
               input="select"
-              options={roofTypes.map((r) => ({ label: r.name, value: r.name }))}
+              options={roofTypes.map((r) => ({ label: r.name, value: r.id }))} // ID som value
               placeholder="Taktype"
             />
             <Input
@@ -405,17 +450,15 @@ export default function LeadPage() {
             <Input
               label="Spenning (nett)"
               value={(voltage || solarData.voltage) ?? 230}
-              onChange={(val) =>
-                setSolarData((prev) => ({ ...prev, voltage: Number(val) }))
-              }
+              onChange={(val) => setVoltage(Number(val))}
               input="select"
               options={voltageOptions}
               placeholder="Spenning (nett)"
             />
             <Input
               label="Faser"
-              value={phase}
-              onChange={(val) => setPhase(Number(val))}
+              value={phases}
+              onChange={(val) => setPhases(Number(val))}
               input="select"
               options={phaseOptions}
               placeholder="Faser"
@@ -455,33 +498,48 @@ export default function LeadPage() {
         {/*  */}
 
         {/*  */}
-        <div className="flex flex-row items-center gap-1">
-          <p>
-            <strong>Prioritet: </strong>{" "}
-          </p>
-          <select
-            value={priority}
-            onChange={(e) => {
-              const newPriority = e.target.value;
-              setPriority(newPriority);
-              updateSingleField("priority", newPriority);
-            }}
-          >
-            {PRIORITIES.map((prio) => (
-              <option key={prio} value={prio}>
-                {prio}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="w-full">
-          <p>Leadinnhenter</p>
-          <TeamMemberSelector
-            team={team}
-            selectedMember={selectedMember}
-            onSelectMember={setSelectedMember}
-            defaultUser={assignedTo}
-          />
+        <div>
+          <div className="flex flex-row items-center gap-1">
+            <p>
+              <strong>Prioritet: </strong>{" "}
+            </p>
+            <select
+              value={priority}
+              onChange={(e) => {
+                const newPriority = e.target.value;
+                setPriority(newPriority);
+                updateSingleField("priority", newPriority);
+              }}
+            >
+              {PRIORITIES.map((prio) => (
+                <option key={prio} value={prio}>
+                  {prio}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-row items-center gap-1 mt-2">
+            <div className="w-full">
+              <p>Avtaleeier</p>
+              <TeamMemberSelector
+                team={team}
+                selectedMember={selectedMember2}
+                onSelectMember={setSelectedMember2}
+                defaultUser={createdBy}
+              />
+            </div>
+
+            <div className="w-full">
+              <p>Leadinnhenter</p>
+              <TeamMemberSelector
+                team={team}
+                selectedMember={selectedMember}
+                onSelectMember={setSelectedMember}
+                defaultUser={assignedTo}
+              />
+            </div>
+          </div>
         </div>
         {/*  */}
 
