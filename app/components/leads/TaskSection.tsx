@@ -1,11 +1,12 @@
 "use client";
-import { Team } from "@/lib/types";
+import { LeadTask, Team } from "@/lib/types";
 import TeamMemberSelector from "../cold-calling/TeamMemberSelector";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthProvider";
-import { getTeam } from "@/lib/api";
+import { getLeadTasks, getTeam } from "@/lib/api";
 import { useTeam } from "@/context/TeamContext";
 import LoadingScreen from "../LoadingScreen";
+import { toast } from "react-toastify";
 
 interface Props {
   leadId: string;
@@ -15,8 +16,15 @@ export default function TaskSection({ leadId }: Props) {
   const { user } = useAuth();
   const { teamId } = useTeam();
   const [team, setTeam] = useState<Team>();
+  const [tasks, setTasks] = useState<LeadTask[]>([]);
+
+  const [taskModal, setTaskModal] = useState(false);
+
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("08:00");
+  const [description, setDescription] = useState("");
   const [selectedMember, setSelectedMember] = useState<string>("");
-  // Formater dato til norsk format (dd.mm.yyyy)
+
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString("no-NO", {
       day: "2-digit",
@@ -29,12 +37,13 @@ export default function TaskSection({ leadId }: Props) {
   const [title, setTitle] = useState(`Oppgave ${today}`);
 
   useEffect(() => {
-    if (!teamId) return;
+    if (!teamId || !leadId) return;
 
-    Promise.all([getTeam(teamId).then(setTeam)]).catch((err) =>
-      console.error(err)
-    );
-  }, [teamId]);
+    Promise.all([
+      getTeam(teamId).then(setTeam),
+      getLeadTasks(leadId).then(setTasks),
+    ]).catch((err) => console.error(err));
+  }, [teamId, leadId]);
 
   const addBusinessDays = (date: Date, days: number): Date => {
     const result = new Date(date);
@@ -122,62 +131,112 @@ export default function TaskSection({ leadId }: Props) {
 
   const timeOptions = generateTimeOptions();
 
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId,
+          title,
+          selectedDate,
+          selectedTime,
+          description,
+          selectedMember,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Feil ved oppdatering av leads");
+
+      setDescription("");
+      setSelectedDate("");
+      setSelectedTime("");
+      setTaskModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt");
+    }
+  };
+
   if (!user) return <LoadingScreen />;
 
   return (
     <div className="">
-      <button className="p-2 bg-blue-700 text-white rounded-md">
+      <button
+        onClick={() => setTaskModal(!taskModal)}
+        className="p-2 bg-blue-700 text-white rounded-md"
+      >
         Opprett oppgave
       </button>
-      <div className="mt-4 bg-white">
-        <div className="bg-blue-700 p-2 text-white">
-          <input
-            value={title || ""}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-        <div className="p-2">
-          <div className="mt-2 flex flex-row gap-2">
-            <div className="flex flex-col w-full">
-              <label>Aktivitetsdato</label>
-              <select className="w-full p-2 border rounded">
-                <option value="">Velg dato...</option>
-                {dateOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label} {option.date && `[${option.date}]`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col w-full">
-              <label className="text-white">.</label>
-              <select className="w-full p-2 border rounded">
-                {timeOptions.map((time) => (
-                  <option key={time} value={time}>
-                    {time}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col w-full">
-              <label>Aktivitet tilordnet</label>
-              <TeamMemberSelector
-                team={team}
-                selectedMember={selectedMember}
-                onSelectMember={setSelectedMember}
-                defaultUser={user.id}
-              />
-            </div>
+      {taskModal && (
+        <div className="mt-4 bg-white">
+          <div className="bg-blue-700 p-2 text-white">
+            <input
+              value={title || ""}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </div>
-          <textarea
-            placeholder="Legg inn oppgaven din.."
-            className="w-full p-2 border-t mt-4 min-h-64"
-          />
-          <button className="px-6 py-2 mt-4 bg-[#FF8E4C] rounded-md text-white">
-            Opprett
-          </button>
+          <div className="p-2">
+            <div className="mt-2 flex flex-row gap-2">
+              <div className="flex flex-col w-full">
+                <label>Aktivitetsdato</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                >
+                  <option value="">Velg dato...</option>
+                  {dateOptions.map((option) => (
+                    <option
+                      key={option.value}
+                      value={option.date || String(option.value)}
+                    >
+                      {option.label} {option.date && `[${option.date}]`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col w-full">
+                <label className="text-white">.</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                >
+                  {timeOptions.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col w-full">
+                <label>Aktivitet tilordnet</label>
+                <TeamMemberSelector
+                  team={team}
+                  selectedMember={selectedMember}
+                  onSelectMember={setSelectedMember}
+                  defaultUser={user.id}
+                />
+              </div>
+            </div>
+            <textarea
+              placeholder="Legg inn oppgaven din.."
+              className="w-full p-2 border-t mt-4 min-h-64"
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <button
+              onClick={handleCreateTask}
+              className="px-6 py-2 mt-4 bg-[#FF8E4C] rounded-md text-white"
+            >
+              Opprett
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+      {tasks.map((task, i) => (
+        <div key={i}>{task.title}</div>
+      ))}
     </div>
   );
 }

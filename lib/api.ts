@@ -11,6 +11,7 @@ import {
   Estimate,
   InstallerGroup,
   Lead,
+  LeadTask,
   MountVolumeReductionType,
   Note,
   RoofType,
@@ -60,6 +61,10 @@ export const getTeams = async (): Promise<Team[]> => {
 // Single team
 export const getTeam = async (teamId: string): Promise<Team> => {
   return apiRequest<Team>(`/api/teams/${teamId}`);
+};
+
+export const getLeadTasks = async (leadId: string): Promise<LeadTask[]> => {
+  return apiRequest<LeadTask[]>(`/api/leads/${leadId}/tasks`);
 };
 
 // InstallerGroups

@@ -113,6 +113,15 @@ export type Note = {
   note_id?: string | null;
 };
 
+export type LeadTask = {
+  id: string;
+  lead_id: string;
+  created_at: string;
+  due_date: string;
+  title: string;
+  description: string;
+};
+
 // LeadEmail now only stores references to emails in Microsoft Graph
 // All content is fetched on-demand from the Graph API
 export interface LeadEmail {
