@@ -19,7 +19,7 @@ export default function LeadCard({ lead }: LeadCardProps) {
       <p className="text-gray-500 text-xs">{lead.email || "Ingen email"}</p>
       <p
         className={`${priorityColor(
-          lead.priority
+          lead.priority || ""
         )} rounded-md font-semibold w-fit py-1 px-2 mt-4`}
       >
         {lead.priority}
