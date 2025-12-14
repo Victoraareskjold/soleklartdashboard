@@ -163,12 +163,12 @@ export default function ContactsPage() {
     (member) => member.user_id === user.id
   );
 
-  const handleUpdateToLead = async (id: string) => {
+  const handleUpdateToLead = async (id: string, userId: string) => {
     try {
       const res = await fetch("/api/coldCalling/contact/upsert", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(id),
+        body: JSON.stringify({ id, userId }),
       });
 
       if (!res.ok) throw new Error("Feil ved oppretelse av avtale");
@@ -250,7 +250,7 @@ export default function ContactsPage() {
               <tr key={coldCall.id}>
                 <td className="w-1/10 border">
                   <button
-                    onClick={() => handleUpdateToLead(coldCall.id)}
+                    onClick={() => handleUpdateToLead(coldCall.id, user.id)}
                     className="w-full bg-[#FF8E4C] h-14 text-white"
                   >
                     Opprett avtale

@@ -135,6 +135,39 @@ export default function ColdCallingPage() {
   };
 
   const handleMove = async () => {
+    // Hvis status >= 5, flytt alle leads til kontakter (status 6)
+    if (status >= 5) {
+      const allLeads = coldCalls.map((lead) => {
+        const data = formData[lead.id] || {};
+
+        return {
+          id: lead.id,
+          ...data,
+          status: "6",
+        };
+      });
+
+      if (!allLeads.length) return;
+
+      try {
+        const res = await fetch("/api/coldCalling/upsert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(allLeads),
+        });
+
+        if (!res.ok) throw new Error("Feil ved oppdatering av leads");
+
+        toast.success("Leads flyttet til kontakter!");
+        setColdCalls([]); // Fjern alle leads fra listen
+      } catch (err) {
+        console.error(err);
+        toast.error("Noe gikk galt");
+      }
+      return;
+    }
+
+    // Original logikk for status < 5
     const completeLeads = coldCalls
       .map((lead) => {
         const data = formData[lead.id];
@@ -158,10 +191,6 @@ export default function ColdCallingPage() {
           } else {
             return null;
           }
-        }
-
-        if (status >= 5) {
-          leadUpdateData.status = "6";
         }
 
         return {

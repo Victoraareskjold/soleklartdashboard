@@ -51,10 +51,13 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const id = body;
+    const { id, userId } = body;
 
-    if (!id) {
-      return NextResponse.json({ error: "Mangler id" }, { status: 400 });
+    if (!id || !userId) {
+      return NextResponse.json(
+        { error: "Mangler id eller userId" },
+        { status: 400 }
+      );
     }
 
     const supabase = createSupabaseAdminClient();
@@ -63,6 +66,7 @@ export async function PATCH(req: NextRequest) {
       .from("leads")
       .update({
         status: 7,
+        created_by: userId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
