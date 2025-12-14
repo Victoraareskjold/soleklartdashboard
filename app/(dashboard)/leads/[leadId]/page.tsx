@@ -22,6 +22,7 @@ import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector
 import { useTeam } from "@/context/TeamContext";
 import { useAuth } from "@/context/AuthProvider";
 import LoadingScreen from "@/app/components/LoadingScreen";
+import TaskSection from "@/app/components/leads/TaskSection";
 
 interface InputProps {
   label: string;
@@ -146,7 +147,7 @@ export default function LeadPage() {
   });
   const [estimates, setEstimates] = useState<Estimate[]>();
 
-  const [activeRoute, setActiveRoute] = useState("Aktivitet");
+  const [activeRoute, setActiveRoute] = useState("Oppgaver");
   const routes = ["Aktivitet", "Merknader", "E-poster", "Oppgaver", "Befaring"];
   const sideMenuRoutes = [
     { label: "Merknader", icon: File },
@@ -544,7 +545,7 @@ export default function LeadPage() {
         {/*  */}
 
         <button
-          className="py-2 px-3 bg-orange-300"
+          className="py-2 px-3 bg-[#FF8E4C] text-white"
           onClick={handleUpdate}
           disabled={loading}
         >
@@ -585,6 +586,8 @@ export default function LeadPage() {
             />
           </div>
         )}
+
+        {activeRoute === "Oppgaver" && <TaskSection leadId={leadIdStr!} />}
       </section>
       <section className="w-1/4 p-2">
         <h1>Estimater</h1>
