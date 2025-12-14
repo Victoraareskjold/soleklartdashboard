@@ -48,7 +48,7 @@ export default function TeamMemberSelector({
     <select
       value={selectedMember}
       onChange={(e) => onSelectMember(e.target.value)}
-      className="border p-2 rounded-md bg-gray-50"
+      className="border p-2 rounded-md bg-gray-50 w-full"
     >
       <option value="">Lead-innhenter</option>
       {teamMembers.map((member) => (

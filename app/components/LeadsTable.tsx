@@ -14,7 +14,7 @@ import { toast } from "react-toastify";
 import LeadCard from "./LeadCard";
 import { useRoles } from "@/context/RoleProvider";
 
-const LEAD_STATUSES = [
+export const LEAD_STATUSES = [
   { value: 7, label: "Oppfølging 1", color: "#FBF586" },
   { value: 8, label: "Oppfølging 2", color: "#FBF586" },
   { value: 9, label: "Oppfølging 3", color: "#FBF586" },

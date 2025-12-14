@@ -5,6 +5,7 @@ import {
   getEstimatesByLeadId,
   getLead,
   getRoofTypes,
+  getTeam,
   updateLead,
 } from "@/lib/api";
 
@@ -13,8 +14,14 @@ import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
 import EstimateSection from "@/app/components/leads/EstimateSection";
-import { Estimate, RoofType } from "@/lib/types";
+import { Estimate, RoofType, Team } from "@/lib/types";
 import Link from "next/link";
+import { LEAD_STATUSES } from "@/app/components/LeadsTable";
+import { Calendar, File, ListTodo, Mail } from "lucide-react";
+import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
+import { useTeam } from "@/context/TeamContext";
+import { useAuth } from "@/context/AuthProvider";
+import LoadingScreen from "@/app/components/LoadingScreen";
 
 interface InputProps {
   label: string;
@@ -35,9 +42,9 @@ const Input = ({
   placeholder,
   options = [],
 }: InputProps) => (
-  <tr className="w-full">
-    <td className="border w-1/2 text-sm font-medium text-gray-700">{label}</td>
-    <td className="border w-full">
+  <div className="w-full">
+    <label className="w-1/2 text-sm font-medium text-gray-700">{label}</label>
+    <div className="w-full">
       {input === "input" ? (
         <input
           type={type}
@@ -60,14 +67,20 @@ const Input = ({
           ))}
         </select>
       )}
-    </td>
-  </tr>
+    </div>
+  </div>
 );
 
 export default function LeadPage() {
   const { leadId } = useParams();
+  const { teamId } = useTeam();
+  const { user } = useAuth();
   const { installerGroupId } = useInstallerGroup();
+
   const leadIdStr = Array.isArray(leadId) ? leadId[0] : leadId;
+
+  const [team, setTeam] = useState<Team>();
+  const [selectedMember, setSelectedMember] = useState<string>("");
 
   // States
   const [loading, setLoading] = useState(true);
@@ -82,6 +95,10 @@ export default function LeadPage() {
   const [company, setCompany] = useState("");
   const [address, setAddress] = useState("");
   const [ownConsumtion, setOwnConsumtion] = useState(0);
+  const [status, setStatus] = useState(0);
+  const [priority, setPriority] = useState("iron");
+  const [role, setRole] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
 
   // Customer info
   const [voltage, setVoltage] = useState(230);
@@ -127,10 +144,18 @@ export default function LeadPage() {
   const [estimates, setEstimates] = useState<Estimate[]>();
 
   const [activeRoute, setActiveRoute] = useState("Aktivitet");
-  const routes = ["Aktivitet", "Merknader", "E-poster"];
+  const routes = ["Aktivitet", "Merknader", "E-poster", "Oppgaver", "Befaring"];
+  const sideMenuRoutes = [
+    { label: "Merknader", icon: File },
+    { label: "E-poster", icon: Mail },
+    { label: "Oppgaver", icon: ListTodo },
+    { label: "Befaring", icon: Calendar },
+  ];
+
+  const PRIORITIES = ["iron", "gold", "diamond"];
 
   useEffect(() => {
-    if (!leadIdStr || !installerGroupId) return;
+    if (!leadIdStr || !installerGroupId || !teamId) return;
 
     setLoading(true);
 
@@ -150,6 +175,10 @@ export default function LeadPage() {
         setRoofType(
           roofTypes.find((rt) => rt.id === data.roof_type_id)?.name ?? ""
         );
+        setStatus(data.status ?? 0);
+        setPriority(data.priority ?? "iron");
+        setRole(data.role ?? "");
+        setAssignedTo(data.assigned_to ?? "");
       }),
       getEstimatesByLeadId(leadIdStr).then((data) => {
         setEstimates(data ?? []);
@@ -157,6 +186,7 @@ export default function LeadPage() {
       getRoofTypes().then((data) => {
         setRoofTypes(data ?? []);
       }),
+      getTeam(teamId).then(setTeam),
     ])
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -208,6 +238,23 @@ export default function LeadPage() {
     }
   };
 
+  const updateSingleField = async <K extends string>(
+    field: K,
+    value: string | number
+  ) => {
+    setLoading(true);
+
+    try {
+      await updateLead(leadIdStr!, {
+        [field]: value,
+      });
+    } catch (err) {
+      console.error("Failed to update:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === "PVMAP_DATA") {
@@ -230,17 +277,67 @@ export default function LeadPage() {
     setIsModalOpen(true);
   };
 
+  if (!user) return <LoadingScreen />;
+
   return (
     <div className="flex flex-row">
       {/* Contact information */}
-      <section className="w-1/4 p-2 flex flex-col gap-6">
-        <table className="w-full">
-          <tbody>
+      <section className="w-1/2 p-2 flex flex-col gap-6">
+        {/*  */}
+        <div>
+          <h1>
+            {company || personInfo || "Mangler navn"} -{" "}
+            {address || "Mangler adresse"}
+          </h1>
+          <p>
+            <strong>Oppgave status:</strong> TODO
+          </p>
+          <div className="flex flex-row items-center gap-1">
+            <p>
+              <strong>Fase: </strong>{" "}
+            </p>
+            <select
+              value={status}
+              onChange={(e) => {
+                const newStatus = Number(e.target.value);
+                setStatus(newStatus);
+                updateSingleField("status", newStatus);
+              }}
+            >
+              {LEAD_STATUSES.map((stat) => (
+                <option key={stat.value} value={stat.value}>
+                  {stat.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-full gap-2 flex mb-4">
+            {sideMenuRoutes.map(({ label, icon: Icon }) => (
+              <div key={label} className="text-center">
+                <button
+                  className="rounded-full p-2 bg-[#F2F8FF] border border-[#20A6D3]"
+                  onClick={() => setActiveRoute(label)}
+                >
+                  <Icon stroke="#000" />
+                </button>
+                <p>{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/*  */}
+
+        {/* Info del */}
+        <div className="grid grid-cols-2 border-t border-b border-black py-3 gap-y-3">
+          <h3 className="font-medium text-lg">Person info</h3>
+          <h3 className="font-medium text-lg">Teknisk info</h3>
+          <div className="pr-4">
             <Input
-              label="E-postadresse"
-              value={email}
-              onChange={setEmail}
-              placeholder="E-postadresse"
+              label="Mobil"
+              value={mobile}
+              onChange={setMobile}
+              placeholder="Mobil"
             />
             <Input
               label="Telefon"
@@ -249,16 +346,22 @@ export default function LeadPage() {
               placeholder="Telefon"
             />
             <Input
-              label="Mobil"
-              value={mobile}
-              onChange={setMobile}
-              placeholder="Mobil"
+              label="E-postadresse"
+              value={email}
+              onChange={setEmail}
+              placeholder="E-postadresse"
             />
             <Input
-              label="Personinfo"
+              label="Adresse"
+              value={address}
+              onChange={setAddress}
+              placeholder="Adresse"
+            />
+            <Input
+              label="Navn"
               value={personInfo}
               onChange={setPersonInfo}
-              placeholder="Personinfo"
+              placeholder="Navn"
             />
             <Input
               label="Fødselsdato"
@@ -268,16 +371,29 @@ export default function LeadPage() {
               placeholder="Fødselsdato"
             />
             <Input
-              label="Bedrift"
-              value={company}
-              onChange={setCompany}
-              placeholder="Bedrift"
+              label="Rolle"
+              value={role}
+              onChange={setRole}
+              type="text"
+              placeholder="Rolle"
             />
             <Input
-              label="Gateadresse"
-              value={address}
-              onChange={setAddress}
-              placeholder="Gateadresse"
+              label="Firma navn"
+              value={company}
+              onChange={setCompany}
+              placeholder="Firma navn"
+            />
+          </div>
+          <div className="border-l pl-4">
+            <Input
+              label="Taktype"
+              value={roofType}
+              onChange={(val) =>
+                setSolarData((prev) => ({ ...prev, selectedRoofType: val }))
+              }
+              input="select"
+              options={roofTypes.map((r) => ({ label: r.name, value: r.name }))}
+              placeholder="Taktype"
             />
             <Input
               label="Eget forbruk"
@@ -286,10 +402,6 @@ export default function LeadPage() {
               type="number"
               placeholder="Eget forbruk"
             />
-          </tbody>
-        </table>
-        <table className="w-full">
-          <tbody>
             <Input
               label="Spenning (nett)"
               value={(voltage || solarData.voltage) ?? 230}
@@ -316,20 +428,6 @@ export default function LeadPage() {
               options={mainFuseOptions}
               placeholder="HovedSikring (A)"
             />
-          </tbody>
-        </table>
-        <table className="w-full">
-          <tbody>
-            <Input
-              label="Taktype"
-              value={roofType}
-              onChange={(val) =>
-                setSolarData((prev) => ({ ...prev, selectedRoofType: val }))
-              }
-              input="select"
-              options={roofTypes.map((r) => ({ label: r.name, value: r.name }))}
-              placeholder="Taktype"
-            />
             <Input
               label="Helning på tak"
               value={roofSlope.toFixed(0)}
@@ -344,8 +442,49 @@ export default function LeadPage() {
               type="number"
               placeholder="Alder på tak i år"
             />
-          </tbody>
-        </table>
+            <div className="w-full">
+              <label className="w-1/2 text-sm font-medium text-gray-700">
+                Privat / Næring
+              </label>
+              <div className="w-full">
+                {company ? "Næring 🏭" : "Privat 🏠"}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/*  */}
+
+        {/*  */}
+        <div className="flex flex-row items-center gap-1">
+          <p>
+            <strong>Prioritet: </strong>{" "}
+          </p>
+          <select
+            value={priority}
+            onChange={(e) => {
+              const newPriority = e.target.value;
+              setPriority(newPriority);
+              updateSingleField("priority", newPriority);
+            }}
+          >
+            {PRIORITIES.map((prio) => (
+              <option key={prio} value={prio}>
+                {prio}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="w-full">
+          <p>Leadinnhenter</p>
+          <TeamMemberSelector
+            team={team}
+            selectedMember={selectedMember}
+            onSelectMember={setSelectedMember}
+            defaultUser={assignedTo}
+          />
+        </div>
+        {/*  */}
+
         <button
           className="py-2 px-3 bg-orange-300"
           onClick={handleUpdate}
