@@ -120,6 +120,7 @@ export type LeadTask = {
   due_date: string;
   title: string;
   description: string;
+  assigned_to: string;
 };
 
 // LeadEmail now only stores references to emails in Microsoft Graph

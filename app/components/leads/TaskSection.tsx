@@ -3,7 +3,7 @@ import { LeadTask, Team } from "@/lib/types";
 import TeamMemberSelector from "../cold-calling/TeamMemberSelector";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthProvider";
-import { getLeadTasks, getTeam } from "@/lib/api";
+import { getLeadTaskComments, getLeadTasks, getTeam } from "@/lib/api";
 import { useTeam } from "@/context/TeamContext";
 import LoadingScreen from "../LoadingScreen";
 import { toast } from "react-toastify";
@@ -19,6 +19,12 @@ export default function TaskSection({ leadId }: Props) {
   const [tasks, setTasks] = useState<LeadTask[]>([]);
 
   const [taskModal, setTaskModal] = useState(false);
+  const [commentModal, setCommentModal] = useState(false);
+
+  const [taskComments, setTaskComments] = useState<
+    Record<string, { id: string; description: string; created_at: string }[]>
+  >({});
+  const [newComment, setNewComment] = useState("");
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("08:00");
@@ -39,10 +45,27 @@ export default function TaskSection({ leadId }: Props) {
   useEffect(() => {
     if (!teamId || !leadId) return;
 
-    Promise.all([
-      getTeam(teamId).then(setTeam),
-      getLeadTasks(leadId).then(setTasks),
-    ]).catch((err) => console.error(err));
+    getTeam(teamId).then(setTeam).catch(console.error);
+    getLeadTasks(leadId)
+      .then((tasks) => {
+        setTasks(tasks);
+        // Hent kommentarer for hver task
+        tasks.forEach((task) => {
+          getLeadTaskComments(leadId, task.id)
+            .then((comments) => {
+              setTaskComments((prev) => ({
+                ...prev,
+                [task.id]: comments.sort(
+                  (a, b) =>
+                    new Date(b.created_at).getTime() -
+                    new Date(a.created_at).getTime()
+                ),
+              }));
+            })
+            .catch(console.error);
+        });
+      })
+      .catch(console.error);
   }, [teamId, leadId]);
 
   const addBusinessDays = (date: Date, days: number): Date => {
@@ -160,19 +183,45 @@ export default function TaskSection({ leadId }: Props) {
     }
   };
 
+  const handleAddComment = async (taskId: string) => {
+    if (!newComment) return;
+    try {
+      const res = await fetch(`/api/leads/${leadId}/tasks/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadTaskId: taskId,
+          description: newComment,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Feil ved oppretting av kommentar");
+      const createdComment = await res.json();
+
+      setTaskComments((prev) => ({
+        ...prev,
+        [taskId]: [createdComment, ...(prev[taskId] || [])],
+      }));
+      setNewComment("");
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt ved oppretting av kommentar");
+    }
+  };
+
   if (!user) return <LoadingScreen />;
 
   return (
     <div className="">
       <button
         onClick={() => setTaskModal(!taskModal)}
-        className="p-2 bg-blue-700 text-white rounded-md"
+        className="p-2 bg-[#7787FF] text-white rounded-md"
       >
         Opprett oppgave
       </button>
       {taskModal && (
         <div className="mt-4 bg-white">
-          <div className="bg-blue-700 p-2 text-white">
+          <div className="bg-[#7787FF] p-2 text-white">
             <input
               value={title || ""}
               onChange={(e) => setTitle(e.target.value)}
@@ -235,7 +284,91 @@ export default function TaskSection({ leadId }: Props) {
         </div>
       )}
       {tasks.map((task, i) => (
-        <div key={i}>{task.title}</div>
+        <div className="mt-4 bg-white" key={i}>
+          <div className="bg-[#7787FF] p-2 text-white">
+            <input value={task.title} readOnly />
+          </div>
+          <div className="p-2">
+            <div className="w-full p-2">
+              <textarea className="w-full" readOnly value={task.description} />
+            </div>
+            <div className="mt-2 flex flex-row gap-2">
+              <div className="flex flex-col w-full">
+                <label>Aktivitetsdato</label>
+                <input
+                  className="w-full p-1.5 border rounded"
+                  value={
+                    task.due_date
+                      ? new Date(task.due_date).toLocaleDateString("no-NO")
+                      : ""
+                  }
+                  readOnly
+                />
+              </div>
+              <div className="flex flex-col w-full">
+                <label className="text-white">.</label>
+                <input
+                  className="w-full p-1.5 border rounded"
+                  value={
+                    task.due_date
+                      ? new Date(task.due_date).toLocaleTimeString("no-NO", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : ""
+                  }
+                  readOnly
+                />
+              </div>
+
+              <div className="flex flex-col w-full">
+                <label>Aktivitet tilordnet</label>
+                <TeamMemberSelector
+                  team={team}
+                  selectedMember={task.assigned_to}
+                  onSelectMember={setSelectedMember}
+                  defaultUser={task.assigned_to}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={() => setCommentModal(!commentModal)}
+              className="bg-[#52FF4C] px-6 py-2 text-white mt-3 rounded-md"
+            >
+              Legg til aktivitet
+            </button>
+            {/* Legg til kommentar */}
+            {commentModal && (
+              <div className="mt-2">
+                <textarea
+                  className="w-full p-2 border-t rounded-md mt-4 h-24 border"
+                  value={newComment || ""}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+                <button
+                  className="px-4 py-2 bg-green-600 text-white rounded mt-2"
+                  onClick={() => handleAddComment(task.id)}
+                >
+                  Kommenter
+                </button>
+              </div>
+            )}
+            {(taskComments[task.id] || []).map((comment, i) => (
+              <div
+                key={comment.id + i}
+                className="w-full p-2 border-t rounded-md mt-4 h-24 border"
+              >
+                <p>{formatDate(new Date(comment.created_at))}</p>
+                <textarea
+                  className="w-full"
+                  readOnly
+                  value={comment.description}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
