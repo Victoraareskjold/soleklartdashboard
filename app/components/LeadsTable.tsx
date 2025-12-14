@@ -32,7 +32,11 @@ const LEAD_STATUSES = [
   { value: 21, label: "Kommisjon Utbetalt", color: "#08FF00" },
 ];
 
-export default function LeadsTable() {
+interface LeadsTableProps {
+  selectedMember: string;
+}
+
+export default function LeadsTable({ selectedMember }: LeadsTableProps) {
   const { teamId } = useTeam();
   const { installerGroupId } = useInstallerGroup();
   const { teamRole } = useRoles();
@@ -43,9 +47,17 @@ export default function LeadsTable() {
     if (!teamId || !installerGroupId || !teamRole) return;
 
     getLeads(teamId, installerGroupId, teamRole)
-      .then(setLeads)
+      .then((allLeads) => {
+        if (selectedMember === "" || selectedMember === null) {
+          setLeads(allLeads);
+        } else {
+          setLeads(
+            allLeads.filter((lead) => lead.assigned_to === selectedMember)
+          );
+        }
+      })
       .catch((err) => console.error("Failed to fetch leads:", err));
-  }, [installerGroupId, teamId, teamRole]);
+  }, [installerGroupId, teamId, teamRole, selectedMember]);
 
   const grouped = LEAD_STATUSES.reduce((acc, status) => {
     acc[status.value] = leads.filter((lead) => lead.status === status.value);

@@ -86,7 +86,11 @@ export const getLeads = async (
   installerGroupId: string,
   teamRole: string
 ): Promise<Lead[]> => {
-  const query = new URLSearchParams({ teamId, installerGroupId, teamRole });
+  const query = new URLSearchParams({
+    teamId,
+    installerGroupId,
+    teamRole,
+  });
   return apiRequest<Lead[]>(`/api/leads?${query.toString()}`);
 };
 
