@@ -330,118 +330,137 @@ export default function TaskSection({ leadId }: Props) {
           </div>
         </div>
       )}
-      {tasks.map((task, i) => (
-        <div className="mt-4 bg-white" key={i}>
-          <div className="bg-[#7787FF] p-2 text-white">
-            <input value={task.title} readOnly />
-          </div>
-          <div className="p-2">
-            <div className="w-full p-2">
-              <textarea className="w-full" readOnly value={task.description} />
+      {tasks
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        .map((task, i) => (
+          <div className="mt-4 bg-white" key={i}>
+            <div className="bg-[#7787FF] p-2 text-white">
+              <input value={task.title} readOnly />
             </div>
-            <div className="mt-2 flex flex-row gap-2">
-              <div className="flex flex-col w-full">
-                <label>Aktivitetsdato</label>
-                <select
-                  className="w-full p-2 border rounded"
-                  value={
-                    task.due_date
-                      ? new Date(task.due_date).toLocaleDateString("no-NO")
-                      : ""
-                  }
-                  onChange={(e) =>
-                    handleUpdateDueDate(task, {
-                      date: e.target.value.split("-").reverse().join("."),
-                    })
-                  }
-                >
-                  {dateOptions.map((option) => (
-                    <option
-                      key={option.value}
-                      value={option.date || String(option.value)}
-                    >
-                      {option.label} {option.date && `[${option.date}]`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col w-full">
-                <label className="text-white">.</label>
-                <select
-                  className="w-full p-2 border rounded"
-                  value={
-                    task.due_date
-                      ? (() => {
-                          const d = new Date(task.due_date);
-                          d.setHours(d.getHours());
-                          return d.toLocaleTimeString("no-NO", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          });
-                        })()
-                      : ""
-                  }
-                  onChange={(e) =>
-                    handleUpdateDueDate(task, { time: e.target.value })
-                  }
-                >
-                  {timeOptions.map((time) => (
-                    <option key={time} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col w-full">
-                <label>Aktivitet tilordnet</label>
-                <TeamMemberSelector
-                  team={team}
-                  selectedMember={task.assigned_to}
-                  onSelectMember={setSelectedMember}
-                  defaultUser={task.assigned_to}
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => setCommentModal(!commentModal)}
-              className="bg-[#52FF4C] px-6 py-2 text-white mt-3 rounded-md"
-            >
-              Legg til aktivitet
-            </button>
-            {/* Legg til kommentar */}
-            {commentModal && (
-              <div className="mt-2">
-                <textarea
-                  className="w-full p-2 border-t rounded-md mt-4 h-24 border"
-                  value={newComment || ""}
-                  onChange={(e) => setNewComment(e.target.value)}
-                />
-                <button
-                  className="px-4 py-2 bg-green-600 text-white rounded mt-2"
-                  onClick={() => handleAddComment(task.id)}
-                >
-                  Kommenter
-                </button>
-              </div>
-            )}
-            {(taskComments[task.id] || []).map((comment, i) => (
-              <div
-                key={comment.id + i}
-                className="w-full p-2 border-t rounded-md mt-4 h-24 border"
-              >
-                <p>{formatDate(new Date(comment.created_at))}</p>
+            <div className="p-2">
+              <div className="w-full p-2">
                 <textarea
                   className="w-full"
                   readOnly
-                  value={comment.description}
+                  value={task.description}
                 />
               </div>
-            ))}
+              <div className="mt-2 flex flex-row gap-2">
+                <div className="flex flex-col w-full">
+                  <label>Aktivitetsdato</label>
+                  <select
+                    className="w-full p-2 border rounded"
+                    value={
+                      task.due_date
+                        ? new Date(task.due_date).toLocaleDateString("no-NO")
+                        : ""
+                    }
+                    onChange={(e) =>
+                      handleUpdateDueDate(task, {
+                        date: e.target.value.split("-").reverse().join("."),
+                      })
+                    }
+                  >
+                    {task.due_date && (
+                      <option
+                        value={new Date(task.due_date).toLocaleDateString(
+                          "no-NO"
+                        )}
+                      >
+                        {new Date(task.due_date).toLocaleDateString("no-NO")}
+                      </option>
+                    )}
+
+                    {dateOptions.map((option) => (
+                      <option
+                        key={option.value}
+                        value={option.date || String(option.value)}
+                      >
+                        {option.label} {option.date && `[${option.date}]`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col w-full">
+                  <label className="text-white">.</label>
+                  <select
+                    className="w-full p-2 border rounded"
+                    value={
+                      task.due_date
+                        ? (() => {
+                            const d = new Date(task.due_date);
+                            d.setHours(d.getHours());
+                            return d.toLocaleTimeString("no-NO", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            });
+                          })()
+                        : ""
+                    }
+                    onChange={(e) =>
+                      handleUpdateDueDate(task, { time: e.target.value })
+                    }
+                  >
+                    {timeOptions.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col w-full">
+                  <label>Aktivitet tilordnet</label>
+                  <TeamMemberSelector
+                    team={team}
+                    selectedMember={task.assigned_to}
+                    onSelectMember={setSelectedMember}
+                    defaultUser={task.assigned_to}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => setCommentModal(!commentModal)}
+                className="bg-[#52FF4C] px-6 py-2 text-white mt-3 rounded-md"
+              >
+                Legg til aktivitet
+              </button>
+              {/* Legg til kommentar */}
+              {commentModal && (
+                <div className="mt-2">
+                  <textarea
+                    className="w-full p-2 border-t rounded-md mt-4 h-24 border"
+                    value={newComment || ""}
+                    onChange={(e) => setNewComment(e.target.value)}
+                  />
+                  <button
+                    className="px-4 py-2 bg-green-600 text-white rounded mt-2"
+                    onClick={() => handleAddComment(task.id)}
+                  >
+                    Kommenter
+                  </button>
+                </div>
+              )}
+              {(taskComments[task.id] || []).map((comment, i) => (
+                <div
+                  key={comment.id + i}
+                  className="w-full p-2 border-t rounded-md mt-4 h-24 border"
+                >
+                  <p>{formatDate(new Date(comment.created_at))}</p>
+                  <textarea
+                    className="w-full"
+                    readOnly
+                    value={comment.description}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 }
