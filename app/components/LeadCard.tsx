@@ -90,7 +90,9 @@ export default function LeadCard({
         <div className="flex flex-row justify-between items-center mt-4 text-sm">
           <div className="flex flex-row gap-2 items-center">
             <p>{dueText}</p>
-            {dueText === "Oppgave forfalt" && <img src="/icons/danger.png" />}
+            {dueText === "Oppgave forfalt" && (
+              <img src="/icons/danger.png" alt="danger icon" />
+            )}
           </div>
           <p className="text-nowrap">
             {lead.company || lead.role ? "🏭 Næring" : "🏠 Privat"}
