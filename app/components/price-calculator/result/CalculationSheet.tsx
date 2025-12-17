@@ -7,7 +7,7 @@ import {
 import { CalculatorState } from "./CalculatorResults";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getElectricalInstallationItems,
   getMountVolumeReductions,
@@ -467,8 +467,14 @@ export default function CalculationSheet({
     calculatedEnovaSupport,
   ]);
 
+  const prevPriceOverviewString = useRef<string | null>(null);
+
   useEffect(() => {
-    setPriceOverview(priceOverview);
+    const priceOverviewString = JSON.stringify(priceOverview);
+    if (priceOverviewString !== prevPriceOverviewString.current) {
+      setPriceOverview(priceOverview);
+      prevPriceOverviewString.current = priceOverviewString;
+    }
   }, [priceOverview, setPriceOverview]);
 
   return (

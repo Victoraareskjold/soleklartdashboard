@@ -96,10 +96,10 @@ export default function CreateLead() {
         status: 7,
         priority: "iron",
       });
-
+      /* 
       await createEstimate({
         ...mapSolarDataToEstimate(solarData, lead.id),
-      });
+      }); */
       toast.success(
         <div>
           Lead &quot;<strong>{lead.person_info}</strong>&quot; created!{" "}
