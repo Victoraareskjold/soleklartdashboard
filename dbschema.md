@@ -22,7 +22,7 @@ id uuid NOT NULL DEFAULT gen_random_uuid(),
 user_id uuid NOT NULL,
 installer_group_id uuid NOT NULL,
 provider text NOT NULL CHECK (provider = ANY (ARRAY['outlook'::text, 'gmail'::text])),
-email text UNIQUE,
+email text,
 access_token text NOT NULL,
 refresh_token text NOT NULL,
 id_token text,
@@ -70,6 +70,7 @@ yearly_cost2 numeric,
 yearly_prod numeric,
 desired_kwh numeric,
 coverage_percentage numeric,
+price_data jsonb,
 CONSTRAINT estimates_pkey PRIMARY KEY (id),
 CONSTRAINT estimates_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id)
 );
@@ -104,12 +105,33 @@ CONSTRAINT lead_notes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users
 CONSTRAINT lead_notes_note_id_fkey FOREIGN KEY (note_id) REFERENCES public.lead_notes(id),
 CONSTRAINT lead_notes_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id)
 );
+CREATE TABLE public.lead_tasks (
+id uuid NOT NULL DEFAULT gen_random_uuid(),
+created_at timestamp with time zone NOT NULL DEFAULT now(),
+due_date timestamp with time zone,
+title text,
+assigned_to uuid,
+description text,
+lead_id uuid,
+CONSTRAINT lead_tasks_pkey PRIMARY KEY (id),
+CONSTRAINT lead_tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id),
+CONSTRAINT lead_tasks_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id)
+);
+CREATE TABLE public.lead_tasks_comments (
+id uuid NOT NULL DEFAULT gen_random_uuid(),
+created_at timestamp with time zone NOT NULL DEFAULT now(),
+lead_task_id uuid NOT NULL,
+description text,
+CONSTRAINT lead_tasks_comments_pkey PRIMARY KEY (id),
+CONSTRAINT lead_tasks_comments_lead_task_id_fkey FOREIGN KEY (lead_task_id) REFERENCES public.lead_tasks(id),
+CONSTRAINT lead_tasks_comments_lead_task_id_fkey1 FOREIGN KEY (lead_task_id) REFERENCES public.lead_tasks(id)
+);
 CREATE TABLE public.leads (
 id uuid NOT NULL DEFAULT gen_random_uuid(),
 team_id uuid NOT NULL,
 installer_group_id uuid NOT NULL,
 assigned_to uuid,
-person_info text NOT NULL,
+person_info text,
 birth_date timestamp without time zone,
 company text,
 address text DEFAULT ''::text,
@@ -124,16 +146,19 @@ roof_slope numeric,
 roof_age numeric,
 electricity_price_avg numeric,
 main_fuse numeric,
-esitmate_id uuid,
-status text,
+status numeric NOT NULL DEFAULT '0'::numeric,
 email text,
 phone text,
+mobile text,
+role text,
+note text,
+created_by uuid,
 CONSTRAINT leads_pkey PRIMARY KEY (id),
 CONSTRAINT leads_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id),
 CONSTRAINT leads_installer_group_id_fkey FOREIGN KEY (installer_group_id) REFERENCES public.installer_groups(id),
 CONSTRAINT leads_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id),
 CONSTRAINT leads_roof_type_id_fkey FOREIGN KEY (roof_type_id) REFERENCES public.roof_types(id),
-CONSTRAINT leads_esitmate_id_fkey FOREIGN KEY (esitmate_id) REFERENCES public.estimates(id)
+CONSTRAINT leads_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
 );
 CREATE TABLE public.mount_items (
 id uuid NOT NULL DEFAULT gen_random_uuid(),

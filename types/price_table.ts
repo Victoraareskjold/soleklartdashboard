@@ -71,3 +71,44 @@ interface RoofType {
   id: string;
   name: string;
 }
+
+export type PriceOverview = {
+  suppliers: {
+    id: string;
+    name: string;
+    supplier: string;
+    product: string;
+    category: string;
+    quantity: number;
+    priceWithMarkup: number;
+  }[];
+  mounting: {
+    id: string;
+    name: string;
+    supplier: string;
+    product: string;
+    category: string;
+    quantity: number;
+    priceWithMarkup: number;
+  }[];
+  installation: {
+    søknad: {
+      priceWithMarkup: number;
+    };
+    solcelleAnlegg: {
+      priceWithMarkup: number;
+    };
+    battery: {
+      selectedBatteryId: string | null;
+      priceWithMarkup: number;
+    };
+    additionalCosts: {
+      id: string;
+      name: string;
+      quantity: number;
+      priceWithMarkup: number;
+    }[];
+  };
+  total: number;
+  "total inkl. alt": number;
+};

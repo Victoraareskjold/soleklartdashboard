@@ -1,5 +1,5 @@
 "use client";
-import { MountItem, Supplier, SupplierWithProducts } from "@/types/price_table";
+import { MountItem, PriceOverview, Supplier, SupplierWithProducts } from "@/types/price_table";
 import { useState, useMemo, useEffect } from "react";
 import { getCategories, getMountItems } from "@/lib/api";
 import CalculationSheet from "./CalculationSheet";
@@ -14,6 +14,7 @@ interface CalculatorResultsProps {
   suppliersAndProducts: SupplierWithProducts[] | null;
   solarData?: SolarData;
   setSolarData?: React.Dispatch<React.SetStateAction<SolarData>>;
+  setPriceOverview: (priceOverview: PriceOverview | null) => void;
 }
 
 export interface CalculatorItem {
@@ -55,6 +56,7 @@ export default function CalculatorResults({
   suppliersAndProducts,
   solarData,
   setSolarData,
+  setPriceOverview,
 }: CalculatorResultsProps) {
   const { installerGroupId } = useInstallerGroup();
   const [allCategories, setAllCategories] = useState<
@@ -845,6 +847,7 @@ export default function CalculatorResults({
           suppliersAndProducts={suppliersAndProducts}
           mountItems={mountItems}
           solarData={solarData}
+          setPriceOverview={setPriceOverview}
         />
         {showModal && (
           <div

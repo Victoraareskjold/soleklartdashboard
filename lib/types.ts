@@ -73,6 +73,9 @@ export interface Lead {
   note?: string | null;
 }
 
+import { SolarData } from "@/app/components/SolarDataView";
+import { PriceOverview } from "@/types/price_table";
+
 export interface Estimate {
   id: string;
   lead_id: string;
@@ -97,9 +100,12 @@ export interface Estimate {
   yearly_prod?: number;
   desired_kwh?: number;
   coverage_percentage?: number;
+  price_data?: PriceOverview;
 }
 
-export type CreateEstimateInput = Partial<Estimate> & { lead_id: string };
+export type CreateEstimateInput = Partial<Estimate> & { lead_id: string } & {
+  solarData: SolarData;
+};
 
 export type Note = {
   id: string;

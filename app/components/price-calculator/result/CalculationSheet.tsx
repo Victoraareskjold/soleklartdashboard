@@ -1,12 +1,13 @@
 import {
   MountItem,
+  PriceOverview,
   SupplierCategory,
   SupplierWithProducts,
 } from "@/types/price_table";
 import { CalculatorState } from "./CalculatorResults";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getElectricalInstallationItems,
   getMountVolumeReductions,
@@ -23,6 +24,7 @@ interface CalculationSheetProps {
   suppliersAndProducts: SupplierWithProducts[];
   mountItems: MountItem[];
   solarData?: SolarData;
+  setPriceOverview: (priceOverview: PriceOverview | null) => void;
 }
 
 export default function CalculationSheet({
@@ -30,6 +32,7 @@ export default function CalculationSheet({
   suppliersAndProducts,
   mountItems,
   solarData,
+  setPriceOverview,
 }: CalculationSheetProps) {
   const { installerGroupId } = useInstallerGroup();
   const { teamId } = useTeam();
@@ -388,70 +391,85 @@ export default function CalculationSheet({
 
   const grandTotal = subTotalForCommission + finalCommissionAmount;
 
-  const priceOverview = {
-    suppliers: supplierItems.map((item) => {
-      const markup = getCategoryMarkup(item.category || "");
-      const price = getFinalPrice(item.id, item.price);
-      return {
-        id: item.id,
-        name: item.name,
-        supplier: item.supplier,
-        product: item.product,
-        category: item.category,
-        quantity: item.quantity,
-        priceWithMarkup: price * (1 + markup / 100),
-      };
-    }),
-    mounting: mountingItems.map((item) => {
-      const markup = getCategoryMarkup(item.category || "");
-      const price = getFinalPrice(item.id, item.price);
-      return {
-        id: item.id,
-        name: item.name,
-        supplier: item.supplier,
-        product: item.product,
-        category: item.category,
-        quantity: item.quantity,
-        priceWithMarkup: price * (1 + markup / 100),
-      };
-    }),
-    installation: {
-      søknad: {
-        priceWithMarkup:
-          getFinalPrice("søknad", søknadTotal) * (1 + electricalMarkup / 100),
-      },
-      solcelleAnlegg: {
-        priceWithMarkup:
-          getFinalPrice(
-            "solcelle_anlegg",
-            solcelleAnleggBaseTotal * inverterCount
-          ) *
-          (1 + electricalMarkup / 100),
-      },
-      battery: {
-        selectedBatteryId,
-        priceWithMarkup:
-          getFinalPrice("batteri", batteryBasePrice * batteryCount) *
-          (1 + electricalMarkup / 100),
-      },
-      additionalCosts: additionalCosts.map((ac, index) => {
-        const selectedItem = additionalCostOptions.find((i) => i.id === ac.id);
-        const base = selectedItem?.price_per || 0;
-        const overrideId = `additional_${index}`;
-        const finalPrice = getFinalPrice(overrideId, base * ac.quantity);
+  const priceOverview = useMemo(() => {
+    return {
+      suppliers: supplierItems.map((item) => {
+        const markup = getCategoryMarkup(item.category || "");
+        const price = getFinalPrice(item.id, item.price);
         return {
-          id: ac.id,
-          name: selectedItem?.name || "",
-          quantity: ac.quantity,
-          priceWithMarkup: finalPrice * (1 + electricalMarkup / 100),
+          id: item.id,
+          name: item.name,
+          supplier: item.supplier,
+          product: item.product,
+          category: item.category,
+          quantity: item.quantity,
+          priceWithMarkup: price * (1 + markup / 100),
         };
       }),
-    },
-    total: grandTotal,
-    "total inkl. alt": grandTotal * 1.25 - calculatedEnovaSupport,
-  };
+      mounting: mountingItems.map((item) => {
+        const markup = getCategoryMarkup(item.category || "");
+        const price = getFinalPrice(item.id, item.price);
+        return {
+          id: item.id,
+          name: item.name,
+          supplier: item.supplier,
+          product: item.product,
+          category: item.category,
+          quantity: item.quantity,
+          priceWithMarkup: price * (1 + markup / 100),
+        };
+      }),
+      installation: {
+        søknad: {
+          priceWithMarkup:
+            getFinalPrice("søknad", søknadTotal) * (1 + electricalMarkup / 100),
+        },
+        solcelleAnlegg: {
+          priceWithMarkup:
+            getFinalPrice(
+              "solcelle_anlegg",
+              solcelleAnleggBaseTotal * inverterCount
+            ) *
+            (1 + electricalMarkup / 100),
+        },
+        battery: {
+          selectedBatteryId,
+          priceWithMarkup:
+            getFinalPrice("batteri", batteryBasePrice * batteryCount) *
+            (1 + electricalMarkup / 100),
+        },
+        additionalCosts: additionalCosts.map((ac, index) => {
+          const selectedItem = additionalCostOptions.find(
+            (i) => i.id === ac.id
+          );
+          const base = selectedItem?.price_per || 0;
+          const overrideId = `additional_${index}`;
+          const finalPrice = getFinalPrice(overrideId, base * ac.quantity);
+          return {
+            id: ac.id,
+            name: selectedItem?.name || "",
+            quantity: ac.quantity,
+            priceWithMarkup: finalPrice * (1 + electricalMarkup / 100),
+          };
+        }),
+      },
+      total: grandTotal,
+      "total inkl. alt": grandTotal * 1.25 - calculatedEnovaSupport,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    supplierItems,
+    mountingItems,
+    additionalCosts,
+    selectedBatteryId,
+    totalWithInstallation,
+    grandTotal,
+    calculatedEnovaSupport,
+  ]);
 
-  /* console.log(JSON.stringify(priceOverview, null, 2)); */
+  useEffect(() => {
+    setPriceOverview(priceOverview);
+  }, [priceOverview, setPriceOverview]);
 
   return (
     <div className="mt-8 border rounded-lg bg-white shadow p-4">

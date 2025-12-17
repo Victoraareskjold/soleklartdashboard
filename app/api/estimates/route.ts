@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
-import { Estimate } from "@/lib/types";
 
 // GET /api/estimates?lead_id=...
 export async function GET(req: NextRequest) {
@@ -41,15 +40,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const client = createSupabaseClient(token);
-    const estimateData: Partial<Estimate> = await req.json();
+    const { lead_id, solarData, price_data } = await req.json();
 
-    if (!estimateData.lead_id) {
+    if (!lead_id) {
       return NextResponse.json({ error: "Missing lead_id" }, { status: 400 });
     }
 
+    const newEstimate = {
+      lead_id: lead_id,
+      price_data,
+      image_url: solarData.imageUrl,
+      total_panels: solarData.totalPanels,
+      selected_panel_type: solarData.selectedPanelType,
+      selected_roof_type: solarData.selectedRoofType,
+      checked_roof_data: solarData.checkedRoofData,
+      selected_el_price: solarData.selectedElPrice,
+      yearly_cost: solarData.yearlyCost,
+      yearly_cost2: solarData.yearlyCost2,
+      yearly_prod: solarData.yearlyProd,
+      desired_kwh: solarData.desiredKwh,
+      coverage_percentage: solarData.coveragePercentage,
+    };
+
     const { data, error } = await client
       .from("estimates")
-      .insert(estimateData)
+      .insert(newEstimate)
       .select()
       .single();
 
