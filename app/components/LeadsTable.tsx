@@ -1,8 +1,8 @@
 "use client";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import { getLeads, updateLead } from "@/lib/api";
-import { Lead } from "@/lib/types";
+import { getLeads, getLeadTasks, updateLead } from "@/lib/api";
+import { Lead, LeadTask } from "@/lib/types";
 import { useEffect, useState } from "react";
 import {
   DragDropContext,
@@ -42,19 +42,35 @@ export default function LeadsTable({ selectedMember }: LeadsTableProps) {
   const { teamRole } = useRoles();
 
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [tasks, setTasks] = useState<LeadTask[]>([]);
 
   useEffect(() => {
     if (!teamId || !installerGroupId || !teamRole) return;
 
+    // Hent alle leads
     getLeads(teamId, installerGroupId, teamRole)
       .then((allLeads) => {
-        if (selectedMember === "" || selectedMember === null) {
-          setLeads(allLeads);
-        } else {
-          setLeads(
-            allLeads.filter((lead) => lead.assigned_to === selectedMember)
-          );
-        }
+        const filteredLeads =
+          selectedMember && selectedMember !== ""
+            ? allLeads.filter((lead) => lead.assigned_to === selectedMember)
+            : allLeads;
+
+        setLeads(filteredLeads);
+
+        // Hent alle oppgaver for de filtrerte leadene
+        return Promise.all(
+          filteredLeads.map((lead) =>
+            getLeadTasks(lead.id).catch((err) => {
+              console.error(`Failed to fetch tasks for lead ${lead.id}:`, err);
+              return [];
+            })
+          )
+        );
+      })
+      .then((allTasksArrays) => {
+        // Flatten oppgaver til én liste
+        const allTasks = allTasksArrays.flat();
+        setTasks(allTasks);
       })
       .catch((err) => console.error("Failed to fetch leads:", err));
   }, [installerGroupId, teamId, teamRole, selectedMember]);
@@ -126,7 +142,10 @@ export default function LeadsTable({ selectedMember }: LeadsTableProps) {
                           ref={provided.innerRef}
                           className="bg-white rounded shadow p-3 mb-2"
                         >
-                          <LeadCard lead={lead} />
+                          <LeadCard
+                            lead={lead}
+                            tasks={tasks.filter((t) => t.lead_id === lead.id)}
+                          />
                         </div>
                       )}
                     </Draggable>
