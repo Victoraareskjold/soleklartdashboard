@@ -7,9 +7,10 @@ import { CLIENT_ROUTES } from "@/constants/routes";
 import { useAuth } from "@/context/AuthProvider";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import { getRoofTypes, getTeam } from "@/lib/api";
-import { RoofType, Team } from "@/lib/types";
+import { getInstallerGroup, getRoofTypes, getTeam } from "@/lib/api";
+import { InstallerGroup, RoofType, Team } from "@/lib/types";
 import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -51,6 +52,8 @@ export default function ColdCallingPage() {
   const { installerGroupId } = useInstallerGroup();
   const { user } = useAuth();
 
+  const [installerData, setInstallerData] = useState<InstallerGroup | null>();
+
   const [team, setTeam] = useState<Team>();
   const [selectedMember, setSelectedMember] = useState<string>("");
   const [coldCalls, setColdCalls] = useState<ColdCallLead[]>([]);
@@ -61,13 +64,20 @@ export default function ColdCallingPage() {
   const [status, setStatus] = useState(0);
 
   useEffect(() => {
-    if (!teamId) return;
+    if (!teamId || !installerGroupId) return;
+
+    const fetchData = async () => {
+      const data2 = await getInstallerGroup(installerGroupId);
+      setInstallerData(data2);
+    };
+
+    fetchData();
 
     getTeam(teamId).then(setTeam);
     getRoofTypes()
       .then(setRoofTypeOptions)
       .catch((err) => console.error("Failed to fetch team members:", err));
-  }, [teamId]);
+  }, [teamId, installerGroupId]);
 
   useEffect(() => {
     if (!installerGroupId || !teamId) return;
@@ -247,12 +257,25 @@ export default function ColdCallingPage() {
     toast.success("Adresse kopiert til utklippstavle");
   };
 
-  if (!user) return <LoadingScreen />;
+  const getLogoPath = (name: string) => {
+    const filename = name.toLowerCase().replace(/\s+/g, "");
+    return `/installerLogos/${filename}.png`;
+  };
+
+  if (!user || !installerData) return <LoadingScreen />;
 
   return (
     <div>
       <div className="flex flex-row justify-between items-center gap-4 mb-4">
         <div>
+          <div className="relative w-64 self-left justify-center h-8">
+            <Image
+              fill
+              alt={installerData?.name + " logo"}
+              src={getLogoPath(installerData?.name)}
+              className="object-contain"
+            />
+          </div>
           <h1>Cold calling</h1>
           <div className="flex flex-row gap-2 my-2">
             <select
