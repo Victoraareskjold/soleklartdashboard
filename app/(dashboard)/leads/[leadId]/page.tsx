@@ -514,10 +514,15 @@ export default function LeadPage() {
             >
               {PRIORITIES.map((prio) => (
                 <option key={prio} value={prio}>
-                  {prio}
+                  {prio.charAt(0).toUpperCase() + prio.slice(1)}
                 </option>
               ))}
             </select>
+            <img
+              src={`/icons/${priority}.png`}
+              alt={priority}
+              className="w-6 h-6"
+            />
           </div>
 
           <div className="flex flex-row items-center gap-1 mt-2">
