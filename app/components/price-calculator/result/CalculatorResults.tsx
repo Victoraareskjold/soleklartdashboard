@@ -1,5 +1,10 @@
 "use client";
-import { MountItem, PriceOverview, Supplier, SupplierWithProducts } from "@/types/price_table";
+import {
+  MountItem,
+  PriceOverview,
+  Supplier,
+  SupplierWithProducts,
+} from "@/types/price_table";
 import { useState, useMemo, useEffect } from "react";
 import { getCategories, getMountItems } from "@/lib/api";
 import CalculationSheet from "./CalculationSheet";
@@ -14,7 +19,7 @@ interface CalculatorResultsProps {
   suppliersAndProducts: SupplierWithProducts[] | null;
   solarData?: SolarData;
   setSolarData?: React.Dispatch<React.SetStateAction<SolarData>>;
-  setPriceOverview: (priceOverview: PriceOverview | null) => void;
+  setPriceOverview?: (priceOverview: PriceOverview | null) => void;
 }
 
 export interface CalculatorItem {

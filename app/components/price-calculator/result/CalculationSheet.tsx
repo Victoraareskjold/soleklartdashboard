@@ -24,7 +24,7 @@ interface CalculationSheetProps {
   suppliersAndProducts: SupplierWithProducts[];
   mountItems: MountItem[];
   solarData?: SolarData;
-  setPriceOverview: (priceOverview: PriceOverview | null) => void;
+  setPriceOverview?: (priceOverview: PriceOverview | null) => void;
 }
 
 export default function CalculationSheet({
@@ -470,6 +470,8 @@ export default function CalculationSheet({
   const prevPriceOverviewString = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!setPriceOverview) return;
+
     const priceOverviewString = JSON.stringify(priceOverview);
     if (priceOverviewString !== prevPriceOverviewString.current) {
       setPriceOverview(priceOverview);
