@@ -117,7 +117,7 @@ export default function LeadsTable({ selectedMember }: LeadsTableProps) {
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="bg-gray-100 min-w-[250px] min-h-124 border flex flex-col justify-between"
+                className="bg-gray-100 min-w-[250px] min-h-164 border flex flex-col justify-between"
               >
                 <div
                   style={{ backgroundColor: status.color }}
@@ -145,6 +145,22 @@ export default function LeadsTable({ selectedMember }: LeadsTableProps) {
                           <LeadCard
                             lead={lead}
                             tasks={tasks.filter((t) => t.lead_id === lead.id)}
+                            onStatusChange={async (leadId, newStatus) => {
+                              try {
+                                await updateLead(leadId, { status: newStatus });
+                                setLeads((prev) =>
+                                  prev.map((l) =>
+                                    l.id === leadId
+                                      ? { ...l, status: newStatus }
+                                      : l
+                                  )
+                                );
+                                toast.success("Status oppdatert!");
+                              } catch (err) {
+                                console.error(err);
+                                toast.error("Kunne ikke oppdatere status");
+                              }
+                            }}
                           />
                         </div>
                       )}
