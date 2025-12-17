@@ -83,7 +83,6 @@ export default function TaskSection({ leadId }: Props) {
     return result;
   };
 
-  // Funksjon for å legge til måneder
   const addMonths = (date: Date, months: number): Date => {
     const result = new Date(date);
     result.setMonth(result.getMonth() + months);
@@ -209,6 +208,54 @@ export default function TaskSection({ leadId }: Props) {
     }
   };
 
+  const handleUpdateDueDate = async (
+    task: LeadTask,
+    options: { date?: string; time?: string }
+  ) => {
+    if (!task.due_date) return;
+
+    const current = new Date(task.due_date);
+
+    // Oppdater dato (dd.mm.yyyy)
+    if (options.date) {
+      const [day, month, year] = options.date.split(".");
+      current.setFullYear(Number(year));
+      current.setMonth(Number(month) - 1);
+      current.setDate(Number(day));
+    }
+
+    // Oppdater tid (HH:mm)
+    if (options.time) {
+      const [hour, minute] = options.time.split(":");
+      current.setHours(Number(hour));
+      current.setMinutes(Number(minute));
+    }
+
+    const id = task.id;
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}/tasks`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          due_date: current.toISOString(),
+          id,
+        }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      // Oppdater lokalt state
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, due_date: current.toISOString() } : t
+        )
+      );
+    } catch {
+      toast.error("Kunne ikke oppdatere dato");
+    }
+  };
+
   if (!user) return <LoadingScreen />;
 
   return (
@@ -295,30 +342,55 @@ export default function TaskSection({ leadId }: Props) {
             <div className="mt-2 flex flex-row gap-2">
               <div className="flex flex-col w-full">
                 <label>Aktivitetsdato</label>
-                <input
-                  className="w-full p-1.5 border rounded"
+                <select
+                  className="w-full p-2 border rounded"
                   value={
                     task.due_date
                       ? new Date(task.due_date).toLocaleDateString("no-NO")
                       : ""
                   }
-                  readOnly
-                />
+                  onChange={(e) =>
+                    handleUpdateDueDate(task, {
+                      date: e.target.value.split("-").reverse().join("."),
+                    })
+                  }
+                >
+                  {dateOptions.map((option) => (
+                    <option
+                      key={option.value}
+                      value={option.date || String(option.value)}
+                    >
+                      {option.label} {option.date && `[${option.date}]`}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex flex-col w-full">
                 <label className="text-white">.</label>
-                <input
-                  className="w-full p-1.5 border rounded"
+                <select
+                  className="w-full p-2 border rounded"
                   value={
                     task.due_date
-                      ? new Date(task.due_date).toLocaleTimeString("no-NO", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                      ? (() => {
+                          const d = new Date(task.due_date);
+                          d.setHours(d.getHours());
+                          return d.toLocaleTimeString("no-NO", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          });
+                        })()
                       : ""
                   }
-                  readOnly
-                />
+                  onChange={(e) =>
+                    handleUpdateDueDate(task, { time: e.target.value })
+                  }
+                >
+                  {timeOptions.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex flex-col w-full">

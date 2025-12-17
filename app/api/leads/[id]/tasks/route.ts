@@ -94,3 +94,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params;
+  if (!resolvedParams?.id) {
+    return NextResponse.json({ error: "Missing lead id" }, { status: 400 });
+  }
+  const leadId = (await params).id;
+
+  try {
+    const body = await req.json();
+    const { due_date, id } = body;
+
+    if (!leadId) {
+      return NextResponse.json({ error: "Mangler leadid" }, { status: 400 });
+    }
+
+    const supabase = createSupabaseAdminClient();
+
+    const { error } = await supabase
+      .from("lead_tasks")
+      .update({ due_date })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: `Feil ved opprettelse av oppgave` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Import error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
