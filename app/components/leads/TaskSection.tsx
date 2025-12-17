@@ -28,6 +28,9 @@ export default function TaskSection({ leadId }: Props) {
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("08:00");
+  const [useCustomDate, setUseCustomDate] = useState(false);
+  const [customDateTaskId, setCustomDateTaskId] = useState<string | null>(null);
+
   const [description, setDescription] = useState("");
   const [selectedMember, setSelectedMember] = useState<string>("");
 
@@ -280,7 +283,16 @@ export default function TaskSection({ leadId }: Props) {
                 <label>Aktivitetsdato</label>
                 <select
                   className="w-full p-2 border rounded"
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  value={useCustomDate ? "custom" : selectedDate}
+                  onChange={(e) => {
+                    if (e.target.value === "custom") {
+                      setUseCustomDate(true);
+                      setSelectedDate("");
+                    } else {
+                      setUseCustomDate(false);
+                      setSelectedDate(e.target.value);
+                    }
+                  }}
                 >
                   <option value="">Velg dato...</option>
                   {dateOptions.map((option) => (
@@ -292,6 +304,16 @@ export default function TaskSection({ leadId }: Props) {
                     </option>
                   ))}
                 </select>
+                {useCustomDate && (
+                  <input
+                    type="date"
+                    className="w-full p-2 border rounded mt-2"
+                    onChange={(e) => {
+                      const [year, month, day] = e.target.value.split("-");
+                      setSelectedDate(`${day}.${month}.${year}`);
+                    }}
+                  />
+                )}
               </div>
               <div className="flex flex-col w-full">
                 <label className="text-white">.</label>
@@ -354,15 +376,22 @@ export default function TaskSection({ leadId }: Props) {
                   <select
                     className="w-full p-2 border rounded"
                     value={
-                      task.due_date
+                      customDateTaskId === task.id
+                        ? "custom"
+                        : task.due_date
                         ? new Date(task.due_date).toLocaleDateString("no-NO")
                         : ""
                     }
-                    onChange={(e) =>
-                      handleUpdateDueDate(task, {
-                        date: e.target.value.split("-").reverse().join("."),
-                      })
-                    }
+                    onChange={(e) => {
+                      if (e.target.value === "custom") {
+                        setCustomDateTaskId(task.id);
+                      } else {
+                        setCustomDateTaskId(null);
+                        handleUpdateDueDate(task, {
+                          date: e.target.value,
+                        });
+                      }
+                    }}
                   >
                     {task.due_date && (
                       <option
@@ -383,6 +412,19 @@ export default function TaskSection({ leadId }: Props) {
                       </option>
                     ))}
                   </select>
+                  {customDateTaskId === task.id && (
+                    <input
+                      type="date"
+                      className="w-full p-2 border rounded mt-2"
+                      onChange={(e) => {
+                        const [year, month, day] = e.target.value.split("-");
+                        const formatted = `${day}.${month}.${year}`;
+
+                        handleUpdateDueDate(task, { date: formatted });
+                        setCustomDateTaskId(null);
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="flex flex-col w-full">
                   <label className="text-white">.</label>
