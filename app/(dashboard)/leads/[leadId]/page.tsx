@@ -23,6 +23,7 @@ import { useTeam } from "@/context/TeamContext";
 import { useAuth } from "@/context/AuthProvider";
 import LoadingScreen from "@/app/components/LoadingScreen";
 import TaskSection from "@/app/components/leads/TaskSection";
+import { getPanelWp } from "@/utils/getPanelWp";
 
 interface InputProps {
   label: string;
@@ -315,6 +316,11 @@ export default function LeadPage() {
     }
   };
 
+  const getkWp = (selectedPanelType: string, totalPanels: number) => {
+    const panelWp = getPanelWp(selectedPanelType);
+    return (totalPanels * panelWp) / 1000;
+  };
+
   if (!user) return <LoadingScreen />;
 
   return (
@@ -598,28 +604,55 @@ export default function LeadPage() {
         <h1>Estimater</h1>
         <div className="flex gap-2">
           <ul>
-            {estimates?.map((e) => (
-              <li className="underline" key={e.id}>
-                <Link
-                  target="_blank"
-                  // TODO: ekte link
-                  href={`https://www.lynelektrosol.no?estimateId=${e.id}`}
-                >
-                  {e.created_at
-                    ? new Date(e.created_at).toLocaleDateString("NO")
-                    : "N/A"}
-                </Link>
-              </li>
-            ))}
+            {estimates
+              ?.sort(
+                (a, b) =>
+                  new Date(b.created_at!).getTime() -
+                  new Date(a.created_at!).getTime()
+              )
+              .map((e) => (
+                <li key={e.id} className="p-2 rounded-md bg-white mb-2 border">
+                  <Link
+                    target="_blank"
+                    // TODO: ekte link
+                    href={`https://www.lynelektrosol.no/estimat/${e.id}`}
+                  >
+                    <p className="font-semibold">
+                      Tilbud -{" "}
+                      {getkWp(e.selected_panel_type!, e.total_panels!).toFixed(
+                        1
+                      )}{" "}
+                      kWp
+                    </p>
+                    <p className="underline text-xs text-blue-500 mb-3">
+                      www.lynelektrosol.no/estimat/{e.id}
+                    </p>
+
+                    <p className="text-sm mb-2">Status - </p>
+
+                    <p className="font-medium text-sm underline">
+                      Total eks.mva:{" "}
+                      {Number(e.price_data?.total ?? 0).toLocaleString(
+                        "nb-NO",
+                        {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        }
+                      )}{" "}
+                      Kr
+                    </p>
+
+                    <p className="text-sm mt-2">
+                      {e.created_at
+                        ? new Date(e.created_at).toLocaleString("NO")
+                        : "N/A"}
+                    </p>
+                  </Link>
+                </li>
+              ))}
           </ul>
         </div>
-        {/* <button
-          className="py-2 px-3 bg-slate-100"
-          onClick={handleToggleModal}
-          disabled={loading}
-        >
-          Åpne pvmap
-        </button> */}
+
         <button
           className="py-2 px-3 bg-slate-100"
           onClick={handleCreateNewEstimate}
