@@ -67,6 +67,12 @@ export const getLeadTasks = async (leadId: string): Promise<LeadTask[]> => {
   return apiRequest<LeadTask[]>(`/api/leads/${leadId}/tasks`);
 };
 
+export const getInstallerDomain = async (
+  installerGroupId: string
+): Promise<string> => {
+  return apiRequest(`/api/installerGroups/${installerGroupId}/domain`);
+};
+
 export const getLeadTaskComments = async (
   leadId: string,
   leadTaskId: string

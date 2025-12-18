@@ -3,6 +3,7 @@ import { SolarData } from "@/app/components/SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import {
   getEstimatesByLeadId,
+  getInstallerDomain,
   getLead,
   getRoofTypes,
   getTeam,
@@ -104,6 +105,8 @@ export default function LeadPage() {
   const [assignedTo, setAssignedTo] = useState("");
   const [createdBy, setCreatedBy] = useState("");
 
+  const [domain, setDomain] = useState("");
+
   // Customer info
   const [voltage, setVoltage] = useState(230);
   const voltageOptions = [
@@ -193,6 +196,7 @@ export default function LeadPage() {
         setRoofTypes(data ?? []);
       }),
       getTeam(teamId).then(setTeam),
+      getInstallerDomain(installerGroupId).then(setDomain),
     ])
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -615,7 +619,7 @@ export default function LeadPage() {
                   <Link
                     target="_blank"
                     // TODO: ekte link
-                    href={`https://www.lynelektrosol.no/estimat/${e.id}`}
+                    href={`https://www.${domain}.no/estimat/${e.id}`}
                   >
                     <p className="font-semibold">
                       Tilbud -{" "}
@@ -625,7 +629,7 @@ export default function LeadPage() {
                       kWp
                     </p>
                     <p className="underline text-xs text-blue-500 mb-3">
-                      www.lynelektrosol.no/estimat/{e.id}
+                      https://www.{domain}.no/estimat/{e.id}
                     </p>
 
                     <p className="text-sm mb-2">Status - </p>
