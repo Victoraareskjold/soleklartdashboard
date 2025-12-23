@@ -48,6 +48,7 @@ export default function ContactsPage() {
 
   const [team, setTeam] = useState<Team>();
   const [selectedMember, setSelectedMember] = useState<string>("");
+
   const [coldCalls, setColdCalls] = useState<ContactLead[]>([]);
 
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
@@ -124,6 +125,7 @@ export default function ContactsPage() {
     "email",
     "mobile",
     "phone",
+    "assigned_to",
   ];
 
   const formDataFields: {
@@ -358,7 +360,7 @@ export default function ContactsPage() {
                   team={team}
                   selectedMember={selectedMember}
                   onSelectMember={setSelectedMember}
-                  defaultUser={user.id}
+                  defaultUser={selectedMember}
                 />
               </div>
             </div>
