@@ -13,6 +13,33 @@ export default function ProfilePageInner() {
 
   const { installerGroupId } = useInstallerGroup();
   const [user, setUser] = useState<User>();
+  const [connectedEmails, setConnectedEmails] = useState<string[]>([]);
+
+  useEffect(() => {
+    const getConnectedEmails = async () => {
+      if (!user || !installerGroupId) return;
+
+      const { data, error } = await supabase
+        .from("email_accounts")
+        .select("email")
+        .eq("user_id", user.id)
+        .eq("installer_group_id", installerGroupId);
+
+      if (error) {
+        console.error("Error fetching connected emails:", error);
+        return;
+      }
+
+      if (data) {
+        const emails = data
+          .map((item: { email: string | null }) => item.email)
+          .filter((email): email is string => email !== null);
+        setConnectedEmails(emails);
+      }
+    };
+
+    getConnectedEmails();
+  }, [user, installerGroupId]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -68,6 +95,16 @@ export default function ProfilePageInner() {
   return (
     <div>
       <p>{user?.id}</p>
+      {connectedEmails.length > 0 && (
+        <div>
+          <p>Tilkoblede e-poster:</p>
+          <ul>
+            {connectedEmails.map((email) => (
+              <li key={email}>{email}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <ConnectOutlook />
       <button onClick={handleLogout}>Logg ut</button>
     </div>

@@ -71,6 +71,8 @@ yearly_prod numeric,
 desired_kwh numeric,
 coverage_percentage numeric,
 price_data jsonb,
+address text,
+name text,
 CONSTRAINT estimates_pkey PRIMARY KEY (id),
 CONSTRAINT estimates_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id)
 );
@@ -79,6 +81,7 @@ id uuid NOT NULL DEFAULT gen_random_uuid(),
 team_id uuid NOT NULL,
 name text NOT NULL,
 created_at timestamp without time zone NOT NULL DEFAULT now(),
+site text NOT NULL DEFAULT 'example'::text,
 CONSTRAINT installer_groups_pkey PRIMARY KEY (id),
 CONSTRAINT installer_groups_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id)
 );
