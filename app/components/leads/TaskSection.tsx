@@ -179,6 +179,7 @@ export default function TaskSection({ leadId }: Props) {
       setSelectedDate("");
       setSelectedTime("");
       setTaskModal(false);
+      window.location.reload();
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt");
