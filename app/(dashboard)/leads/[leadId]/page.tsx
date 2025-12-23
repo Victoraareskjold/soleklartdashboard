@@ -5,6 +5,7 @@ import {
   getEstimatesByLeadId,
   getInstallerDomain,
   getLead,
+  getLeadTasks,
   getRoofTypes,
   getTeam,
   updateLead,
@@ -15,7 +16,7 @@ import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
 import EstimateSection from "@/app/components/leads/EstimateSection";
-import { Estimate, RoofType, Team } from "@/lib/types";
+import { Estimate, LeadTask, RoofType, Team } from "@/lib/types";
 import Link from "next/link";
 import { LEAD_STATUSES } from "@/app/components/LeadsTable";
 import { Calendar, File, ListTodo, Mail } from "lucide-react";
@@ -135,6 +136,8 @@ export default function LeadPage() {
 
   const [roofAge, setRoofAge] = useState(0);
 
+  const [tasks, setTasks] = useState<LeadTask[]>([]);
+
   const [solarData, setSolarData] = useState<SolarData>({
     totalPanels: 0,
     selectedPanelType: "",
@@ -195,6 +198,7 @@ export default function LeadPage() {
       getRoofTypes().then((data) => {
         setRoofTypes(data ?? []);
       }),
+      getLeadTasks(leadIdStr).then(setTasks),
       getTeam(teamId).then(setTeam),
       getInstallerDomain(installerGroupId).then(setDomain),
     ])
@@ -324,6 +328,30 @@ export default function LeadPage() {
     const panelWp = getPanelWp(selectedPanelType);
     return (totalPanels * panelWp) / 1000;
   };
+  const nextTask = tasks
+    .filter((t) => t.created_at)
+    .sort(
+      (a, b) =>
+        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+    )[0];
+
+  let dueText = "Ingen oppgave";
+
+  if (nextTask) {
+    const now = new Date().getTime();
+    const due = new Date(nextTask.due_date!).getTime();
+    const diffMs = due - now;
+
+    if (diffMs <= 0) {
+      dueText = "forfalt";
+    } else if (diffMs < 1000 * 60 * 60 * 24) {
+      const hours = Math.ceil(diffMs / (1000 * 60 * 60));
+      dueText = `forfaller om ${hours} time${hours > 1 ? "r" : ""}`;
+    } else {
+      const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      dueText = `forfaller om ${days} dag${days > 1 ? "er" : ""}`;
+    }
+  }
 
   if (!user) return <LoadingScreen />;
 
@@ -338,7 +366,7 @@ export default function LeadPage() {
             {address || "Mangler adresse"}
           </h1>
           <p>
-            <strong>Oppgave status:</strong> TODO
+            <strong>Oppgave status:</strong> {dueText}
           </p>
           <div className="flex flex-row items-center gap-1">
             <p>
