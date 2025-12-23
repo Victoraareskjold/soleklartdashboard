@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
       phone,
       address,
       assigned_to,
+      note,
     } = await req.json();
 
     const supabase = createSupabaseAdminClient();
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest) {
         address: address || null,
         assigned_to: assigned_to || null,
         status: 7,
+        note: note || null,
         updated_at: new Date().toISOString(),
       })
       .select()
