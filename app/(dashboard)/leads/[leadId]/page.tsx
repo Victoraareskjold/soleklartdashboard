@@ -263,12 +263,12 @@ export default function LeadPage() {
 
   const handleAssigneeChange = (userId: string) => {
     setAssignedTo(userId);
-    updateSingleField('assigned_to', userId);
+    updateSingleField("assigned_to", userId);
   };
 
   const handleOwnerChange = (userId: string) => {
     setCreatedBy(userId);
-    updateSingleField('created_by', userId);
+    updateSingleField("created_by", userId);
   };
 
   const updateSingleField = async <K extends string>(
@@ -550,7 +550,6 @@ export default function LeadPage() {
         >
           {loading ? "Lagrer..." : "Lagre"}
         </button>
-
         {/*  */}
 
         {/*  */}

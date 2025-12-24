@@ -50,6 +50,7 @@ export default function ContactsPage() {
   const [selectedMember, setSelectedMember] = useState<string>("");
 
   const [coldCalls, setColdCalls] = useState<ContactLead[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
 
@@ -165,6 +166,17 @@ export default function ContactsPage() {
     (member) => member.user_id === user.id
   );
 
+  const filteredColdCalls = coldCalls.filter((lead) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      (lead.person_info && lead.person_info.toLowerCase().includes(query)) ||
+      (lead.address && lead.address.toLowerCase().includes(query)) ||
+      (lead.email && lead.email.toLowerCase().includes(query)) ||
+      (lead.mobile && lead.mobile.toLowerCase().includes(query)) ||
+      (lead.phone && lead.phone.toLowerCase().includes(query))
+    );
+  });
+
   const handleUpdateToLead = async (id: string, userId: string) => {
     try {
       const res = await fetch("/api/coldCalling/contact/upsert", {
@@ -224,6 +236,8 @@ export default function ContactsPage() {
               type="text"
               placeholder="Søk etter navn eller beskrivelse"
               className="border p-2 rounded-md"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <div>
@@ -248,7 +262,7 @@ export default function ContactsPage() {
             </tr>
           </thead>
           <tbody>
-            {coldCalls.map((coldCall) => (
+            {filteredColdCalls.map((coldCall) => (
               <tr key={coldCall.id}>
                 <td className="w-1/10 border">
                   <button

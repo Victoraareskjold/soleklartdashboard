@@ -57,6 +57,7 @@ export default function ColdCallingPage() {
   const [team, setTeam] = useState<Team>();
   const [selectedMember, setSelectedMember] = useState<string>("");
   const [coldCalls, setColdCalls] = useState<ColdCallLead[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [formData, setFormData] = useState<FormData>({});
   const [roofTypeOptions, setRoofTypeOptions] = useState<RoofType[]>([]);
@@ -264,6 +265,22 @@ export default function ColdCallingPage() {
 
   if (!user || !installerData) return <LoadingScreen />;
 
+  const filteredColdCalls = coldCalls.filter(lead => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    const searchableFields = [
+        lead.person_info,
+        lead.address,
+        lead.email,
+        lead.mobile,
+        lead.phone,
+        lead.company,
+        lead.role,
+        lead.note
+    ];
+    return searchableFields.some(field => field && field.toString().toLowerCase().includes(query));
+  });
+
   return (
     <div>
       <div className="flex flex-row justify-between items-center gap-4 mb-4">
@@ -302,6 +319,8 @@ export default function ColdCallingPage() {
             type="text"
             placeholder="Søk etter navn eller beskrivelse"
             className="border p-2 rounded-md w-full"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
@@ -326,7 +345,7 @@ export default function ColdCallingPage() {
       </div>
 
       <div>
-        {coldCalls && (
+        {filteredColdCalls && (
           <>
             <table className="w-full">
               <thead>
@@ -340,7 +359,7 @@ export default function ColdCallingPage() {
               </thead>
             </table>
 
-            {coldCalls.slice(sliceAmount - 5, sliceAmount).map((lead, i) => (
+            {filteredColdCalls.slice(sliceAmount - 5, sliceAmount).map((lead, i) => (
               <div key={i} className="mb-4">
                 <table className="w-full mb-1">
                   <tbody>
@@ -392,7 +411,7 @@ export default function ColdCallingPage() {
             <ChevronLeft size={16} /> Tilbake
           </button>
           <button
-            disabled={sliceAmount >= coldCalls.length}
+            disabled={sliceAmount >= filteredColdCalls.length}
             className="flex flex-row items-center gap-2"
             onClick={() => setSliceAmount(sliceAmount + 5)}
           >
