@@ -13,7 +13,8 @@ export default function LeadsPage() {
   const { user } = useAuth();
 
   const [team, setTeam] = useState<Team>();
-  const [selectedMember, setSelectedMember] = useState<string>("");
+  const [leadOwner, setLeadOwner] = useState<string>("");
+  const [leadCollector, setLeadCollector] = useState<string>("");
 
   useEffect(() => {
     if (!teamId) return;
@@ -28,18 +29,32 @@ export default function LeadsPage() {
   return (
     <div>
       <div className="p-4">
-        <h1>Avtaler</h1>
-        <div className="mt-2 flex flex-row items-center">
+        <h1 className="font-semibold text-lg">Avtaler</h1>
+        <div className="mt-2 flex flex-row items-center gap-4">
           {/* TODO Koble til getLeads å faktisk funke */}
-          <TeamMemberSelector
-            team={team}
-            selectedMember={selectedMember}
-            onSelectMember={setSelectedMember}
-            defaultUser={user.id}
-          />
+          <div className="flex flex-col">
+            <p>Avtaleeier</p>
+            <TeamMemberSelector
+              team={team}
+              selectedMember={leadCollector}
+              onSelectMember={setLeadCollector}
+              defaultUser={user.id}
+              firstOption="Avtaleeier"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <p>Lead-innhenter</p>
+            <TeamMemberSelector
+              team={team}
+              selectedMember={leadOwner}
+              onSelectMember={setLeadOwner}
+              defaultUser={user.id}
+            />
+          </div>
         </div>
       </div>
-      <LeadsTable selectedMember={selectedMember} />
+      <LeadsTable leadOwner={leadOwner} leadCollector={leadCollector} />
     </div>
   );
 }

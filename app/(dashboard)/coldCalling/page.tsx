@@ -265,20 +265,22 @@ export default function ColdCallingPage() {
 
   if (!user || !installerData) return <LoadingScreen />;
 
-  const filteredColdCalls = coldCalls.filter(lead => {
+  const filteredColdCalls = coldCalls.filter((lead) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     const searchableFields = [
-        lead.person_info,
-        lead.address,
-        lead.email,
-        lead.mobile,
-        lead.phone,
-        lead.company,
-        lead.role,
-        lead.note
+      lead.person_info,
+      lead.address,
+      lead.email,
+      lead.mobile,
+      lead.phone,
+      lead.company,
+      lead.role,
+      lead.note,
     ];
-    return searchableFields.some(field => field && field.toString().toLowerCase().includes(query));
+    return searchableFields.some(
+      (field) => field && field.toString().toLowerCase().includes(query)
+    );
   });
 
   return (
@@ -359,47 +361,49 @@ export default function ColdCallingPage() {
               </thead>
             </table>
 
-            {filteredColdCalls.slice(sliceAmount - 5, sliceAmount).map((lead, i) => (
-              <div key={i} className="mb-4">
-                <table className="w-full mb-1">
-                  <tbody>
-                    <tr aria-hidden="true">
-                      <td colSpan={fields.length} className="h-4"></td>
-                    </tr>
+            {filteredColdCalls
+              .slice(sliceAmount - 5, sliceAmount)
+              .map((lead, i) => (
+                <div key={i} className="mb-4">
+                  <table className="w-full mb-1">
+                    <tbody>
+                      <tr aria-hidden="true">
+                        <td colSpan={fields.length} className="h-4"></td>
+                      </tr>
 
-                    <tr
-                      className={`${
-                        i % 2 == 0 ? "bg-[#82CCEB]" : "bg-[#BFE6F5]"
-                      }`}
-                    >
-                      <td
-                        className="border p-1 w-1/6 pr-4 relative cursor-pointer"
-                        onClick={() => handleCopyAddress(lead.address)}
+                      <tr
+                        className={`${
+                          i % 2 == 0 ? "bg-[#82CCEB]" : "bg-[#BFE6F5]"
+                        }`}
                       >
-                        {lead.address}
-                        <div className="absolute top-0 right-0 p-1">
-                          <Copy size={14} />
-                        </div>
-                      </td>
-
-                      {fields.map((field) => (
-                        <td className="border p-1 w-1/6" key={field}>
-                          {lead[field]}
+                        <td
+                          className="border p-1 w-1/6 pr-4 relative cursor-pointer"
+                          onClick={() => handleCopyAddress(lead.address)}
+                        >
+                          {lead.address}
+                          <div className="absolute top-0 right-0 p-1">
+                            <Copy size={14} />
+                          </div>
                         </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
 
-                <RenderInputFields
-                  lead={lead}
-                  index={i}
-                  formData={formData}
-                  onFormDataChange={handleFormDataChange}
-                  roofTypeOptions={roofTypeOptions}
-                />
-              </div>
-            ))}
+                        {fields.map((field) => (
+                          <td className="border p-1 w-1/6" key={field}>
+                            {lead[field]}
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <RenderInputFields
+                    lead={lead}
+                    index={i}
+                    formData={formData}
+                    onFormDataChange={handleFormDataChange}
+                    roofTypeOptions={roofTypeOptions}
+                  />
+                </div>
+              ))}
           </>
         )}
         <div className="flex flex-row items-center gap-8 justify-center p-2">

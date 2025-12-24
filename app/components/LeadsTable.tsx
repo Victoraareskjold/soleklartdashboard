@@ -33,10 +33,14 @@ export const LEAD_STATUSES = [
 ];
 
 interface LeadsTableProps {
-  selectedMember: string;
+  leadOwner: string;
+  leadCollector: string;
 }
 
-export default function LeadsTable({ selectedMember }: LeadsTableProps) {
+export default function LeadsTable({
+  leadOwner,
+  leadCollector,
+}: LeadsTableProps) {
   const { teamId } = useTeam();
   const { installerGroupId } = useInstallerGroup();
   const { teamRole } = useRoles();
@@ -47,17 +51,24 @@ export default function LeadsTable({ selectedMember }: LeadsTableProps) {
   useEffect(() => {
     if (!teamId || !installerGroupId || !teamRole) return;
 
-    // Hent alle leads
     getLeads(teamId, installerGroupId, teamRole)
       .then((allLeads) => {
-        const filteredLeads =
-          selectedMember && selectedMember !== ""
-            ? allLeads.filter((lead) => lead.assigned_to === selectedMember)
-            : allLeads;
+        const filteredLeads = allLeads.filter((lead) => {
+          const ownerMatch =
+            !leadOwner || leadOwner === ""
+              ? true
+              : lead.assigned_to === leadOwner;
+
+          const collectorMatch =
+            !leadCollector || leadCollector === ""
+              ? true
+              : lead.created_by === leadCollector;
+
+          return ownerMatch && collectorMatch;
+        });
 
         setLeads(filteredLeads);
 
-        // Hent alle oppgaver for de filtrerte leadene
         return Promise.all(
           filteredLeads.map((lead) =>
             getLeadTasks(lead.id).catch((err) => {
@@ -68,12 +79,10 @@ export default function LeadsTable({ selectedMember }: LeadsTableProps) {
         );
       })
       .then((allTasksArrays) => {
-        // Flatten oppgaver til én liste
-        const allTasks = allTasksArrays.flat();
-        setTasks(allTasks);
+        setTasks(allTasksArrays.flat());
       })
       .catch((err) => console.error("Failed to fetch leads:", err));
-  }, [installerGroupId, teamId, teamRole, selectedMember]);
+  }, [installerGroupId, teamId, teamRole, leadOwner, leadCollector]);
 
   const grouped = LEAD_STATUSES.reduce((acc, status) => {
     acc[status.value] = leads.filter((lead) => lead.status === status.value);
