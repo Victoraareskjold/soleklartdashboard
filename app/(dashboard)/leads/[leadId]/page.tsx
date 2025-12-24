@@ -26,6 +26,7 @@ import { useAuth } from "@/context/AuthProvider";
 import LoadingScreen from "@/app/components/LoadingScreen";
 import TaskSection from "@/app/components/leads/TaskSection";
 import { getPanelWp } from "@/utils/getPanelWp";
+import AcitivitySection from "@/app/components/leads/AcitivitySection";
 
 interface InputProps {
   label: string;
@@ -154,7 +155,7 @@ export default function LeadPage() {
   });
   const [estimates, setEstimates] = useState<Estimate[]>();
 
-  const [activeRoute, setActiveRoute] = useState("Oppgaver");
+  const [activeRoute, setActiveRoute] = useState("Aktivitet");
   const routes = ["Aktivitet", "Merknader", "E-poster", "Oppgaver", "Befaring"];
   const sideMenuRoutes = [
     { label: "Merknader", icon: File },
@@ -612,6 +613,10 @@ export default function LeadPage() {
             </button>
           ))}
         </div>
+
+        {activeRoute === "Aktivitet" && (
+          <AcitivitySection leadId={leadIdStr!} />
+        )}
 
         {activeRoute === "Merknader" && (
           <LeadNotesSection leadId={leadIdStr!} />
