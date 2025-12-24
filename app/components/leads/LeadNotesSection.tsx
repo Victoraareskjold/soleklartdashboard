@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { getLeadNotes, createLeadNote, getTaggableUsers } from "@/lib/api";
-import { Note } from "@/lib/types";
+import { getLead, getLeadNotes, createLeadNote, getTaggableUsers } from "@/lib/api";
+import { Lead, Note } from "@/lib/types";
 
 interface Props {
   leadId: string;
 }
 
 export default function LeadNotesSection({ leadId }: Props) {
+  const [lead, setLead] = useState<Lead | null>(null);
   const [allNotes, setAllNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
   const [newComments, setNewComments] = useState<Record<string, string>>({});
@@ -27,13 +28,33 @@ export default function LeadNotesSection({ leadId }: Props) {
     if (!leadId) return;
 
     const fetchData = async () => {
-      const [notesData, users] = await Promise.all([
+      const [leadData, notesData, users] = await Promise.all([
+        getLead(leadId),
         getLeadNotes(leadId),
         getTaggableUsers(leadId),
       ]);
-
-      setAllNotes(notesData ?? []);
+      setLead(leadData);
       setTaggableUsers(users);
+
+      const combinedNotes = [...(notesData ?? [])];
+
+      if (leadData && leadData.note && leadData.created_by) {
+        const leadCreator = users.find((u) => u.id === leadData.created_by);
+        const leadNote: Note = {
+          id: `lead-note-${leadData.id}`,
+          lead_id: leadData.id,
+          user_id: leadData.created_by,
+          content: leadData.note,
+          created_at: leadData.created_at ?? new Date(0).toISOString(),
+          source: 'note',
+          user: leadCreator ?? { id: leadData.created_by, name: "Ukjent bruker" },
+        };
+        combinedNotes.push(leadNote);
+      }
+
+      combinedNotes.sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime());
+
+      setAllNotes(combinedNotes);
     };
 
     fetchData();
