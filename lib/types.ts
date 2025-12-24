@@ -105,6 +105,7 @@ export interface Estimate {
 
 export type CreateEstimateInput = Partial<Estimate> & { lead_id: string } & {
   solarData: SolarData;
+  imageUrl?: File | null;
 };
 
 export type Note = {

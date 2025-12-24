@@ -5,9 +5,8 @@ import SolarDataView, { SolarData } from "@/app/components/SolarDataView";
 import { CLIENT_ROUTES } from "@/constants/routes";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import { createEstimate, createLead } from "@/lib/api";
+import { createLead } from "@/lib/api";
 
-import { mapSolarDataToEstimate } from "@/lib/mappers";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -96,10 +95,6 @@ export default function CreateLead() {
         status: 7,
         priority: "iron",
       });
-      /* 
-      await createEstimate({
-        ...mapSolarDataToEstimate(solarData, lead.id),
-      }); */
       toast.success(
         <div>
           Lead &quot;<strong>{lead.person_info}</strong>&quot; created!{" "}

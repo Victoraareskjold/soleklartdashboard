@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const client = createSupabaseClient(token);
-    const { lead_id, solarData, price_data } = await req.json();
+    const { lead_id, solarData, price_data, imageUrl } = await req.json();
 
     if (!lead_id) {
       return NextResponse.json({ error: "Missing lead_id" }, { status: 400 });
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     const newEstimate = {
       lead_id: lead_id,
       price_data,
-      image_url: solarData.imageUrl,
+      image_url: imageUrl,
       total_panels: solarData.totalPanels,
       selected_panel_type: solarData.selectedPanelType,
       selected_roof_type: solarData.selectedRoofType,
