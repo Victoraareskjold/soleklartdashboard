@@ -15,6 +15,7 @@ export default function LeadsPage() {
   const [team, setTeam] = useState<Team>();
   const [leadOwner, setLeadOwner] = useState<string>("");
   const [leadCollector, setLeadCollector] = useState<string>("");
+  const [taskDueDateFilter, setTaskDueDateFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -53,6 +54,25 @@ export default function LeadsPage() {
               defaultUser={user.id}
             />
           </div>
+
+          <div className="flex flex-col">
+            <p>Forfallsdato</p>
+            <select
+              className="border p-2 rounded-md bg-gray-50"
+              value={taskDueDateFilter}
+              onChange={(e) => setTaskDueDateFilter(e.target.value)}
+            >
+              <option value="">Alle oppgaver</option>
+              <option value="overdue">Forfalt</option>
+              <option value="today">I dag</option>
+              <option value="this_week">Denne uken</option>
+              <option value="next_week">Neste uke</option>
+              <option value="this_month">Denne måneden</option>
+              <option value="next_month">Neste måned</option>
+              <option value="this_year">Dette året</option>
+              <option value="next_year">Neste år</option>
+            </select>
+          </div>
         </div>
         <div className="flex flex-col mt-4">
           <input
@@ -67,6 +87,7 @@ export default function LeadsPage() {
       <LeadsTable
         leadOwner={leadOwner}
         leadCollector={leadCollector}
+        taskDueDateFilter={taskDueDateFilter}
         searchQuery={searchQuery}
       />
     </div>

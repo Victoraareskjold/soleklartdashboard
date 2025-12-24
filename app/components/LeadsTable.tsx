@@ -14,6 +14,15 @@ import { toast } from "react-toastify";
 import LeadCard from "./LeadCard";
 import { useRoles } from "@/context/RoleProvider";
 
+// Date helper functions
+const getStartOfWeek = (date: Date) => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  d.setHours(0, 0, 0, 0);
+  return new Date(d.setDate(diff));
+};
+
 export const LEAD_STATUSES = [
   { value: 7, label: "Oppfølging 1", color: "#FBF586" },
   { value: 8, label: "Oppfølging 2", color: "#FBF586" },
@@ -36,58 +45,32 @@ interface LeadsTableProps {
   leadOwner: string;
   leadCollector: string;
   searchQuery: string;
+  taskDueDateFilter: string;
 }
 
 export default function LeadsTable({
   leadOwner,
   leadCollector,
   searchQuery,
+  taskDueDateFilter,
 }: LeadsTableProps) {
   const { teamId } = useTeam();
   const { installerGroupId } = useInstallerGroup();
   const { teamRole } = useRoles();
 
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [rawLeads, setRawLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]); // Displayed leads
   const [tasks, setTasks] = useState<LeadTask[]>([]);
 
+  // Effect for fetching data
   useEffect(() => {
     if (!teamId || !installerGroupId || !teamRole) return;
 
     getLeads(teamId, installerGroupId, teamRole)
       .then((allLeads) => {
-        const filteredByOwners = allLeads.filter((lead) => {
-          const ownerMatch =
-            !leadOwner || leadOwner === ""
-              ? true
-              : lead.assigned_to === leadOwner;
-
-          const collectorMatch =
-            !leadCollector || leadCollector === ""
-              ? true
-              : lead.created_by === leadCollector;
-
-          return ownerMatch && collectorMatch;
-        });
-
-        const finalFilteredLeads = filteredByOwners.filter(lead => {
-          if (!searchQuery) return true;
-          const query = searchQuery.toLowerCase();
-          const searchableFields = [
-            lead.person_info,
-            lead.company,
-            lead.address,
-            lead.email,
-            lead.phone,
-            lead.mobile,
-            lead.note,
-          ];
-          return searchableFields.some(field => field && field.toString().toLowerCase().includes(query));
-        });
-
-        setLeads(finalFilteredLeads);
-
+        setRawLeads(allLeads);
         return Promise.all(
-          finalFilteredLeads.map((lead) =>
+          allLeads.map((lead) =>
             getLeadTasks(lead.id).catch((err) => {
               console.error(`Failed to fetch tasks for lead ${lead.id}:`, err);
               return [];
@@ -98,8 +81,88 @@ export default function LeadsTable({
       .then((allTasksArrays) => {
         setTasks(allTasksArrays.flat());
       })
-      .catch((err) => console.error("Failed to fetch leads:", err));
-  }, [installerGroupId, teamId, teamRole, leadOwner, leadCollector, searchQuery]);
+      .catch((err) => console.error("Failed to fetch leads or tasks:", err));
+  }, [installerGroupId, teamId, teamRole]);
+
+  // Effect for filtering data
+  useEffect(() => {
+    let filteredLeads = [...rawLeads];
+
+    // Filter by owner and collector
+    if (leadOwner || leadCollector) {
+      filteredLeads = filteredLeads.filter((lead) => {
+        const ownerMatch = !leadOwner || lead.assigned_to === leadOwner;
+        const collectorMatch = !leadCollector || lead.created_by === leadCollector;
+        return ownerMatch && collectorMatch;
+      });
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      filteredLeads = filteredLeads.filter(lead => {
+        const query = searchQuery.toLowerCase();
+        const searchableFields = [
+          lead.person_info,
+          lead.company,
+          lead.address,
+          lead.email,
+          lead.phone,
+          lead.mobile,
+          lead.note,
+        ];
+        return searchableFields.some(field => field && field.toString().toLowerCase().includes(query));
+      });
+    }
+
+    // Filter by task due date
+    if (taskDueDateFilter) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      filteredLeads = filteredLeads.filter(lead => {
+        const leadTasks = tasks.filter(t => t.lead_id === lead.id);
+        if (leadTasks.length === 0) return false;
+
+        return leadTasks.some(task => {
+          const dueDate = new Date(task.due_date);
+          dueDate.setHours(0, 0, 0, 0);
+          
+          switch (taskDueDateFilter) {
+            case "overdue":
+              return dueDate < today;
+            case "today":
+              return dueDate.getTime() === today.getTime();
+            case "this_week": {
+              const startOfWeek = getStartOfWeek(now);
+              const endOfWeek = new Date(startOfWeek);
+              endOfWeek.setDate(startOfWeek.getDate() + 6);
+              return dueDate >= startOfWeek && dueDate <= endOfWeek;
+            }
+            case "next_week": {
+                const startOfNextWeek = getStartOfWeek(now);
+                startOfNextWeek.setDate(startOfNextWeek.getDate() + 7);
+                const endOfNextWeek = new Date(startOfNextWeek);
+                endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
+                return dueDate >= startOfNextWeek && dueDate <= endOfNextWeek;
+            }
+            case "this_month":
+              return dueDate.getFullYear() === now.getFullYear() && dueDate.getMonth() === now.getMonth();
+            case "next_month":
+                const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                return dueDate.getFullYear() === nextMonth.getFullYear() && dueDate.getMonth() === nextMonth.getMonth();
+            case "this_year":
+              return dueDate.getFullYear() === now.getFullYear();
+            case "next_year":
+              return dueDate.getFullYear() === now.getFullYear() + 1;
+            default:
+              return true;
+          }
+        });
+      });
+    }
+    
+    setLeads(filteredLeads);
+  }, [rawLeads, tasks, leadOwner, leadCollector, searchQuery, taskDueDateFilter]);
 
   const grouped = LEAD_STATUSES.reduce((acc, status) => {
     acc[status.value] = leads.filter((lead) => lead.status === status.value);
@@ -113,24 +176,37 @@ export default function LeadsTable({
     const sourceStatus = parseInt(source.droppableId);
     const destStatus = parseInt(destination.droppableId);
 
-    // Kun oppdater hvis status faktisk endres
     if (sourceStatus === destStatus) return;
 
-    // Oppdater lokal state optimistisk
-    const updatedLeads = leads.map((lead) =>
+    const originalRawLeads = [...rawLeads];
+    const updatedRawLeads = rawLeads.map((lead) =>
       lead.id === draggableId ? { ...lead, status: destStatus } : lead
     );
-    setLeads(updatedLeads);
-
-    // Oppdater DB
+    setRawLeads(updatedRawLeads);
+    
     try {
       await updateLead(draggableId, { status: destStatus as Lead["status"] });
     } catch (err) {
       console.error("Failed to update lead status:", err);
       toast.error("Failed to update lead status");
+      setRawLeads(originalRawLeads);
+    }
+  };
 
-      // Revert hvis DB feiler
-      setLeads(leads);
+  const handleStatusChange = async (leadId: string, newStatus: number) => {
+    const originalRawLeads = [...rawLeads];
+    const updatedRawLeads = rawLeads.map((l) =>
+      l.id === leadId ? { ...l, status: newStatus } : l
+    );
+    setRawLeads(updatedRawLeads);
+
+    try {
+      await updateLead(leadId, { status: newStatus });
+      toast.success("Status oppdatert!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Kunne ikke oppdatere status");
+      setRawLeads(originalRawLeads);
     }
   };
 
@@ -171,22 +247,7 @@ export default function LeadsTable({
                           <LeadCard
                             lead={lead}
                             tasks={tasks.filter((t) => t.lead_id === lead.id)}
-                            onStatusChange={async (leadId, newStatus) => {
-                              try {
-                                await updateLead(leadId, { status: newStatus });
-                                setLeads((prev) =>
-                                  prev.map((l) =>
-                                    l.id === leadId
-                                      ? { ...l, status: newStatus }
-                                      : l
-                                  )
-                                );
-                                toast.success("Status oppdatert!");
-                              } catch (err) {
-                                console.error(err);
-                                toast.error("Kunne ikke oppdatere status");
-                              }
-                            }}
+                            onStatusChange={handleStatusChange}
                           />
                         </div>
                       )}
