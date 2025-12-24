@@ -15,6 +15,7 @@ export default function LeadsPage() {
   const [team, setTeam] = useState<Team>();
   const [leadOwner, setLeadOwner] = useState<string>("");
   const [leadCollector, setLeadCollector] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!teamId) return;
@@ -53,8 +54,21 @@ export default function LeadsPage() {
             />
           </div>
         </div>
+        <div className="flex flex-col mt-4">
+          <input
+            type="text"
+            placeholder="Søk etter navn, adresse, eller kontaktinfo..."
+            className="border p-2 rounded-md w-96"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
-      <LeadsTable leadOwner={leadOwner} leadCollector={leadCollector} />
+      <LeadsTable
+        leadOwner={leadOwner}
+        leadCollector={leadCollector}
+        searchQuery={searchQuery}
+      />
     </div>
   );
 }

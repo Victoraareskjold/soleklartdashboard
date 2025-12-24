@@ -35,11 +35,13 @@ export const LEAD_STATUSES = [
 interface LeadsTableProps {
   leadOwner: string;
   leadCollector: string;
+  searchQuery: string;
 }
 
 export default function LeadsTable({
   leadOwner,
   leadCollector,
+  searchQuery,
 }: LeadsTableProps) {
   const { teamId } = useTeam();
   const { installerGroupId } = useInstallerGroup();
@@ -53,7 +55,7 @@ export default function LeadsTable({
 
     getLeads(teamId, installerGroupId, teamRole)
       .then((allLeads) => {
-        const filteredLeads = allLeads.filter((lead) => {
+        const filteredByOwners = allLeads.filter((lead) => {
           const ownerMatch =
             !leadOwner || leadOwner === ""
               ? true
@@ -67,10 +69,25 @@ export default function LeadsTable({
           return ownerMatch && collectorMatch;
         });
 
-        setLeads(filteredLeads);
+        const finalFilteredLeads = filteredByOwners.filter(lead => {
+          if (!searchQuery) return true;
+          const query = searchQuery.toLowerCase();
+          const searchableFields = [
+            lead.person_info,
+            lead.company,
+            lead.address,
+            lead.email,
+            lead.phone,
+            lead.mobile,
+            lead.note,
+          ];
+          return searchableFields.some(field => field && field.toString().toLowerCase().includes(query));
+        });
+
+        setLeads(finalFilteredLeads);
 
         return Promise.all(
-          filteredLeads.map((lead) =>
+          finalFilteredLeads.map((lead) =>
             getLeadTasks(lead.id).catch((err) => {
               console.error(`Failed to fetch tasks for lead ${lead.id}:`, err);
               return [];
@@ -82,7 +99,7 @@ export default function LeadsTable({
         setTasks(allTasksArrays.flat());
       })
       .catch((err) => console.error("Failed to fetch leads:", err));
-  }, [installerGroupId, teamId, teamRole, leadOwner, leadCollector]);
+  }, [installerGroupId, teamId, teamRole, leadOwner, leadCollector, searchQuery]);
 
   const grouped = LEAD_STATUSES.reduce((acc, status) => {
     acc[status.value] = leads.filter((lead) => lead.status === status.value);
