@@ -2,8 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { getLead, getLeadNotes, createLeadNote, getTaggableUsers } from "@/lib/api";
+import {
+  getLead,
+  getLeadNotes,
+  createLeadNote,
+  getTaggableUsers,
+  updateLead,
+} from "@/lib/api";
 import { Lead, Note } from "@/lib/types";
+import { toast } from "react-toastify";
 
 interface Props {
   leadId: string;
@@ -46,13 +53,20 @@ export default function LeadNotesSection({ leadId }: Props) {
           user_id: leadData.created_by,
           content: leadData.note,
           created_at: leadData.created_at ?? new Date(0).toISOString(),
-          source: 'note',
-          user: leadCreator ?? { id: leadData.created_by, name: "Ukjent bruker" },
+          source: "note",
+          user: leadCreator ?? {
+            id: leadData.created_by,
+            name: "Ukjent bruker",
+          },
         };
         combinedNotes.push(leadNote);
       }
 
-      combinedNotes.sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime());
+      combinedNotes.sort(
+        (a, b) =>
+          new Date(b.created_at ?? 0).getTime() -
+          new Date(a.created_at ?? 0).getTime()
+      );
 
       setAllNotes(combinedNotes);
     };
@@ -88,15 +102,61 @@ export default function LeadNotesSection({ leadId }: Props) {
     const text = newComments[noteId]?.trim();
     if (!text || !user?.id) return;
 
-    const comment = await createLeadNote(
-      leadId,
-      user.id,
-      text,
-      "comment",
-      noteId
-    );
-    setAllNotes([...allNotes, comment]);
-    setNewComments({ ...newComments, [noteId]: "" });
+    if (noteId.startsWith("lead-note-")) {
+      if (!lead || !lead.note || !lead.created_by) return;
+
+      try {
+        // Convert the temporary lead note into a permanent one
+        const permanentNote = await createLeadNote(
+          leadId,
+          lead.created_by,
+          lead.note,
+          "note"
+        );
+
+        // Add the new comment to the permanent note
+        const newComment = await createLeadNote(
+          leadId,
+          user.id,
+          text,
+          "comment",
+          permanentNote.id
+        );
+
+        // Clear the original note from the lead to avoid duplication
+        await updateLead(leadId, { note: null });
+
+        // Update state to reflect the changes
+        setAllNotes((prevNotes) => {
+          const withoutTemporary = prevNotes.filter((n) => n.id !== noteId);
+          const updatedNotes = [...withoutTemporary, permanentNote, newComment];
+          updatedNotes.sort(
+            (a, b) =>
+              new Date(b.created_at ?? 0).getTime() -
+              new Date(a.created_at ?? 0).getTime()
+          );
+          return updatedNotes;
+        });
+
+        setLead((prev) => (prev ? { ...prev, note: null } : null));
+        setNewComments({ ...newComments, [noteId]: "" });
+        toast.success("Kommentar lagt til.");
+      } catch (error) {
+        console.error("Feil ved konvertering av hovedmerknad:", error);
+        toast.error("En feil oppstod ved kommentering.");
+      }
+    } else {
+      // Standard procedure for regular notes
+      const comment = await createLeadNote(
+        leadId,
+        user.id,
+        text,
+        "comment",
+        noteId
+      );
+      setAllNotes([...allNotes, comment]);
+      setNewComments({ ...newComments, [noteId]: "" });
+    }
     setCommentMentionSuggestions({
       ...commentMentionSuggestions,
       [noteId]: [],
