@@ -16,6 +16,7 @@ type Props = {
   selectedMember: string;
   onSelectMember: (userId: string) => void;
   defaultUser?: string;
+  firstOption?: string;
 };
 
 export default function TeamMemberSelector({
@@ -23,6 +24,7 @@ export default function TeamMemberSelector({
   selectedMember,
   onSelectMember,
   defaultUser,
+  firstOption = "Lead-innhenter",
 }: Props) {
   const teamMembers = useMemo(() => {
     return (
@@ -50,7 +52,7 @@ export default function TeamMemberSelector({
       onChange={(e) => onSelectMember(e.target.value)}
       className="border p-2 rounded-md bg-gray-50"
     >
-      <option value="">Lead-innhenter</option>
+      <option value="">{firstOption}</option>
       {teamMembers.map((member) => (
         <option key={member.user_id} value={member.user_id}>
           {member.name}

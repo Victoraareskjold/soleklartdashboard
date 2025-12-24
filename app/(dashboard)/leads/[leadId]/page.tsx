@@ -85,8 +85,6 @@ export default function LeadPage() {
   const leadIdStr = Array.isArray(leadId) ? leadId[0] : leadId;
 
   const [team, setTeam] = useState<Team>();
-  const [selectedMember, setSelectedMember] = useState<string>("");
-  const [selectedMember2, setSelectedMember2] = useState<string>("");
 
   // States
   const [loading, setLoading] = useState(true);
@@ -263,6 +261,16 @@ export default function LeadPage() {
     }
   };
 
+  const handleAssigneeChange = (userId: string) => {
+    setAssignedTo(userId);
+    updateSingleField('assigned_to', userId);
+  };
+
+  const handleOwnerChange = (userId: string) => {
+    setCreatedBy(userId);
+    updateSingleField('created_by', userId);
+  };
+
   const updateSingleField = async <K extends string>(
     field: K,
     value: string | number
@@ -406,7 +414,7 @@ export default function LeadPage() {
         {/*  */}
 
         {/* Info del */}
-        <div className="grid grid-cols-2 border-t border-b border-black py-3 gap-y-3">
+        <div className="grid grid-cols-2 border-t border-black py-3 gap-y-3">
           <h3 className="font-medium text-lg">Person info</h3>
           <h3 className="font-medium text-lg">Teknisk info</h3>
           <div className="pr-4 flex flex-col gap-3">
@@ -535,6 +543,14 @@ export default function LeadPage() {
             </div>
           </div>
         </div>
+        <button
+          className="py-2 px-3 bg-[#FF8E4C] text-white w-full"
+          onClick={handleUpdate}
+          disabled={loading}
+        >
+          {loading ? "Lagrer..." : "Lagre"}
+        </button>
+
         {/*  */}
 
         {/*  */}
@@ -569,32 +585,25 @@ export default function LeadPage() {
               <p>Avtaleeier</p>
               <TeamMemberSelector
                 team={team}
-                selectedMember={selectedMember2}
-                onSelectMember={setSelectedMember2}
+                selectedMember={createdBy}
+                onSelectMember={handleOwnerChange}
                 defaultUser={createdBy}
+                firstOption="Avtaleeier"
               />
             </div>
 
             <div className="w-full">
-              <p>Leadinnhenter</p>
+              <p>Lead-innhenter</p>
               <TeamMemberSelector
                 team={team}
-                selectedMember={selectedMember}
-                onSelectMember={setSelectedMember}
+                selectedMember={assignedTo}
+                onSelectMember={handleAssigneeChange}
                 defaultUser={assignedTo}
               />
             </div>
           </div>
         </div>
         {/*  */}
-
-        <button
-          className="py-2 px-3 bg-[#FF8E4C] text-white"
-          onClick={handleUpdate}
-          disabled={loading}
-        >
-          {loading ? "Lagrer..." : "Lagre"}
-        </button>
       </section>
       {/* Center section */}
       <section className="w-full bg-blue-100 p-2 [min-height:calc(100vh-3rem)]">
