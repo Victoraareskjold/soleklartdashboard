@@ -162,6 +162,15 @@ export default function LeadPage() {
     { label: "Befaring", icon: Calendar },
   ];
 
+  const [newlyCreatedEstimate, setNewlyCreatedEstimate] =
+    useState<Estimate | null>(null);
+
+  const handleEstimateCreated = (newEstimate: Estimate) => {
+    setEstimates((prev) => (prev ? [newEstimate, ...prev] : [newEstimate]));
+    setNewlyCreatedEstimate(newEstimate);
+    setActiveRoute("E-poster");
+  };
+
   const PRIORITIES = ["iron", "gold", "diamond"];
 
   useEffect(() => {
@@ -605,7 +614,7 @@ export default function LeadPage() {
         {/*  */}
       </section>
       {/* Center section */}
-      <section className="w-full bg-blue-100 p-2 [min-height:calc(100vh-3rem)]">
+      <section className="w-full bg-blue-100 p-2 [min-height:calc(100vh-3rem)] max-w-196">
         <div className="w-full gap-2 flex mb-4">
           {routes.map((route) => (
             <button
@@ -631,7 +640,14 @@ export default function LeadPage() {
         )}
 
         {activeRoute === "E-poster" && (
-          <LeadEmailSection leadId={leadIdStr!} leadEmail={email} />
+          <LeadEmailSection
+            leadId={leadIdStr!}
+            leadEmail={email}
+            newEstimate={newlyCreatedEstimate}
+            leadName={personInfo || company}
+            domain={domain}
+            estimates={estimates}
+          />
         )}
 
         {activeRoute === "Estimat" && (
@@ -639,6 +655,7 @@ export default function LeadPage() {
             <EstimateSection
               solarData={solarData}
               setSolarData={setSolarData}
+              onEstimateCreated={handleEstimateCreated}
             />
           </div>
         )}

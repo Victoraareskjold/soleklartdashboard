@@ -14,16 +14,18 @@ import {
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { supabase } from "@/lib/supabase";
-import { CreateEstimateInput } from "@/lib/types";
+import { CreateEstimateInput, Estimate } from "@/lib/types";
 
 interface EstimateSectionProps {
   solarData: SolarData;
   setSolarData: React.Dispatch<React.SetStateAction<SolarData>>;
+  onEstimateCreated?: (newEstimate: Estimate) => void;
 }
 
 export default function EstimateSection({
   solarData,
   setSolarData,
+  onEstimateCreated,
 }: EstimateSectionProps) {
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
   const [suppliersAndProducts, setSuppliersAndProducts] = useState<
@@ -73,7 +75,7 @@ export default function EstimateSection({
         imageUrl = publicUrlData.publicUrl;
       }
 
-      await createEstimate({
+      const newEstimate = await createEstimate({
         lead_id: leadId,
         solarData,
         price_data: priceOverview,
@@ -81,6 +83,9 @@ export default function EstimateSection({
       } as CreateEstimateInput);
 
       toast.success("Estimat og prisestimat opprettet!");
+      if (onEstimateCreated) {
+        onEstimateCreated(newEstimate);
+      }
     } catch (err) {
       console.error("Kunne ikke opprette estimat:", err);
       toast.error(

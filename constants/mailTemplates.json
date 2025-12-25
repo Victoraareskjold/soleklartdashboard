@@ -1,0 +1,12 @@
+{
+  "newEstimate": {
+    "name": "Nytt estimat",
+    "subject": "Ditt estimat på solcelleanlegg fra oss",
+    "body": "Hei {leadName},\n\nTakk for din interesse! \n\nVedlagt finner du et estimat for ditt solcelleanlegg. Du kan se det online her: <a href={estimateLink}>Link til ditt estimat</a>\n\nTa gjerne kontakt om du har spørsmål.\n\nVennlig hilsen,\nOss"
+  },
+  "genericFollowUp": {
+    "name": "Generell oppfølging",
+    "subject": "Oppfølging angående solcelleanlegg",
+    "body": "Hei {leadName},\n\nJeg følger opp vår tidligere samtale.\n\nHar du noen spørsmål eller er det noe mer jeg kan hjelpe deg med?\n\nVennlig hilsen,\nOss"
+  }
+}
