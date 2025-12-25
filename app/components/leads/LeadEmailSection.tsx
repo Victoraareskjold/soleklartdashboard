@@ -260,6 +260,7 @@ export default function LeadEmailSection({
 
         // Refresh to show the sent email
         await fetchEmails();
+        await handleSync();
       }
     } catch (error) {
       console.error("Error sending email:", error);
