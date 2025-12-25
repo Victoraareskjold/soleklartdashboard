@@ -41,6 +41,7 @@ export default function LeadEmailSection({
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [replyToMessageId, setReplyToMessageId] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState("");
 
   useEffect(() => {
     if (leadId && installerGroupId) {
@@ -62,11 +63,13 @@ export default function LeadEmailSection({
       setSubject(emailSubject);
       setBody(emailBody);
       setShowCompose(true);
+      setSelectedTemplate("newEstimate");
     }
   }, [newEstimate, leadName, domain]);
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const templateKey = e.target.value;
+    setSelectedTemplate(templateKey);
     if (!templateKey) {
       setSubject("");
       setBody("");
@@ -376,6 +379,7 @@ export default function LeadEmailSection({
               <div className="flex flex-row justify-between items-center">
                 <div>
                   <select
+                    value={selectedTemplate}
                     onChange={handleTemplateChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >

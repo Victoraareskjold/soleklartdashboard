@@ -11,7 +11,7 @@ import {
   updateLead,
 } from "@/lib/api";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
