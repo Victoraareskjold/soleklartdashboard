@@ -63,7 +63,7 @@ export default function LeadCard({
 
       <Link href={`/leads/${lead.id}`}>
         <p className="font-bold text-blue-600 text-md border-b border-black pb-1 pt-7 mb-3">
-          {lead.person_info || "Ingen navn"} -{" "}
+          {lead.company || lead.person_info || "Mangler navn"} -{" "}
           {lead.address || "Ingen addresse"}
         </p>
 

@@ -33,7 +33,6 @@ export default function LeadsPage() {
       <div className="p-4">
         <h1 className="font-semibold text-lg">Avtaler</h1>
         <div className="mt-2 flex flex-row items-center gap-3">
-          {/* TODO Koble til getLeads å faktisk funke */}
           <div className="flex flex-col">
             <p>Avtaleeier</p>
             <TeamMemberSelector

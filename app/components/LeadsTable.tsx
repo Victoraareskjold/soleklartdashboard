@@ -92,14 +92,15 @@ export default function LeadsTable({
     if (leadOwner || leadCollector) {
       filteredLeads = filteredLeads.filter((lead) => {
         const ownerMatch = !leadOwner || lead.assigned_to === leadOwner;
-        const collectorMatch = !leadCollector || lead.created_by === leadCollector;
+        const collectorMatch =
+          !leadCollector || lead.created_by === leadCollector;
         return ownerMatch && collectorMatch;
       });
     }
 
     // Filter by search query
     if (searchQuery) {
-      filteredLeads = filteredLeads.filter(lead => {
+      filteredLeads = filteredLeads.filter((lead) => {
         const query = searchQuery.toLowerCase();
         const searchableFields = [
           lead.person_info,
@@ -110,7 +111,9 @@ export default function LeadsTable({
           lead.mobile,
           lead.note,
         ];
-        return searchableFields.some(field => field && field.toString().toLowerCase().includes(query));
+        return searchableFields.some(
+          (field) => field && field.toString().toLowerCase().includes(query)
+        );
       });
     }
 
@@ -119,14 +122,14 @@ export default function LeadsTable({
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      filteredLeads = filteredLeads.filter(lead => {
-        const leadTasks = tasks.filter(t => t.lead_id === lead.id);
+      filteredLeads = filteredLeads.filter((lead) => {
+        const leadTasks = tasks.filter((t) => t.lead_id === lead.id);
         if (leadTasks.length === 0) return false;
 
-        return leadTasks.some(task => {
+        return leadTasks.some((task) => {
           const dueDate = new Date(task.due_date);
           dueDate.setHours(0, 0, 0, 0);
-          
+
           switch (taskDueDateFilter) {
             case "overdue":
               return dueDate < today;
@@ -139,17 +142,27 @@ export default function LeadsTable({
               return dueDate >= startOfWeek && dueDate <= endOfWeek;
             }
             case "next_week": {
-                const startOfNextWeek = getStartOfWeek(now);
-                startOfNextWeek.setDate(startOfNextWeek.getDate() + 7);
-                const endOfNextWeek = new Date(startOfNextWeek);
-                endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
-                return dueDate >= startOfNextWeek && dueDate <= endOfNextWeek;
+              const startOfNextWeek = getStartOfWeek(now);
+              startOfNextWeek.setDate(startOfNextWeek.getDate() + 7);
+              const endOfNextWeek = new Date(startOfNextWeek);
+              endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
+              return dueDate >= startOfNextWeek && dueDate <= endOfNextWeek;
             }
             case "this_month":
-              return dueDate.getFullYear() === now.getFullYear() && dueDate.getMonth() === now.getMonth();
+              return (
+                dueDate.getFullYear() === now.getFullYear() &&
+                dueDate.getMonth() === now.getMonth()
+              );
             case "next_month":
-                const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-                return dueDate.getFullYear() === nextMonth.getFullYear() && dueDate.getMonth() === nextMonth.getMonth();
+              const nextMonth = new Date(
+                now.getFullYear(),
+                now.getMonth() + 1,
+                1
+              );
+              return (
+                dueDate.getFullYear() === nextMonth.getFullYear() &&
+                dueDate.getMonth() === nextMonth.getMonth()
+              );
             case "this_year":
               return dueDate.getFullYear() === now.getFullYear();
             case "next_year":
@@ -160,9 +173,16 @@ export default function LeadsTable({
         });
       });
     }
-    
+
     setLeads(filteredLeads);
-  }, [rawLeads, tasks, leadOwner, leadCollector, searchQuery, taskDueDateFilter]);
+  }, [
+    rawLeads,
+    tasks,
+    leadOwner,
+    leadCollector,
+    searchQuery,
+    taskDueDateFilter,
+  ]);
 
   const grouped = LEAD_STATUSES.reduce((acc, status) => {
     acc[status.value] = leads.filter((lead) => lead.status === status.value);
@@ -183,7 +203,7 @@ export default function LeadsTable({
       lead.id === draggableId ? { ...lead, status: destStatus } : lead
     );
     setRawLeads(updatedRawLeads);
-    
+
     try {
       await updateLead(draggableId, { status: destStatus as Lead["status"] });
     } catch (err) {

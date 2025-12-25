@@ -97,7 +97,7 @@ export default function ProfilePageInner() {
       <p>{user?.id}</p>
       {connectedEmails.length > 0 && (
         <div>
-          <p>tilkoblet e-poster:</p>
+          <p>tilkoblet e-post:</p>
           <ul>
             {connectedEmails.map((email) => (
               <li key={email}>{email}</li>

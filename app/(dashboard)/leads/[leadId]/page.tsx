@@ -659,7 +659,6 @@ export default function LeadPage() {
                 <li key={e.id} className="p-2 rounded-md bg-white mb-2 border">
                   <Link
                     target="_blank"
-                    // TODO: ekte link
                     href={`https://www.${domain}.no/estimat/${e.id}`}
                   >
                     <p className="font-semibold">
