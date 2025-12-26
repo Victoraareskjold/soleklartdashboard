@@ -11,7 +11,7 @@ import {
   updateLead,
 } from "@/lib/api";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
@@ -691,17 +691,30 @@ export default function LeadPage() {
 
                     <p className="text-sm mb-2">Status - </p>
 
-                    <p className="font-medium text-sm underline">
-                      Total eks.mva:{" "}
-                      {Number(e.price_data?.total ?? 0).toLocaleString(
-                        "nb-NO",
-                        {
+                    {company ? (
+                      <p className="font-medium text-sm underline">
+                        Total eks. mva:{" "}
+                        {Number(e.price_data?.total ?? 0).toLocaleString(
+                          "nb-NO",
+                          {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          }
+                        )}{" "}
+                        Kr
+                      </p>
+                    ) : (
+                      <p className="font-medium text-sm underline">
+                        Total inkl. mva:{" "}
+                        {Number(
+                          e.price_data?.["total inkl. alt"] ?? 0
+                        ).toLocaleString("nb-NO", {
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 0,
-                        }
-                      )}{" "}
-                      Kr
-                    </p>
+                        })}{" "}
+                        Kr
+                      </p>
+                    )}
 
                     <p className="text-sm mt-2">
                       {e.created_at
