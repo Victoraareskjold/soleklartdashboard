@@ -54,7 +54,7 @@ export default function FacilityInfo({
       </thead>
 
       <tbody>
-        {!solarData?.yearlyProd ? (
+        {solarData?.yearlyProd === undefined ? (
           <>
             <tr>
               <td className="border p-1 w-1/2">kWp</td>
@@ -144,9 +144,22 @@ export default function FacilityInfo({
             <tr>
               <td className="border p-1 w-1/2">Årlig kWh produksjon</td>
               <td className="border p-1 w-1/2">
-                {solarData.yearlyProd ?? "0"} kWh
+                <input
+                  type="number"
+                  value={solarData?.yearlyProd ?? 0}
+                  min={0}
+                  onChange={(e) => {
+                    if (!solarData || !setSolarData) return;
+                    setSolarData({
+                      ...solarData,
+                      yearlyProd: Number(e.target.value),
+                    });
+                  }}
+                  className="w-full p-1"
+                />
               </td>
             </tr>
+
             <tr>
               <td className="border p-1 w-1/2">Årlig CO₂ spart (kg)</td>
               <td className="border p-1 w-1/2">{yearlyCo2Saved()} kg</td>

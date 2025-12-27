@@ -15,6 +15,7 @@ import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { supabase } from "@/lib/supabase";
 import { CreateEstimateInput, Estimate } from "@/lib/types";
+import { getPanelWp } from "@/utils/getPanelWp";
 
 interface EstimateSectionProps {
   solarData: SolarData;
@@ -38,6 +39,20 @@ export default function EstimateSection({
   const params = useParams();
   const leadId = params.leadId as string;
 
+  const [initialSolarData, setInitialSolarData] = useState<SolarData | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (
+      solarData.totalPanels! > 0 &&
+      solarData.yearlyProd! > 0 &&
+      !initialSolarData
+    ) {
+      setInitialSolarData(solarData);
+    }
+  }, [solarData, initialSolarData]);
+
   useEffect(() => {
     getSuppliers().then((data) => {
       setSuppliers(data);
@@ -46,6 +61,38 @@ export default function EstimateSection({
       setSuppliersAndProducts(data);
     });
   }, []);
+
+  const wrappedSetSolarData = (action: React.SetStateAction<SolarData>) => {
+    setSolarData((prevSolarData) => {
+      const newSolarData =
+        typeof action === "function" ? action(prevSolarData) : action;
+
+      if (
+        initialSolarData &&
+        (newSolarData.totalPanels !== prevSolarData.totalPanels ||
+          newSolarData.selectedPanelType !== prevSolarData.selectedPanelType)
+      ) {
+        const initialPanelWp = getPanelWp(initialSolarData.selectedPanelType!);
+        const initialKwp =
+          (initialSolarData.totalPanels! * initialPanelWp) / 1000;
+
+        const newPanelWp = getPanelWp(newSolarData.selectedPanelType!);
+        const newKwp = (newSolarData.totalPanels! * newPanelWp) / 1000;
+
+        if (initialKwp > 0) {
+          const newYearlyProd =
+            (initialSolarData.yearlyProd! / initialKwp) * newKwp;
+          return {
+            ...newSolarData,
+            yearlyProd: Math.round(newYearlyProd),
+            kwp: newKwp,
+          };
+        }
+      }
+
+      return newSolarData;
+    });
+  };
 
   const handleCreateEstimate = async () => {
     if (!solarData || !priceOverview) {
@@ -100,7 +147,7 @@ export default function EstimateSection({
         suppliers={suppliers}
         suppliersAndProducts={suppliersAndProducts}
         solarData={solarData}
-        setSolarData={setSolarData}
+        setSolarData={wrappedSetSolarData}
         setPriceOverview={setPriceOverview}
       />
       <div className="mt-4">
