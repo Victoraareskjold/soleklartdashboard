@@ -59,11 +59,11 @@ export default function MentionsCenter({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/15 bg-opacity-50 flex justify-center items-center !z-999"
+      className="fixed inset-0 bg-black/15 bg-opacity-50 flex justify-center items-center z-[9999]"
       onClick={onClose}
     >
       <div
-        className="bg-white w-full max-w-md p-4 rounded-md shadow-lg relative z-999"
+        className="bg-white w-full max-w-md p-4 rounded-md shadow-lg relative"
         onClick={(e) => e.stopPropagation()}
       >
         <button
