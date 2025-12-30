@@ -583,6 +583,7 @@ export default function LeadPage() {
                 </option>
               ))}
             </select>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/icons/${priority}.png`}
               alt={priority}

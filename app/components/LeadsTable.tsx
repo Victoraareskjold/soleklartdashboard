@@ -276,6 +276,7 @@ export default function LeadsTable({
                 </div>
                 <div className="p-2 border-t">
                   <h2 className="font-bold text-sm text-center">
+                    {/* todo */}
                     Totalt: 14 123412 Kr
                   </h2>
                 </div>
