@@ -1,8 +1,13 @@
 "use client";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import { getLeads, getLeadTasks, updateLead } from "@/lib/api";
-import { Lead, LeadTask } from "@/lib/types";
+import {
+  getLeads,
+  getLeadTasks,
+  updateLead,
+  getEstimatesByLeadId,
+} from "@/lib/api";
+import { Lead, LeadTask, Estimate } from "@/lib/types";
 import { useEffect, useState } from "react";
 import {
   DragDropContext,
@@ -61,6 +66,7 @@ export default function LeadsTable({
   const [rawLeads, setRawLeads] = useState<Lead[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]); // Displayed leads
   const [tasks, setTasks] = useState<LeadTask[]>([]);
+  const [estimates, setEstimates] = useState<Record<string, Estimate[]>>({});
 
   // Effect for fetching data
   useEffect(() => {
@@ -69,17 +75,45 @@ export default function LeadsTable({
     getLeads(teamId, installerGroupId, teamRole)
       .then((allLeads) => {
         setRawLeads(allLeads);
-        return Promise.all(
-          allLeads.map((lead) =>
-            getLeadTasks(lead.id).catch((err) => {
-              console.error(`Failed to fetch tasks for lead ${lead.id}:`, err);
-              return [];
-            })
-          )
+        const taskPromises = allLeads.map((lead) =>
+          getLeadTasks(lead.id).catch((err) => {
+            console.error(`Failed to fetch tasks for lead ${lead.id}:`, err);
+            return [];
+          })
         );
+        const estimatePromises = allLeads.map((lead) =>
+          getEstimatesByLeadId(lead.id).catch((err) => {
+            console.error(
+              `Failed to fetch estimates for lead ${lead.id}:`,
+              err
+            );
+            return [];
+          })
+        );
+
+        return Promise.all([
+          Promise.all(taskPromises),
+          Promise.all(estimatePromises),
+        ]);
       })
-      .then((allTasksArrays) => {
-        setTasks(allTasksArrays.flat());
+      .then(([allTasksArrays, allEstimatesArrays]) => {
+        setTasks(
+          allTasksArrays
+            .flat()
+            .filter(
+              (item): item is LeadTask => "due_date" in item && "title" in item
+            )
+        );
+        const estimatesByLead = allEstimatesArrays.reduce(
+          (acc, leadEstimates) => {
+            if (leadEstimates.length > 0) {
+              acc[leadEstimates[0].lead_id] = leadEstimates;
+            }
+            return acc;
+          },
+          {} as Record<string, Estimate[]>
+        );
+        setEstimates(estimatesByLead);
       })
       .catch((err) => console.error("Failed to fetch leads or tasks:", err));
   }, [installerGroupId, teamId, teamRole]);
@@ -230,61 +264,98 @@ export default function LeadsTable({
     }
   };
 
+  const calculateTotalForStatus = (statusLeads: Lead[]): number => {
+    return statusLeads.reduce((total, lead) => {
+      const leadEstimates = estimates[lead.id];
+      if (!leadEstimates || leadEstimates.length === 0) {
+        return total;
+      }
+
+      const latestEstimate = leadEstimates.reduce((latest, current) => {
+        const latestDate = latest.created_at
+          ? new Date(latest.created_at)
+          : new Date(0);
+        const currentDate = current.created_at
+          ? new Date(current.created_at)
+          : new Date(0);
+        return currentDate > latestDate ? current : latest;
+      });
+
+      if (latestEstimate?.price_data) {
+        const price =
+          lead.company && lead.company !== ""
+            ? latestEstimate.price_data.total
+            : latestEstimate.price_data["total inkl. alt"];
+        return total + (price || 0);
+      }
+
+      return total;
+    }, 0);
+  };
+
   return (
     <div className="flex gap-x-1 gap-y-12 grid grid-cols-5 p-4">
       <DragDropContext onDragEnd={onDragEnd}>
-        {LEAD_STATUSES.map((status) => (
-          <Droppable key={status.value} droppableId={status.value.toString()}>
-            {(provided) => (
-              <div
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className="bg-gray-100 min-w-[250px] min-h-164 border flex flex-col justify-between"
-              >
+        {LEAD_STATUSES.map((status) => {
+          const statusLeads = grouped[status.value] || [];
+          const totalForStatus = calculateTotalForStatus(statusLeads);
+
+          return (
+            <Droppable key={status.value} droppableId={status.value.toString()}>
+              {(provided) => (
                 <div
-                  style={{ backgroundColor: status.color }}
-                  className="p-2 border-b flex items-center justify-between min-h-15"
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className="bg-gray-100 min-w-[250px] min-h-164 border flex flex-col justify-between"
                 >
-                  <h2 className="font-semibold text-sm">{status.label}</h2>
-                  <h2 className="font-semibold text-sm">
-                    ({grouped[status.value]?.length || 0}){" "}
-                  </h2>
+                  <div
+                    style={{ backgroundColor: status.color }}
+                    className="p-2 border-b flex items-center justify-between min-h-15"
+                  >
+                    <h2 className="font-semibold text-sm">{status.label}</h2>
+                    <h2 className="font-semibold text-sm">
+                      ({statusLeads.length}){" "}
+                    </h2>
+                  </div>
+                  <div className="flex-1 p-2">
+                    {statusLeads.map((lead, index) => (
+                      <Draggable
+                        key={lead.id}
+                        draggableId={lead.id}
+                        index={index}
+                      >
+                        {(provided) => (
+                          <div
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            ref={provided.innerRef}
+                            className="bg-white rounded shadow p-3 mb-2"
+                          >
+                            <LeadCard
+                              lead={lead}
+                              tasks={tasks.filter((t) => t.lead_id === lead.id)}
+                              onStatusChange={handleStatusChange}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                  </div>
+                  <div className="p-2 border-t">
+                    <h2 className="font-bold text-sm text-center">
+                      Totalt:{" "}
+                      {totalForStatus.toLocaleString("nb-NO", {
+                        style: "currency",
+                        currency: "NOK",
+                      })}
+                    </h2>
+                  </div>
+                  {provided.placeholder}
                 </div>
-                <div className="flex-1 p-2">
-                  {grouped[status.value]?.map((lead, index) => (
-                    <Draggable
-                      key={lead.id}
-                      draggableId={lead.id}
-                      index={index}
-                    >
-                      {(provided) => (
-                        <div
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          ref={provided.innerRef}
-                          className="bg-white rounded shadow p-3 mb-2"
-                        >
-                          <LeadCard
-                            lead={lead}
-                            tasks={tasks.filter((t) => t.lead_id === lead.id)}
-                            onStatusChange={handleStatusChange}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                </div>
-                <div className="p-2 border-t">
-                  <h2 className="font-bold text-sm text-center">
-                    {/* todo */}
-                    Totalt: 14 123412 Kr
-                  </h2>
-                </div>
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        ))}
+              )}
+            </Droppable>
+          );
+        })}
       </DragDropContext>
     </div>
   );
