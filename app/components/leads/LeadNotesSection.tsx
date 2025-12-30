@@ -253,7 +253,6 @@ export default function LeadNotesSection({ leadId }: Props) {
             </div>
             <div style="padding: 20px;">
               <h2 style="color: #4f46e5;">Du ble nevnt</h2>
-              <p>Hei ${name},</p>
               <p><strong>${authorName}</strong> nevnte deg i en merknad på leadet <strong>${
           lead.person_info
         }</strong>.</p>
