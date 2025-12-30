@@ -376,7 +376,7 @@ export default function LeadPage() {
   return (
     <div className="flex flex-row">
       {/* Contact information */}
-      <section className="w-1/3 p-2 pr-4 flex flex-col gap-6">
+      <section className="w-1/3 !max-w-112 p-2 pr-4 flex flex-col gap-6">
         {/*  */}
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-medium">
@@ -662,7 +662,7 @@ export default function LeadPage() {
 
         {activeRoute === "Oppgaver" && <TaskSection leadId={leadIdStr!} />}
       </section>
-      <section className="w-1/4 p-2">
+      <section className="w-1/4 !max-w-64 p-2">
         <h1>Estimater</h1>
         <div className="flex gap-2">
           <ul>
