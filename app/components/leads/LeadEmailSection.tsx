@@ -333,7 +333,7 @@ export default function LeadEmailSection({
 
         {/* Compose email form */}
         {showCompose && (
-          <div className="bg-white border border-gray-300 rounded-md p-4 shadow-sm">
+          <div className="bg-white max-w-182 mx-auto border border-gray-300 rounded-md p-4 shadow-sm">
             <h4 className="font-medium mb-3">
               {replyToMessageId ? "Svar på e-post" : "Send ny e-post"}
             </h4>
@@ -426,7 +426,7 @@ export default function LeadEmailSection({
             {emailThreads.map((thread) => (
               <div
                 key={thread.conversationId}
-                className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden"
+                className="bg-white max-w-182 mx-auto border border-gray-200 rounded-md shadow-sm overflow-hidden"
               >
                 {/* Thread header */}
                 <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
@@ -492,15 +492,17 @@ export default function LeadEmailSection({
                             </p>
                           </div>
                         </div>
-                        <div
-                          className="text-sm text-gray-700 whitespace-pre-wrap"
-                          dangerouslySetInnerHTML={{
-                            __html:
-                              email.body ||
-                              email.body_preview ||
-                              "Ingen innhold",
-                          }}
-                        />
+                        <div className="overflow-x-auto">
+                          <div
+                            className="text-sm text-gray-700 whitespace-pre-wrap break-words"
+                            dangerouslySetInnerHTML={{
+                              __html:
+                                email.body ||
+                                email.body_preview ||
+                                "Ingen innhold",
+                            }}
+                          />
+                        </div>{" "}
                       </div>
                     );
                   })}

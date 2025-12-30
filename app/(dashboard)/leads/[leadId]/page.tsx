@@ -376,7 +376,7 @@ export default function LeadPage() {
   return (
     <div className="flex flex-row">
       {/* Contact information */}
-      <section className="w-1/3 !max-w-112 p-2 pr-4 flex flex-col gap-6">
+      <section className="w-1/3 max-w-92 p-2 pr-4 flex flex-col gap-6 overflow-y-auto">
         {/*  */}
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-medium">
@@ -614,7 +614,7 @@ export default function LeadPage() {
         {/*  */}
       </section>
       {/* Center section */}
-      <section className="w-full bg-blue-100 p-2 [min-height:calc(100vh-3rem)] max-w-196">
+      <section className="flex-1 bg-blue-100 p-2 [min-height:calc(100vh-3rem)] overflow-y-auto min-w-0">
         <div className="w-full gap-2 flex mb-4">
           {routes.map((route) => (
             <button
@@ -662,7 +662,8 @@ export default function LeadPage() {
 
         {activeRoute === "Oppgaver" && <TaskSection leadId={leadIdStr!} />}
       </section>
-      <section className="w-1/4 !max-w-64 p-2">
+      {/* Right section */}
+      <section className="w-1/4 max-w-64 p-2 overflow-y-auto">
         <h1>Estimater</h1>
         <div className="flex gap-2">
           <ul>
