@@ -94,6 +94,16 @@ export default function LeadNotesSection({ leadId }: Props) {
     setAllNotes([note, ...allNotes]);
     setNewNote("");
     setMentionSuggestions([]);
+
+    await fetch("/api/send-mail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: user.email,
+        subject: "Soleklart Dashboard",
+        html: "<p>Vi har mottatt meldingen din.</p>",
+      }),
+    });
   };
 
   const handleAddComment = async (noteId: string) => {
