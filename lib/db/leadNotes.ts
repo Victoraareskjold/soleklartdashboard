@@ -35,7 +35,7 @@ export const createLeadNote = async (
     .single();
   if (error || !note) throw error;
 
-  const mentionRegex = /@(\w+)/g;
+  const mentionRegex = /@\[([^\]]+)\]/g;
   let match;
   const mentions: string[] = [];
   while ((match = mentionRegex.exec(content))) mentions.push(match[1]);

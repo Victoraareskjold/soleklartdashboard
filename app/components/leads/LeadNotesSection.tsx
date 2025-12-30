@@ -195,7 +195,7 @@ export default function LeadNotesSection({ leadId }: Props) {
 
   const insertMention = (text: string, name: string) => {
     const atIndex = text.lastIndexOf("@");
-    return atIndex >= 0 ? text.slice(0, atIndex) + "@" + name + " " : text;
+    return atIndex >= 0 ? text.slice(0, atIndex) + `@[${name}]` + " " : text;
   };
 
   const handleSelectMention = (name: string) => {
