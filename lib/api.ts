@@ -172,8 +172,8 @@ export const createLeadNote = async (
 
 export const getTaggableUsers = async (
   leadId: string
-): Promise<{ id: string; name: string }[]> => {
-  return apiRequest<{ id: string; name: string }[]>(
+): Promise<{ id: string; name: string; email: string }[]> => {
+  return apiRequest<{ id: string; name: string; email: string }[]>(
     `/api/leadNotes/${leadId}/taggableUsers`
   );
 };

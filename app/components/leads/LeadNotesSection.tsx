@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { Lead, Note } from "@/lib/types";
 import { toast } from "react-toastify";
+import { User } from "@supabase/supabase-js";
 
 interface Props {
   leadId: string;
@@ -22,7 +23,7 @@ export default function LeadNotesSection({ leadId }: Props) {
   const [newNote, setNewNote] = useState("");
   const [newComments, setNewComments] = useState<Record<string, string>>({});
   const [taggableUsers, setTaggableUsers] = useState<
-    { id: string; name: string }[]
+    { id: string; name: string; email: string }[]
   >([]);
   const [mentionSuggestions, setMentionSuggestions] = useState<
     { id: string; name: string }[]
@@ -92,18 +93,12 @@ export default function LeadNotesSection({ leadId }: Props) {
 
     const note = await createLeadNote(leadId, user.id, newNote.trim(), "note");
     setAllNotes([note, ...allNotes]);
+    if (lead) {
+      sendMentionEmail(newNote.trim(), lead, user, taggableUsers);
+    }
+
     setNewNote("");
     setMentionSuggestions([]);
-
-    await fetch("/api/send-mail", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: user.email,
-        subject: "Soleklart Dashboard",
-        html: "<p>Vi har mottatt meldingen din.</p>",
-      }),
-    });
   };
 
   const handleAddComment = async (noteId: string) => {
@@ -164,6 +159,9 @@ export default function LeadNotesSection({ leadId }: Props) {
         "comment",
         noteId
       );
+      if (lead) {
+        sendMentionEmail(text, lead, user, taggableUsers);
+      }
       setAllNotes([...allNotes, comment]);
       setNewComments({ ...newComments, [noteId]: "" });
     }
@@ -181,7 +179,9 @@ export default function LeadNotesSection({ leadId }: Props) {
     if (atIndex >= 0) {
       const query = text.slice(atIndex + 1).toLowerCase();
       setter(
-        taggableUsers.filter((u) => u.name.toLowerCase().startsWith(query))
+        taggableUsers
+          .filter((u) => u.name.toLowerCase().startsWith(query))
+          .map((u) => ({ id: u.id, name: u.name }))
       );
     } else {
       setter([]);
@@ -220,6 +220,78 @@ export default function LeadNotesSection({ leadId }: Props) {
       ...commentMentionSuggestions,
       [noteId]: [],
     });
+  };
+
+  const sendMentionEmail = async (
+    content: string,
+    lead: Lead,
+    currentUser: User,
+    users: { id: string; name: string; email: string }[]
+  ) => {
+    const mentions = content.match(/@\[([^\]]+)\]/g);
+    if (!mentions) return;
+
+    const { data: authorData } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", currentUser.id)
+      .single();
+    const authorName = authorData?.name ?? "En bruker";
+
+    const mentionedUserNames = mentions.map((m) =>
+      m.substring(2, m.length - 1)
+    );
+
+    for (const name of mentionedUserNames) {
+      const user = users.find((u) => u.name === name);
+      if (user && user.email) {
+        const emailSubject = `Du ble nevnt i en merknad på lead: ${lead.person_info}`;
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 5px; overflow: hidden;">
+            <div style="background-color: #4f46e5; color: white; padding: 20px; text-align: center;">
+              <h1>Soleklart Dashboard</h1>
+            </div>
+            <div style="padding: 20px;">
+              <h2 style="color: #4f46e5;">Du ble nevnt</h2>
+              <p>Hei ${name},</p>
+              <p><strong>${authorName}</strong> nevnte deg i en merknad på leadet <strong>${
+          lead.person_info
+        }</strong>.</p>
+              <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 3px solid #4f46e5;">
+                <p style="margin: 0;">${content.replace(
+                  /@\[([^\]]+)\]/g,
+                  "<strong>@$1</strong>"
+                )}</p>
+              </div>
+              <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
+              <div>
+                <h3 style="color: #4f46e"}>Lead Detaljer:</h3>
+                <p><strong>Navn:</strong> ${lead.person_info}</p>
+                <p><strong>Adresse:</strong> ${lead.address}</p>
+              </div>
+              <div style="text-align: center; margin-top: 30px;">
+                <a href="${window.location.origin}/leads/${
+          lead.id
+        }?tab=Merknader" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">Vis Lead</a>
+              </div>
+            </div>
+            <div style="background-color: #f2f2f2; text-align: center; padding: 15px; font-size: 12px; color: #666;">
+              <p>Dette er en automatisk varsling fra Soleklart Dashboard.</p>
+            </div>
+          </div>
+        `;
+
+        await fetch("/api/send-mail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: user.email,
+            subject: emailSubject,
+            html: emailHtml,
+          }),
+        });
+      }
+    }
   };
 
   return (

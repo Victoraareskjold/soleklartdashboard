@@ -72,16 +72,14 @@ export const getTaggableUsers = async (
 
   const { data: teamMembers } = await client
     .from("team_members")
-    .select("user_id, user:user_id(name)")
+    .select("user_id, user:user_id(name, email)")
     .eq("team_id", lead.team_id);
 
-  const map: Record<string, { id: string; name: string }> = {};
+  const map: Record<string, { id: string; name: string; email: string }> = {};
   [...(teamMembers ?? [])].forEach((m) => {
-    const userName = Array.isArray(m.user)
-      ? m.user[0]?.name
-      : (m.user as User)?.name;
-    if (m.user_id && userName)
-      map[m.user_id] = { id: m.user_id, name: userName };
+    const user = Array.isArray(m.user) ? m.user[0] : (m.user as User);
+    if (m.user_id && user?.name && user.email)
+      map[m.user_id] = { id: m.user_id, name: user.name, email: user.email };
   });
 
   return Object.values(map);
