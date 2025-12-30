@@ -255,6 +255,7 @@ export default function LeadNotesSection({ leadId }: Props) {
           return (
             <li
               key={note.id}
+              id={note.id}
               className="border p-2 rounded-md bg-white shadow-sm"
             >
               <div className="flex flex-row justify-between">

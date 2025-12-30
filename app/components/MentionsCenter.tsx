@@ -52,9 +52,9 @@ export default function MentionsCenter({ onClose }: { onClose: () => void }) {
     fetchMentions();
   }, []);
 
-  const handleGoToLead = (leadId: string) => {
+  const handleGoToLead = (note: SimpleNote) => {
     onClose();
-    router.push(`/leads/${leadId}`);
+    router.push(`/leads/${note.lead_id}?tab=Merknader`);
   };
 
   return (
@@ -86,7 +86,7 @@ export default function MentionsCenter({ onClose }: { onClose: () => void }) {
               <li
                 key={note.id}
                 className="p-2 border rounded cursor-pointer hover:bg-gray-100"
-                onClick={() => handleGoToLead(note.lead_id)}
+                onClick={() => handleGoToLead(note as SimpleNote)}
               >
                 <p className="text-sm">{note.content}</p>
                 <p className="text-xs text-gray-400">

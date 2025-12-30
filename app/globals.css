@@ -7,3 +7,14 @@ button:hover {
 button:disabled {
   cursor: not-allowed;
 }
+
+/* Added for mention highlighting */
+@keyframes highlight {
+  from { background-color: #fefcbf; /* yellow-100 */ }
+  to { background-color: transparent; }
+}
+
+.highlight-mention {
+  animation: highlight 3s ease-out;
+}
+

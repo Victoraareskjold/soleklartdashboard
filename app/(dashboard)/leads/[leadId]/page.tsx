@@ -11,7 +11,7 @@ import {
   updateLead,
 } from "@/lib/api";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
@@ -81,6 +81,8 @@ export default function LeadPage() {
   const { teamId } = useTeam();
   const { user } = useAuth();
   const { installerGroupId } = useInstallerGroup();
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
 
   const leadIdStr = Array.isArray(leadId) ? leadId[0] : leadId;
 
@@ -153,7 +155,7 @@ export default function LeadPage() {
   });
   const [estimates, setEstimates] = useState<Estimate[]>();
 
-  const [activeRoute, setActiveRoute] = useState("Aktivitet");
+  const [activeRoute, setActiveRoute] = useState(tab || "Aktivitet");
   const routes = ["Aktivitet", "Merknader", "E-poster", "Oppgaver", "Befaring"];
   const sideMenuRoutes = [
     { label: "Merknader", icon: File },
