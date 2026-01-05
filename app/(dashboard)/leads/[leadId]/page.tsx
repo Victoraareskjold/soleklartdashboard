@@ -736,7 +736,7 @@ export default function LeadPage() {
         </div>
 
         <button
-          className="py-2 px-3 bg-slate-100"
+          className="py-2 px-3 bg-slate-100 w-full"
           onClick={handleCreateNewEstimate}
           disabled={loading}
         >

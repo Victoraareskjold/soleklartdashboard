@@ -14,8 +14,14 @@ export async function POST(
 
     const client = createSupabaseClient(token);
     const { id: leadId } = await params;
-    const { userId, installerGroupId, subject, body, messageId } =
-      await req.json();
+    const {
+      userId,
+      installerGroupId,
+      subject,
+      body,
+      messageId,
+      attachments,
+    } = await req.json();
 
     if (!userId || !installerGroupId || !body) {
       return NextResponse.json(
@@ -55,6 +61,15 @@ export async function POST(
     let isReply = false;
     let sentMessageId: string | null = null;
     let conversationId: string | null = null;
+    const hasAttachments = attachments && attachments.length > 0;
+
+    const graphAttachments =
+      attachments?.map((att: any) => ({
+        "@odata.type": "#microsoft.graph.fileAttachment",
+        name: att.name,
+        contentType: att.contentType,
+        contentBytes: att.contentBytes,
+      })) || [];
 
     // If messageId is provided, this is a reply
     if (messageId) {
@@ -91,7 +106,7 @@ export async function POST(
       const draft = await createReplyRes.json();
       sentMessageId = draft.id;
 
-      // Update draft with body
+      // Update draft with body and attachments
       const updateUrl = `https://graph.microsoft.com/v1.0/me/messages/${draft.id}`;
       const updateRes = await fetch(updateUrl, {
         method: "PATCH",
@@ -109,6 +124,7 @@ export async function POST(
               },
             },
           ],
+          attachments: hasAttachments ? graphAttachments : undefined,
         }),
       });
 
@@ -153,6 +169,7 @@ export async function POST(
               },
             },
           ],
+          attachments: hasAttachments ? graphAttachments : undefined,
         },
         saveToSentItems: true,
       };
@@ -192,7 +209,7 @@ export async function POST(
           body_preview: body.substring(0, 255),
           body: body,
           received_at: new Date().toISOString(),
-          has_attachments: false,
+          has_attachments: hasAttachments,
         });
       } catch (error) {
         console.error("Error storing sent email:", error);

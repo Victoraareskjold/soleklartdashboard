@@ -79,6 +79,7 @@ export default function LeadEmailSection({
   const [sending, setSending] = useState(false);
   const [replyToMessageId, setReplyToMessageId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -132,6 +133,7 @@ export default function LeadEmailSection({
     if (!templateKey) {
       setSubject("");
       setBody("");
+      setAttachments([]);
       editor?.commands.clearContent();
       return;
     }
@@ -304,22 +306,44 @@ export default function LeadEmailSection({
         return;
       }
 
+      const attachmentsPayload = await Promise.all(
+        attachments.map(async (file) => {
+          const contentBytes = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+              const result = reader.result as string;
+              resolve(result.split(",")[1]);
+            };
+            reader.onerror = (error) => reject(error);
+          });
+          return {
+            name: file.name,
+            contentType: file.type,
+            contentBytes,
+          };
+        })
+      );
+
       const response = await sendLeadEmail(
         leadId,
         user.id,
         installerGroupId,
         subject,
         body,
-        replyToMessageId || undefined
+        replyToMessageId || undefined,
+        attachmentsPayload
       );
 
       if (response.success) {
         toast.success("E-post sendt!");
         setSubject("");
         setBody("");
+        setAttachments([]);
         editor?.commands.clearContent();
         setShowCompose(false);
         setReplyToMessageId(null);
+        setSelectedTemplate("");
 
         // Refresh to show the sent email
         await fetchEmails();
@@ -383,6 +407,7 @@ export default function LeadEmailSection({
                 setReplyToMessageId(null);
                 setSubject("");
                 setBody("");
+                setAttachments([]);
                 editor?.commands.clearContent();
               }}
               className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
@@ -433,6 +458,7 @@ export default function LeadEmailSection({
                   <EditorContent editor={editor} />
                 </div>
               </div>
+
               <div className="flex flex-row justify-between items-center">
                 <div>
                   <select
@@ -447,6 +473,34 @@ export default function LeadEmailSection({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="email-attachments"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  ></label>
+                  <input
+                    type="file"
+                    id="email-attachments"
+                    name="email-attachments"
+                    multiple
+                    onChange={(e) =>
+                      setAttachments(
+                        e.target.files ? Array.from(e.target.files) : []
+                      )
+                    }
+                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                  />
+                  {attachments.length > 0 && (
+                    <div className="mt-2 text-sm text-gray-600">
+                      <ul className="list-disc list-inside">
+                        {attachments.map((file, i) => (
+                          <li key={i}>{file.name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2">

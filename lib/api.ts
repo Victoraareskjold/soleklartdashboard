@@ -317,7 +317,8 @@ export const sendLeadEmail = async (
   installerGroupId: string,
   subject: string,
   body: string,
-  messageId?: string
+  messageId?: string,
+  attachments?: { name: string; contentType: string; contentBytes: string }[]
 ) => {
   return apiRequest<{
     success: boolean;
@@ -328,6 +329,7 @@ export const sendLeadEmail = async (
     subject,
     body,
     messageId,
+    attachments,
   });
 };
 
