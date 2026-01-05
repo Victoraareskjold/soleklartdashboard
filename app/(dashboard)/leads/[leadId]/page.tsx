@@ -374,6 +374,26 @@ export default function LeadPage() {
     }
   }
 
+  const getLatestEstimate = (): Estimate | null => {
+    if (!estimates || estimates.length === 0) return null;
+
+    return [...estimates].sort(
+      (a, b) =>
+        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+    )[0];
+  };
+
+  const getTotalForCustomer = (estimate: Estimate | null) => {
+    if (!estimate) return null;
+
+    return company?.trim()
+      ? Number(estimate.price_data?.total ?? 0)
+      : Number(estimate.price_data?.["total inkl. alt"] ?? 0);
+  };
+
+  const latest = getLatestEstimate();
+  const total = getTotalForCustomer(latest);
+
   if (!user) return <LoadingScreen />;
 
   return (
@@ -742,6 +762,29 @@ export default function LeadPage() {
         >
           Opprett nytt estimat
         </button>
+
+        <div className="border-t-1 border-b-1 border-slate-700 py-4 my-4">
+          <h1>Vedlegg</h1>
+          <div className="flex gap-2">
+            <ul className="w-full"></ul>
+          </div>
+        </div>
+
+        <div className="border-t-1 border-b-1 border-slate-700 py-4 my-4">
+          <h1>Fakturering</h1>
+          <div className="flex gap-2">
+            <ul className="w-full">
+              {total !== null ? (
+                <p className="font-medium">
+                  {company?.trim() ? "Eks. mva: " : "Inkl. mva: "}
+                  {total.toLocaleString("nb-NO")} kr
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500">Ingen estimat</p>
+              )}
+            </ul>
+          </div>
+        </div>
       </section>
       {/* Modals */}
       {isModalOpen && (
