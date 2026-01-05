@@ -1,4 +1,5 @@
 "use client";
+import LeadStatusChart from "@/app/components/cold-calling/LeadStatusChart";
 import RenderInputFields from "@/app/components/cold-calling/RenderInputFields";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
 import LoadingScreen from "@/app/components/LoadingScreen";
@@ -64,6 +65,10 @@ export default function ColdCallingPage() {
 
   const [status, setStatus] = useState(0);
 
+  const [leadSummary, setLeadSummary] = useState<
+    { status: number; count: number }[]
+  >([]);
+
   useEffect(() => {
     if (!teamId || !installerGroupId) return;
 
@@ -79,6 +84,16 @@ export default function ColdCallingPage() {
       .then(setRoofTypeOptions)
       .catch((err) => console.error("Failed to fetch team members:", err));
   }, [teamId, installerGroupId]);
+
+  useEffect(() => {
+    if (!user || !teamId || !installerGroupId) return;
+
+    fetch(
+      `/api/leads/status-summary?userId=${user.id}&teamId=${teamId}&installerGroupId=${installerGroupId}`
+    )
+      .then((res) => res.json())
+      .then(setLeadSummary);
+  }, [user, teamId, installerGroupId]);
 
   useEffect(() => {
     if (!installerGroupId || !teamId) return;
@@ -283,6 +298,34 @@ export default function ColdCallingPage() {
     );
   });
 
+  const leadSummaryWithColor = leadSummary.reduce((acc, { status, count }) => {
+    let label: string;
+    let color: string;
+
+    if (status === 0) {
+      label = "Ingen status";
+      color = "#CCCCCC"; // grå for udefinert
+    } else if (status > 5) {
+      label = "Vil ha tilbud";
+      color = "#69FF59";
+    } else {
+      const info = LeadStatus.find((s) => s.value === status);
+      if (!info) return acc;
+      label = info.label;
+      color = info.color;
+    }
+
+    // Summer tellerne per label
+    const existing = acc.find((a) => a.label === label);
+    if (existing) {
+      existing.count += count;
+    } else {
+      acc.push({ label, count, color });
+    }
+
+    return acc;
+  }, [] as { label: string; count: number; color: string }[]);
+
   return (
     <div>
       <div className="flex flex-row justify-between items-center gap-4 mb-4">
@@ -326,7 +369,25 @@ export default function ColdCallingPage() {
           />
         </div>
 
-        <div className="w-full h-32 bg-slate-200"></div>
+        <div className="flex gap-4 items-center">
+          <div className="w-64 h-48">
+            <LeadStatusChart summary={leadSummary} />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            {leadSummaryWithColor.map((item) => (
+              <div key={item.label} className="flex items-center gap-2">
+                <span
+                  className="w-4 h-4 rounded"
+                  style={{ backgroundColor: item.color }}
+                ></span>
+                <span>
+                  {item.label}: {item.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="flex flex-col gap-2">
           {status === 0 && (
