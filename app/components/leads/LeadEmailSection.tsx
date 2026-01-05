@@ -6,6 +6,40 @@ import { supabase } from "@/lib/supabase";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { toast } from "react-toastify";
 import mailTemplates from "@/constants/mailTemplates.json";
+import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
+  if (!editor) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2 border border-gray-300 rounded-t-md p-2 bg-gray-50">
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        className={editor.isActive("bold") ? "is-active" : ""}
+      >
+        Bold
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+        className={editor.isActive("italic") ? "is-active" : ""}
+      >
+        Italic
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+        className={editor.isActive("strike") ? "is-active" : ""}
+      >
+        Strike
+      </button>
+    </div>
+  );
+};
 
 interface LeadEmailSectionProps {
   leadId: string;
@@ -43,6 +77,27 @@ export default function LeadEmailSection({
   const [replyToMessageId, setReplyToMessageId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState("");
 
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: body,
+    immediatelyRender: false,
+    onUpdate: ({ editor }) => {
+      setBody(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class:
+          "prose dark:prose-invert prose-sm sm:prose-base lg:prose-lg xl:prose-2xl m-5 focus:outline-none",
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (editor && body !== editor.getHTML()) {
+      editor.commands.setContent(body);
+    }
+  }, [body, editor]);
+
   useEffect(() => {
     if (leadId && installerGroupId) {
       fetchEmails();
@@ -62,10 +117,11 @@ export default function LeadEmailSection({
 
       setSubject(emailSubject);
       setBody(emailBody);
+      editor?.commands.setContent(emailBody);
       setShowCompose(true);
       setSelectedTemplate("newEstimate");
     }
-  }, [newEstimate, leadName, domain]);
+  }, [newEstimate, leadName, domain, editor]);
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const templateKey = e.target.value;
@@ -73,6 +129,7 @@ export default function LeadEmailSection({
     if (!templateKey) {
       setSubject("");
       setBody("");
+      editor?.commands.clearContent();
       return;
     }
 
@@ -106,6 +163,7 @@ export default function LeadEmailSection({
 
     setSubject(template.subject);
     setBody(emailBody);
+    editor?.commands.setContent(emailBody);
   };
 
   const fetchEmails = async () => {
@@ -243,14 +301,12 @@ export default function LeadEmailSection({
         return;
       }
 
-      const emailBodyHtml = body.replace(/\n/g, "<br />");
-
       const response = await sendLeadEmail(
         leadId,
         user.id,
         installerGroupId,
         subject,
-        emailBodyHtml,
+        body,
         replyToMessageId || undefined
       );
 
@@ -258,6 +314,7 @@ export default function LeadEmailSection({
         toast.success("E-post sendt!");
         setSubject("");
         setBody("");
+        editor?.commands.clearContent();
         setShowCompose(false);
         setReplyToMessageId(null);
 
@@ -323,6 +380,7 @@ export default function LeadEmailSection({
                 setReplyToMessageId(null);
                 setSubject("");
                 setBody("");
+                editor?.commands.clearContent();
               }}
               className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
             >
@@ -367,14 +425,10 @@ export default function LeadEmailSection({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Melding
                 </label>
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  placeholder="Skriv din melding her..."
-                  rows={8}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+                <div className="border border-gray-300 rounded-md">
+                  <MenuBar editor={editor} />
+                  <EditorContent editor={editor} />
+                </div>
               </div>
               <div className="flex flex-row justify-between items-center">
                 <div>

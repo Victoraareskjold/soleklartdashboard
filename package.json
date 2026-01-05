@@ -12,6 +12,8 @@
     "@hello-pangea/dnd": "^18.0.1",
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/supabase-js": "^2.58.0",
+    "@tiptap/react": "^3.14.0",
+    "@tiptap/starter-kit": "^3.14.0",
     "lucide-react": "^0.544.0",
     "next": "16.0.10",
     "nodemailer": "^7.0.9",
