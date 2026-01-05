@@ -490,7 +490,7 @@ export default function LeadEmailSection({
                         e.target.files ? Array.from(e.target.files) : []
                       )
                     }
-                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                   />
                   {attachments.length > 0 && (
                     <div className="mt-2 text-sm text-gray-600">
