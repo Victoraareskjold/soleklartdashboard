@@ -379,7 +379,7 @@ export default function LeadPage() {
   return (
     <div className="flex flex-row">
       {/* Contact information */}
-      <section className="w-1/3 max-w-92 p-2 pr-4 flex flex-col gap-6 overflow-y-auto">
+      <section className="w-1/4 p-2 pr-4 flex flex-col gap-6 overflow-y-auto">
         {/*  */}
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-medium">
@@ -667,10 +667,10 @@ export default function LeadPage() {
         {activeRoute === "Oppgaver" && <TaskSection leadId={leadIdStr!} />}
       </section>
       {/* Right section */}
-      <section className="w-1/4 max-w-64 p-2 overflow-y-auto">
+      <section className="w-1/4 p-2 overflow-y-auto">
         <h1>Estimater</h1>
         <div className="flex gap-2">
-          <ul>
+          <ul className="w-full">
             {estimates
               ?.sort(
                 (a, b) =>
@@ -678,7 +678,10 @@ export default function LeadPage() {
                   new Date(a.created_at!).getTime()
               )
               .map((e) => (
-                <li key={e.id} className="p-2 rounded-md bg-white mb-2 border">
+                <li
+                  key={e.id}
+                  className="p-2 rounded-md w-full bg-white mb-2 border"
+                >
                   <Link
                     target="_blank"
                     href={`https://www.${domain}.no/estimat/${e.id}`}

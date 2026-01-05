@@ -69,7 +69,7 @@ export default function LeadsPage() {
               team={team}
               selectedMember={leadOwner}
               onSelectMember={setLeadOwner}
-              defaultUser={user.id}
+              defaultUser={""}
             />
           </div>
         </div>
