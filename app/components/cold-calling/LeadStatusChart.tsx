@@ -38,7 +38,7 @@ const LeadStatusChart: React.FC<LeadStatusChartProps> = ({ summary }) => {
       return {
         name: info?.label ?? `Ingen status`,
         value: count,
-        color: info?.color ?? "#333",
+        color: info?.color ?? "#CCCCCC",
       };
     }),
     ...(aggregated.priceEstimate > 0

@@ -9,17 +9,20 @@ export async function GET(req: Request) {
   const userId = searchParams.get("userId");
   const teamId = searchParams.get("teamId");
   const installerGroupId = searchParams.get("installerGroupId");
+  const selectedMember = searchParams.get("selectedMember");
 
-  if (!userId || !teamId || !installerGroupId) {
+  if (!userId || !teamId || !installerGroupId || !selectedMember) {
     return NextResponse.json([], { status: 400 });
   }
 
   const { data, error } = await supabase
     .from("leads")
     .select("status", { count: "exact", head: false })
-    .eq("assigned_to", userId)
     .eq("team_id", teamId)
-    .eq("installer_group_id", installerGroupId);
+    .eq("installer_group_id", installerGroupId)
+    .eq("assigned_to", selectedMember);
+
+  console.log(data);
 
   if (error) {
     return NextResponse.json([], { status: 500 });

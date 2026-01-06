@@ -89,11 +89,11 @@ export default function ColdCallingPage() {
     if (!user || !teamId || !installerGroupId) return;
 
     fetch(
-      `/api/leads/status-summary?userId=${user.id}&teamId=${teamId}&installerGroupId=${installerGroupId}`
+      `/api/leads/status-summary?userId=${user.id}&teamId=${teamId}&installerGroupId=${installerGroupId}&selectedMember=${selectedMember}`
     )
       .then((res) => res.json())
       .then(setLeadSummary);
-  }, [user, teamId, installerGroupId]);
+  }, [user, teamId, installerGroupId, selectedMember]);
 
   useEffect(() => {
     if (!installerGroupId || !teamId) return;
