@@ -10,35 +10,71 @@ import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
-  if (!editor) {
-    return null;
-  }
+  const [activeMarks, setActiveMarks] = useState({
+    bold: false,
+    italic: false,
+    strike: false,
+  });
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const update = () => {
+      setActiveMarks({
+        bold: editor.isActive("bold"),
+        italic: editor.isActive("italic"),
+        strike: editor.isActive("strike"),
+      });
+    };
+
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+    };
+  }, [editor]);
+
+  if (!editor) return null;
+
+  const toggle = (action: () => void) => {
+    editor?.chain().focus();
+    action();
+  };
+
+  const base = "px-2 py-1 text-sm border rounded-md transition-colors";
+  const active = "bg-blue-600 text-white border-blue-600";
+  const inactive = "bg-white text-gray-700 border-gray-300 hover:bg-gray-100";
 
   return (
-    <div className="flex flex-wrap gap-2 border border-gray-300 rounded-t-md p-2 bg-gray-50">
+    <div className="flex gap-2 border-b border-gray-300 p-2 bg-gray-50 rounded-t-md">
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        className={editor.isActive("bold") ? "is-active" : ""}
-        style={{ fontWeight: "bold" }}
+        onClick={() => toggle(() => editor.chain().focus().toggleBold().run())}
+        className={`${base} ${editor.isActive("bold") ? active : inactive}`}
       >
-        Bold
+        <strong>Bold</strong>
       </button>
+
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={editor.isActive("italic") ? "is-active" : ""}
-        style={{ fontStyle: "italic" }}
+        onClick={() =>
+          toggle(() => editor.chain().focus().toggleItalic().run())
+        }
+        className={`${base} ${editor.isActive("italic") ? active : inactive}`}
       >
-        Italic
+        <em>Italic</em>
       </button>
+
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        className={editor.isActive("strike") ? "is-active" : ""}
-        style={{ textDecoration: "line-through" }}
+        onClick={() =>
+          toggle(() => editor.chain().focus().toggleStrike().run())
+        }
+        className={`${base} ${editor.isActive("strike") ? active : inactive}`}
       >
-        Strike
+        <span className="line-through">Strike</span>
       </button>
     </div>
   );
@@ -201,8 +237,7 @@ export default function LeadEmailSection({
           Math.abs(
             new Date(emailWithoutConv.received_at).getTime() -
               new Date(emailWithConv.received_at).getTime()
-          ) <
-            60000 // 1 minute threshold
+          ) < 60000 // 1 minute threshold
       );
 
       if (duplicateIndex > -1) {
