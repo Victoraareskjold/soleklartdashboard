@@ -76,6 +76,7 @@ export default function LeadEmailSection({
 
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [cc, setCc] = useState("");
   const [sending, setSending] = useState(false);
   const [replyToMessageId, setReplyToMessageId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState("");
@@ -190,14 +191,52 @@ export default function LeadEmailSection({
   };
 
   const organizeEmailsIntoThreads = (emails: EmailContent[]) => {
+    const emailsWithConvId = emails.filter((e) => e.conversation_id);
+    const emailsWithoutConvId = emails.filter((e) => !e.conversation_id);
+
+    const mergedEmails = emailsWithConvId.map((emailWithConv) => {
+      const duplicateIndex = emailsWithoutConvId.findIndex(
+        (emailWithoutConv) =>
+          emailWithoutConv.subject === emailWithConv.subject &&
+          Math.abs(
+            new Date(emailWithoutConv.received_at).getTime() -
+              new Date(emailWithConv.received_at).getTime()
+          ) <
+            60000 // 1 minute threshold
+      );
+
+      if (duplicateIndex > -1) {
+        const duplicate = emailsWithoutConvId[duplicateIndex];
+        // remove from emailsWithoutConvId so it's not added again
+        emailsWithoutConvId.splice(duplicateIndex, 1);
+
+        return {
+          ...emailWithConv,
+          cc_addresses:
+            emailWithConv.cc_addresses && emailWithConv.cc_addresses.length > 0
+              ? emailWithConv.cc_addresses
+              : duplicate.cc_addresses,
+          attachments:
+            emailWithConv.attachments && emailWithConv.attachments.length > 0
+              ? emailWithConv.attachments
+              : duplicate.attachments,
+        };
+      }
+      return emailWithConv;
+    });
+
+    const finalEmails = [...mergedEmails, ...emailsWithoutConvId];
+
     // Group by conversation_id
     const threadMap: { [key: string]: EmailContent[] } = {};
 
-    emails.forEach((email) => {
-      if (!threadMap[email.conversation_id]) {
-        threadMap[email.conversation_id] = [];
+    finalEmails.forEach((email) => {
+      // If no conversation_id, treat it as a separate thread using its own id
+      const conversationKey = email.conversation_id || email.id;
+      if (!threadMap[conversationKey]) {
+        threadMap[conversationKey] = [];
       }
-      threadMap[email.conversation_id].push(email);
+      threadMap[conversationKey].push(email);
     });
 
     // Convert to array and sort
@@ -325,6 +364,11 @@ export default function LeadEmailSection({
         })
       );
 
+      const ccArray = cc
+        .split(",")
+        .map((email) => email.trim())
+        .filter(Boolean);
+
       const response = await sendLeadEmail(
         leadId,
         user.id,
@@ -332,13 +376,15 @@ export default function LeadEmailSection({
         subject,
         body,
         replyToMessageId || undefined,
-        attachmentsPayload
+        attachmentsPayload,
+        ccArray
       );
 
       if (response.success) {
         toast.success("E-post sendt!");
         setSubject("");
         setBody("");
+        setCc("");
         setAttachments([]);
         editor?.commands.clearContent();
         setShowCompose(false);
@@ -407,6 +453,7 @@ export default function LeadEmailSection({
                 setReplyToMessageId(null);
                 setSubject("");
                 setBody("");
+                setCc("");
                 setAttachments([]);
                 editor?.commands.clearContent();
               }}
@@ -434,6 +481,18 @@ export default function LeadEmailSection({
                   value={leadEmail}
                   disabled
                   className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cc
+                </label>
+                <input
+                  type="text"
+                  value={cc}
+                  onChange={(e) => setCc(e.target.value)}
+                  placeholder="Kommaseparerte e-poster"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -584,11 +643,18 @@ export default function LeadEmailSection({
                               <span className="text-sm font-medium text-gray-900">
                                 {isSentByMe
                                   ? `Til: ${
-                                      email.to_addresses?.[0] || leadEmail
+                                      email.to_addresses?.join(", ") ||
+                                      leadEmail
                                     }`
                                   : `Fra: ${email.from_address || "Ukjent"}`}
                               </span>
                             </div>
+                            {email.cc_addresses &&
+                              email.cc_addresses?.length > 0 && (
+                                <div className="ml-10 mt-0.5 text-xs text-gray-600">
+                                  Cc: {email.cc_addresses.join(", ")}
+                                </div>
+                              )}
                             <p className="text-xs text-gray-500 mt-1">
                               {new Date(email.received_at || "").toLocaleString(
                                 "nb-NO",

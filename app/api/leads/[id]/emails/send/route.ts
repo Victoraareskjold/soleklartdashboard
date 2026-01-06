@@ -27,6 +27,7 @@ export async function POST(
       body,
       messageId, // This is the message_id of the email we are replying to
       attachments,
+      cc,
     } = await req.json();
 
     if (!userId || !installerGroupId || !body) {
@@ -114,6 +115,7 @@ export async function POST(
         toRecipients: [
           { emailAddress: { address: lead.email, name: lead.person_info } },
         ],
+        ccRecipients: cc?.map((email: string) => ({ emailAddress: { address: email } })) || [],
         attachments: hasAttachments ? graphAttachments : undefined,
       };
 
@@ -147,6 +149,7 @@ export async function POST(
         // For replies, we only need to patch the body and attachments,
         // as createReply pre-fills the rest.
         body: { contentType: "HTML", content: body },
+        ccRecipients: cc?.map((email: string) => ({ emailAddress: { address: email } })) || [],
         attachments: hasAttachments ? graphAttachments : undefined,
       };
 
@@ -208,6 +211,7 @@ export async function POST(
         subject: subject,
         from_address: account.email,
         to_addresses: [lead.email],
+        cc_addresses: cc,
         body: body,
         body_preview: body.substring(0, 255).replace(/<[^>]*>?/gm, ""),
         received_at: new Date().toISOString(),

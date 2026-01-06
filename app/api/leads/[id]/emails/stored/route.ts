@@ -27,7 +27,7 @@ export async function GET(
     // Fetch all emails for this lead from database
     const { data, error } = await client
       .from("email_messages")
-      .select("*, attachments:email_attachments(*)")
+      .select("*, cc_addresses, attachments:email_attachments(*)")
       .eq("lead_id", leadId)
       .eq("installer_group_id", installerGroupId)
       .order("received_at", { ascending: false });

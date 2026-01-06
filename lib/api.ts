@@ -318,7 +318,8 @@ export const sendLeadEmail = async (
   subject: string,
   body: string,
   messageId?: string,
-  attachments?: { name: string; contentType: string; contentBytes: string }[]
+  attachments?: { name: string; contentType: string; contentBytes: string }[],
+  cc?: string[]
 ) => {
   return apiRequest<{
     success: boolean;
@@ -330,6 +331,7 @@ export const sendLeadEmail = async (
     body,
     messageId,
     attachments,
+    cc,
   });
 };
 

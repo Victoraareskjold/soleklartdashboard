@@ -152,10 +152,11 @@ export interface EmailContent {
   installer_group_id: string;
   lead_id: string;
   message_id: string;
-  conversation_id: string;
+  conversation_id: string | null;
   subject: string;
   from_address: string;
   to_addresses: string[];
+  cc_addresses?: string[];
   body_preview: string;
   body: string;
   received_at: string;
