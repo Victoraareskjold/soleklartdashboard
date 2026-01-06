@@ -330,7 +330,7 @@ export default function ColdCallingPage() {
     <div>
       <div className="flex flex-row justify-between items-center gap-4 mb-4">
         <div>
-          <div className="relative w-64 self-left justify-center h-8">
+          <div className="relative w-64 w-full self-left justify-center h-8">
             <Image
               fill
               alt={installerData?.name + " logo"}
@@ -338,26 +338,30 @@ export default function ColdCallingPage() {
               className="object-contain"
             />
           </div>
-          <h1>Cold calling</h1>
           <div className="flex flex-row gap-2 my-2">
-            <select
-              className="border p-2 rounded-md"
-              onChange={(e) => setStatus(Number(e.target.value))}
-            >
-              <option value={0}>Ringeliste</option>
-              {LeadStatus.sort((a, b) => a.value - b.value).map((stat) => (
-                <option key={stat.value} value={stat.value}>
-                  {stat.label}
-                </option>
-              ))}
-            </select>
-
-            <TeamMemberSelector
-              team={team}
-              selectedMember={selectedMember}
-              onSelectMember={setSelectedMember}
-              defaultUser={user.id}
-            />
+            <div className="flex flex-col">
+              <h1>Status</h1>
+              <TeamMemberSelector
+                team={team}
+                selectedMember={selectedMember}
+                onSelectMember={setSelectedMember}
+                defaultUser={user.id}
+              />
+            </div>
+            <div className="flex flex-col">
+              <h1>Cold caller</h1>
+              <select
+                className="border p-2 rounded-md"
+                onChange={(e) => setStatus(Number(e.target.value))}
+              >
+                <option value={0}>Ringeliste</option>
+                {LeadStatus.sort((a, b) => a.value - b.value).map((stat) => (
+                  <option key={stat.value} value={stat.value}>
+                    {stat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <input
