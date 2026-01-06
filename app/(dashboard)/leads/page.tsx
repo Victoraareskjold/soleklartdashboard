@@ -34,17 +34,6 @@ export default function LeadsPage() {
         <h1 className="font-semibold text-lg">Avtaler</h1>
         <div className="mt-2 flex flex-row items-center gap-3">
           <div className="flex flex-col">
-            <p>Avtaleeier</p>
-            <TeamMemberSelector
-              team={team}
-              selectedMember={leadCollector}
-              onSelectMember={setLeadCollector}
-              defaultUser={user.id}
-              firstOption="Avtaleeier"
-            />
-          </div>
-
-          <div className="flex flex-col">
             <p>Oppgave</p>
             <select
               className="border p-2 rounded-md bg-gray-50"
@@ -61,6 +50,17 @@ export default function LeadsPage() {
               <option value="this_year">Dette året</option>
               <option value="next_year">Neste år</option>
             </select>
+          </div>
+
+          <div className="flex flex-col">
+            <p>Avtaleeier</p>
+            <TeamMemberSelector
+              team={team}
+              selectedMember={leadCollector}
+              onSelectMember={setLeadCollector}
+              defaultUser={""}
+              firstOption="Avtaleeier"
+            />
           </div>
 
           <div className="flex flex-col">
