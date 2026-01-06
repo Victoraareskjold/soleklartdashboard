@@ -140,6 +140,13 @@ export interface LeadEmail {
   created_at?: string;
 }
 
+export interface EmailAttachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+}
+
 export interface EmailContent {
   id: string;
   installer_group_id: string;
@@ -153,6 +160,7 @@ export interface EmailContent {
   body: string;
   received_at: string;
   has_attachments: boolean;
+  attachments?: EmailAttachment[];
   created_at?: string;
 }
 
