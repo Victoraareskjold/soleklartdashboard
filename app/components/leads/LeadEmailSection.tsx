@@ -613,7 +613,28 @@ export default function LeadEmailSection({
                                 "Ingen innhold",
                             }}
                           />
-                        </div>{" "}
+                        </div>
+                        {email.attachments && email.attachments.length > 0 && (
+                          <div className="mt-4">
+                            <h5 className="text-sm font-semibold text-gray-600">
+                              Vedlegg
+                            </h5>
+                            <ul className="mt-2 list-disc list-inside space-y-1">
+                              {email.attachments.map((att) => (
+                                <li key={att.id} className="text-sm">
+                                  <a
+                                    href={att.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline"
+                                  >
+                                    {att.file_name}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}{" "}
                       </div>
                     );
                   })}

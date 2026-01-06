@@ -19,7 +19,7 @@ export async function POST(
       installerGroupId,
       subject,
       body,
-      messageId,
+      messageId, // This is the message_id of the email we are replying to
       attachments,
     } = await req.json();
 
@@ -57,11 +57,10 @@ export async function POST(
       );
     }
 
-    let graphRes;
-    let isReply = false;
-    let sentMessageId: string | null = null;
-    let conversationId: string | null = null;
+    const isReply = !!messageId;
     const hasAttachments = attachments && attachments.length > 0;
+    let conversationId: string | null = null;
+    let draftMessage: any;
 
     const graphAttachments =
       attachments?.map((att: any) => ({
@@ -71,149 +70,180 @@ export async function POST(
         contentBytes: att.contentBytes,
       })) || [];
 
-    // If messageId is provided, this is a reply
-    if (messageId) {
-      isReply = true;
-
-      // Get the original message details for conversation_id
+    // --- 1. Create a draft ---
+    if (isReply) {
       const { data: originalEmail } = await client
         .from("email_messages")
         .select("conversation_id")
         .eq("message_id", messageId)
         .single();
-
       conversationId = originalEmail?.conversation_id || null;
 
-      // Create reply draft
-      const replyUrl = `https://graph.microsoft.com/v1.0/me/messages/${messageId}/createReply`;
-      const createReplyRes = await fetch(replyUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${account.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
+      const createReplyRes = await fetch(
+        `https://graph.microsoft.com/v1.0/me/messages/${messageId}/createReply`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${account.access_token}` },
+        }
+      );
       if (!createReplyRes.ok) {
-        const errorData = await createReplyRes.json().catch(() => ({}));
-        console.error("Graph API create reply error:", errorData);
-        return NextResponse.json(
-          { error: "Failed to create reply", details: errorData },
-          { status: createReplyRes.status }
-        );
+        console.error("Graph API create reply draft error:", await createReplyRes.json());
+        throw new Error("Failed to create reply draft in Outlook.");
       }
-
-      const draft = await createReplyRes.json();
-      sentMessageId = draft.id;
-
-      // Update draft with body and attachments
-      const updateUrl = `https://graph.microsoft.com/v1.0/me/messages/${draft.id}`;
-      const updateRes = await fetch(updateUrl, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${account.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          body: { contentType: "HTML", content: body },
-          toRecipients: [
-            {
-              emailAddress: {
-                address: lead.email,
-                name: lead.person_info,
-              },
-            },
-          ],
-          attachments: hasAttachments ? graphAttachments : undefined,
-        }),
-      });
-
-      if (!updateRes.ok) {
-        const errorData = await updateRes.json().catch(() => ({}));
-        console.error("Graph API update draft error:", errorData);
-        return NextResponse.json(
-          { error: "Failed to update reply", details: errorData },
-          { status: updateRes.status }
-        );
-      }
-
-      // Send the draft
-      const sendUrl = `https://graph.microsoft.com/v1.0/me/messages/${draft.id}/send`;
-      graphRes = await fetch(sendUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${account.access_token}`,
-        },
-      });
+      draftMessage = await createReplyRes.json();
     } else {
-      // New email
+      // New email: Create the draft with the full payload at once.
       if (!subject) {
         return NextResponse.json(
           { error: "Subject is required for new emails" },
           { status: 400 }
         );
       }
-
-      const message = {
-        message: {
-          subject: subject,
-          body: {
-            contentType: "HTML",
-            content: body,
-          },
-          toRecipients: [
-            {
-              emailAddress: {
-                address: lead.email,
-                name: lead.person_info,
-              },
-            },
-          ],
-          attachments: hasAttachments ? graphAttachments : undefined,
-        },
-        saveToSentItems: true,
+      const draftPayload = {
+        subject: subject,
+        body: { contentType: "HTML", content: body },
+        toRecipients: [
+          { emailAddress: { address: lead.email, name: lead.person_info } },
+        ],
+        attachments: hasAttachments ? graphAttachments : undefined,
       };
 
-      graphRes = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
-        method: "POST",
+      const createDraftRes = await fetch(
+        "https://graph.microsoft.com/v1.0/me/messages",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${account.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(draftPayload),
+        }
+      );
+      if (!createDraftRes.ok) {
+        console.error("Graph API create draft error:", await createDraftRes.json());
+        throw new Error("Failed to create draft in Outlook.");
+      }
+      draftMessage = await createDraftRes.json();
+    }
+
+    const sentMessageId = draftMessage.id;
+
+    // --- 2. Update draft (only needed for replies now) ---
+    if (isReply) {
+      const updateUrl = `https://graph.microsoft.com/v1.0/me/messages/${sentMessageId}`;
+      const updatePayload = {
+        // For replies, we only need to patch the body and attachments,
+        // as createReply pre-fills the rest.
+        body: { contentType: "HTML", content: body },
+        attachments: hasAttachments ? graphAttachments : undefined,
+      };
+
+      const updateRes = await fetch(updateUrl, {
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${account.access_token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(message),
+        body: JSON.stringify(updatePayload),
       });
+
+      if (!updateRes.ok) {
+        console.error("Graph API update draft error:", await updateRes.json());
+        throw new Error("Failed to update reply draft in Outlook.");
+      }
     }
+
+    // --- 3. Send the draft ---
+    const sendUrl = `https://graph.microsoft.com/v1.0/me/messages/${sentMessageId}/send`;
+    const graphRes = await fetch(sendUrl, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${account.access_token}` },
+    });
 
     if (!graphRes.ok) {
-      const errorData = await graphRes.json().catch(() => ({}));
-      console.error("Graph API send error:", errorData);
-      return NextResponse.json(
-        { error: "Failed to send email", details: errorData },
-        { status: graphRes.status }
-      );
+       console.error("Graph API send error:", await graphRes.json());
+      throw new Error("Failed to send email from Outlook.");
     }
 
-    // Store sent email in database immediately
-    // For new emails, we need to wait a moment and fetch it from Graph API
-    // For replies, we already have the message ID
-    if (isReply && sentMessageId && conversationId) {
-      try {
-        await client.from("email_messages").insert({
-          installer_group_id: installerGroupId,
-          lead_id: leadId,
-          message_id: sentMessageId,
-          conversation_id: conversationId,
-          subject: subject,
-          from_address: account.email,
-          to_addresses: [lead.email],
-          body_preview: body.substring(0, 255),
-          body: body,
-          received_at: new Date().toISOString(),
-          has_attachments: hasAttachments,
-        });
-      } catch (error) {
-        console.error("Error storing sent email:", error);
-        // Don't fail the request if storage fails
+    // --- 4. Store email and attachments in DB ---
+    if (!isReply) {
+       // Wait a moment for eventual consistency, then fetch the conversationId
+       await new Promise(resolve => setTimeout(resolve, 3000));
+       const getMsgRes = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${sentMessageId}?$select=conversationId`, {
+           headers: { Authorization: `Bearer ${account.access_token}` },
+       });
+       if (getMsgRes.ok) {
+           const sentMessageDetails = await getMsgRes.json();
+           conversationId = sentMessageDetails.conversationId;
+       } else {
+           console.warn(`Could not fetch conversationId for sent message ${sentMessageId}`);
+       }
+    }
+    
+    // Insert email message into our DB
+    const { data: dbEmail, error: insertError } = await client
+      .from("email_messages")
+      .insert({
+        installer_group_id: installerGroupId,
+        lead_id: leadId,
+        message_id: sentMessageId,
+        conversation_id: conversationId,
+        subject: subject,
+        from_address: account.email,
+        to_addresses: [lead.email],
+        body: body,
+        body_preview: body.substring(0, 255).replace(/<[^>]*>?/gm, ''),
+        received_at: new Date().toISOString(),
+        has_attachments: hasAttachments,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("Error storing sent email in DB:", insertError);
+      // Don't fail the whole request, but log it.
+    } else if (dbEmail && hasAttachments) {
+      // Upload attachments to Supabase Storage and link them
+      const uploadedAttachments = await Promise.all(
+        attachments.map(async (att: any) => {
+          try {
+            const buffer = Buffer.from(att.contentBytes, "base64");
+            const filePath = `${leadId}/${sentMessageId}/${att.name}`;
+
+            const { error: uploadError } = await client.storage
+              .from("email-attachments")
+              .upload(filePath, buffer, {
+                contentType: att.contentType,
+                upsert: true,
+              });
+
+            if (uploadError) throw uploadError;
+
+            const { data: publicUrlData } = client.storage
+              .from("email-attachments")
+              .getPublicUrl(filePath);
+            
+            return {
+              email_message_id: dbEmail.id,
+              file_name: att.name,
+              file_url: publicUrlData.publicUrl,
+              file_type: att.contentType,
+            };
+          } catch(uploadError) {
+            console.error(`Attachment upload/linking failed for ${att.name}:`, uploadError);
+            return null;
+          }
+        })
+      );
+
+      const validAttachments = uploadedAttachments.filter((att) => att !== null);
+      if (validAttachments.length > 0) {
+        const { error: attInsertError } = await client
+          .from("email_attachments")
+          .insert(validAttachments);
+        if (attInsertError) {
+          console.error("Error storing email attachment metadata:", attInsertError);
+        }
       }
     }
 
