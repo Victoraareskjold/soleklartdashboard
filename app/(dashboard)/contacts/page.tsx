@@ -18,6 +18,7 @@ export type ContactLead = {
   phone: string | null;
   email: string | null;
   assigned_to: string | null;
+  note: string | null;
 };
 
 export type CreateLead = {
@@ -28,7 +29,10 @@ export type CreateLead = {
   address: string | null;
   mobile: string | null;
   phone: string | null;
+  company: string | null;
+  role: string | null;
   assigned_to: string | null;
+  created_by: string | null;
   roof_type_id: string | null;
   own_consumption: number | null;
   voltage: number | null;
@@ -62,7 +66,10 @@ export default function ContactsPage() {
     address: null,
     mobile: null,
     phone: null,
+    company: null,
+    role: null,
     assigned_to: selectedMember,
+    created_by: null,
     roof_type_id: null,
     own_consumption: null,
     voltage: null,
@@ -126,7 +133,6 @@ export default function ContactsPage() {
     "email",
     "mobile",
     "phone",
-    "assigned_to",
   ];
 
   const formDataFields: {
@@ -137,6 +143,8 @@ export default function ContactsPage() {
   }[] = [
     { label: "E-post", value: "email", type: "text" },
     { label: "Navn", value: "person_info", type: "text" },
+    { label: "Firma", value: "company", type: "text" },
+    { label: "Rolle", value: "role", type: "text" },
     { label: "Mobil", value: "mobile", type: "text" },
     { label: "Telefon", value: "phone", type: "text" },
     { label: "Adresse", value: "address", type: "text" },
@@ -177,18 +185,22 @@ export default function ContactsPage() {
     );
   });
 
-  const handleUpdateToLead = async (id: string, userId: string) => {
+  const handleUpdateToLead = async (contact: ContactLead) => {
     try {
       const res = await fetch("/api/coldCalling/contact/upsert", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, userId }),
+        body: JSON.stringify({
+          id: contact.id,
+          userId: user!.id,
+          note: contact.note,
+        }),
       });
 
       if (!res.ok) throw new Error("Feil ved oppretelse av avtale");
 
       toast.success("Avtale opprettet!");
-      router.push(`/leads/${id}`);
+      router.push(`/leads/${contact.id}`);
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt");
@@ -220,6 +232,30 @@ export default function ContactsPage() {
     }
   };
 
+  const handleOpenCreateModal = () => {
+    setFormData({
+      team_id: teamId!,
+      installer_group_id: installerGroupId!,
+      email: null,
+      person_info: null,
+      address: null,
+      mobile: null,
+      phone: null,
+      company: null,
+      role: null,
+      assigned_to: user.id,
+      created_by: user.id,
+      roof_type_id: null,
+      own_consumption: null,
+      voltage: null,
+      roof_slope: null,
+      roof_age: null,
+      note: null,
+    });
+    setSelectedMember(user.id);
+    setIsModalOpen(true);
+  };
+
   return (
     <>
       <div>
@@ -242,7 +278,7 @@ export default function ContactsPage() {
           </div>
           <div>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={handleOpenCreateModal}
               className="w-42 text-center rounded-sm px-4 py-2 bg-[#FF8E4C] text-white"
             >
               Opprett konktakt
@@ -266,7 +302,7 @@ export default function ContactsPage() {
               <tr key={coldCall.id}>
                 <td className="w-1/10 border">
                   <button
-                    onClick={() => handleUpdateToLead(coldCall.id, user.id)}
+                    onClick={() => handleUpdateToLead(coldCall)}
                     className="w-full bg-[#FF8E4C] h-14 text-white"
                   >
                     Opprett avtale
