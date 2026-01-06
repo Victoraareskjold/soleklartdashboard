@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
 import { getRefreshedEmailAccount } from "@/lib/graph";
 
+interface Attachment {
+  name: string;
+  contentType: string;
+  contentBytes: string;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -60,10 +66,10 @@ export async function POST(
     const isReply = !!messageId;
     const hasAttachments = attachments && attachments.length > 0;
     let conversationId: string | null = null;
-    let draftMessage: any;
+    let draftMessage: { id: string };
 
     const graphAttachments =
-      attachments?.map((att: any) => ({
+      attachments?.map((att: Attachment) => ({
         "@odata.type": "#microsoft.graph.fileAttachment",
         name: att.name,
         contentType: att.contentType,
@@ -87,7 +93,10 @@ export async function POST(
         }
       );
       if (!createReplyRes.ok) {
-        console.error("Graph API create reply draft error:", await createReplyRes.json());
+        console.error(
+          "Graph API create reply draft error:",
+          await createReplyRes.json()
+        );
         throw new Error("Failed to create reply draft in Outlook.");
       }
       draftMessage = await createReplyRes.json();
@@ -120,7 +129,10 @@ export async function POST(
         }
       );
       if (!createDraftRes.ok) {
-        console.error("Graph API create draft error:", await createDraftRes.json());
+        console.error(
+          "Graph API create draft error:",
+          await createDraftRes.json()
+        );
         throw new Error("Failed to create draft in Outlook.");
       }
       draftMessage = await createDraftRes.json();
@@ -161,25 +173,30 @@ export async function POST(
     });
 
     if (!graphRes.ok) {
-       console.error("Graph API send error:", await graphRes.json());
+      console.error("Graph API send error:", await graphRes.json());
       throw new Error("Failed to send email from Outlook.");
     }
 
     // --- 4. Store email and attachments in DB ---
     if (!isReply) {
-       // Wait a moment for eventual consistency, then fetch the conversationId
-       await new Promise(resolve => setTimeout(resolve, 3000));
-       const getMsgRes = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${sentMessageId}?$select=conversationId`, {
-           headers: { Authorization: `Bearer ${account.access_token}` },
-       });
-       if (getMsgRes.ok) {
-           const sentMessageDetails = await getMsgRes.json();
-           conversationId = sentMessageDetails.conversationId;
-       } else {
-           console.warn(`Could not fetch conversationId for sent message ${sentMessageId}`);
-       }
+      // Wait a moment for eventual consistency, then fetch the conversationId
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const getMsgRes = await fetch(
+        `https://graph.microsoft.com/v1.0/me/messages/${sentMessageId}?$select=conversationId`,
+        {
+          headers: { Authorization: `Bearer ${account.access_token}` },
+        }
+      );
+      if (getMsgRes.ok) {
+        const sentMessageDetails = await getMsgRes.json();
+        conversationId = sentMessageDetails.conversationId;
+      } else {
+        console.warn(
+          `Could not fetch conversationId for sent message ${sentMessageId}`
+        );
+      }
     }
-    
+
     // Insert email message into our DB
     const { data: dbEmail, error: insertError } = await client
       .from("email_messages")
@@ -192,7 +209,7 @@ export async function POST(
         from_address: account.email,
         to_addresses: [lead.email],
         body: body,
-        body_preview: body.substring(0, 255).replace(/<[^>]*>?/gm, ''),
+        body_preview: body.substring(0, 255).replace(/<[^>]*>?/gm, ""),
         received_at: new Date().toISOString(),
         has_attachments: hasAttachments,
       })
@@ -205,7 +222,7 @@ export async function POST(
     } else if (dbEmail && hasAttachments) {
       // Upload attachments to Supabase Storage and link them
       const uploadedAttachments = await Promise.all(
-        attachments.map(async (att: any) => {
+        attachments.map(async (att: Attachment) => {
           try {
             const buffer = Buffer.from(att.contentBytes, "base64");
             const filePath = `${leadId}/${sentMessageId}/${att.name}`;
@@ -222,27 +239,35 @@ export async function POST(
             const { data: publicUrlData } = client.storage
               .from("email-attachments")
               .getPublicUrl(filePath);
-            
+
             return {
               email_message_id: dbEmail.id,
               file_name: att.name,
               file_url: publicUrlData.publicUrl,
               file_type: att.contentType,
             };
-          } catch(uploadError) {
-            console.error(`Attachment upload/linking failed for ${att.name}:`, uploadError);
+          } catch (uploadError) {
+            console.error(
+              `Attachment upload/linking failed for ${att.name}:`,
+              uploadError
+            );
             return null;
           }
         })
       );
 
-      const validAttachments = uploadedAttachments.filter((att) => att !== null);
+      const validAttachments = uploadedAttachments.filter(
+        (att) => att !== null
+      );
       if (validAttachments.length > 0) {
         const { error: attInsertError } = await client
           .from("email_attachments")
           .insert(validAttachments);
         if (attInsertError) {
-          console.error("Error storing email attachment metadata:", attInsertError);
+          console.error(
+            "Error storing email attachment metadata:",
+            attInsertError
+          );
         }
       }
     }
