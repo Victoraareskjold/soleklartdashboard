@@ -7,6 +7,7 @@ import { getLeadTaskComments, getLeadTasks, getTeam } from "@/lib/api";
 import { useTeam } from "@/context/TeamContext";
 import LoadingScreen from "../LoadingScreen";
 import { toast } from "react-toastify";
+import { useInstallerGroup } from "@/context/InstallerGroupContext";
 
 interface Props {
   leadId: string;
@@ -15,6 +16,7 @@ interface Props {
 export default function TaskSection({ leadId }: Props) {
   const { user } = useAuth();
   const { teamId } = useTeam();
+  const { installerGroupId } = useInstallerGroup();
   const [team, setTeam] = useState<Team>();
   const [tasks, setTasks] = useState<LeadTask[]>([]);
 
@@ -260,6 +262,27 @@ export default function TaskSection({ leadId }: Props) {
     }
   };
 
+  const handleUpdateAssignee = async (taskId: string, userId: string) => {
+    try {
+      const res = await fetch(`/api/leads/${leadId}/tasks`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: taskId,
+          assigned_to: userId,
+        }),
+      });
+      if (!res.ok) throw new Error("Could not update assignee");
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, assigned_to: userId } : t))
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Kunne ikke oppdatere tildeling");
+    }
+  };
+
   if (!user) return <LoadingScreen />;
 
   return (
@@ -336,6 +359,8 @@ export default function TaskSection({ leadId }: Props) {
                   selectedMember={selectedMember}
                   onSelectMember={setSelectedMember}
                   defaultUser={user.id}
+                  includeInstallers
+                  installerGroupId={installerGroupId}
                 />
               </div>
             </div>
@@ -460,8 +485,12 @@ export default function TaskSection({ leadId }: Props) {
                   <TeamMemberSelector
                     team={team}
                     selectedMember={task.assigned_to}
-                    onSelectMember={setSelectedMember}
+                    onSelectMember={(userId) =>
+                      handleUpdateAssignee(task.id, userId)
+                    }
                     defaultUser={task.assigned_to}
+                    includeInstallers
+                    installerGroupId={installerGroupId}
                   />
                 </div>
               </div>

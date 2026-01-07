@@ -112,6 +112,7 @@ export type LeadNoteAttachment = {
   id: string;
   file_name: string;
   file_url: string;
+  created_at: string;
 };
 
 export type Note = {
@@ -152,6 +153,7 @@ export interface EmailAttachment {
   file_name: string;
   file_url: string;
   file_type: string;
+  created_at: string;
 }
 
 export interface EmailContent {
