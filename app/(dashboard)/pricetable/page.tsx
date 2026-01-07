@@ -59,15 +59,15 @@ export default function PriceTablePage() {
     if (!installerGroupId) return;
 
     const panelKey = `defaultPanel_${installerGroupId}`;
-    //const inverterKey = `defaultInverterSupplier_${installerGroupId}`;
+    const inverterKey = `defaultInverterSupplier_${installerGroupId}`;
 
     const savedPanel = localStorage.getItem(panelKey) || "";
-    //const savedInverter = localStorage.getItem(inverterKey) || "";
+    const savedInverter = localStorage.getItem(inverterKey) || "";
 
     setSolarData((prev) => ({
       ...prev,
       selectedPanelType: savedPanel || "",
-      //defaultInverterSupplierId: savedInverter || "",
+      defaultInverterSupplierId: savedInverter || "",
     }));
   }, [installerGroupId]);
 
