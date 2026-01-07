@@ -1,13 +1,7 @@
 "use client";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
-import {
-  getLeads,
-  getLeadTasks,
-  updateLead,
-  getEstimatesByLeadId,
-} from "@/lib/api";
-import { Lead, LeadTask, Estimate } from "@/lib/types";
+import { updateLead, getFullLeads, FullLead } from "@/lib/api";
 import { useEffect, useState } from "react";
 import {
   DragDropContext,
@@ -63,60 +57,20 @@ export default function LeadsTable({
   const { installerGroupId } = useInstallerGroup();
   const { teamRole } = useRoles();
 
-  const [rawLeads, setRawLeads] = useState<Lead[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]); // Displayed leads
-  const [tasks, setTasks] = useState<LeadTask[]>([]);
-  const [estimates, setEstimates] = useState<Record<string, Estimate[]>>({});
+  const [rawLeads, setRawLeads] = useState<FullLead[]>([]);
+  const [leads, setLeads] = useState<FullLead[]>([]);
 
-  // Effect for fetching data
   useEffect(() => {
     if (!teamId || !installerGroupId || !teamRole) return;
 
-    getLeads(teamId, installerGroupId, teamRole)
-      .then((allLeads) => {
-        setRawLeads(allLeads);
-        const taskPromises = allLeads.map((lead) =>
-          getLeadTasks(lead.id).catch((err) => {
-            console.error(`Failed to fetch tasks for lead ${lead.id}:`, err);
-            return [];
-          })
-        );
-        const estimatePromises = allLeads.map((lead) =>
-          getEstimatesByLeadId(lead.id).catch((err) => {
-            console.error(
-              `Failed to fetch estimates for lead ${lead.id}:`,
-              err
-            );
-            return [];
-          })
-        );
-
-        return Promise.all([
-          Promise.all(taskPromises),
-          Promise.all(estimatePromises),
-        ]);
+    getFullLeads(teamId, installerGroupId, teamRole)
+      .then((data) => {
+        setRawLeads(data);
       })
-      .then(([allTasksArrays, allEstimatesArrays]) => {
-        setTasks(
-          allTasksArrays
-            .flat()
-            .filter(
-              (item): item is LeadTask => "due_date" in item && "title" in item
-            )
-        );
-        const estimatesByLead = allEstimatesArrays.reduce(
-          (acc, leadEstimates) => {
-            if (leadEstimates.length > 0) {
-              acc[leadEstimates[0].lead_id] = leadEstimates;
-            }
-            return acc;
-          },
-          {} as Record<string, Estimate[]>
-        );
-        setEstimates(estimatesByLead);
-      })
-      .catch((err) => console.error("Failed to fetch leads or tasks:", err));
-  }, [installerGroupId, teamId, teamRole]);
+      .catch((err) => {
+        console.error("Failed to fetch full leads:", err);
+      });
+  }, [teamId, installerGroupId, teamRole]);
 
   // Effect for filtering data
   useEffect(() => {
@@ -157,10 +111,12 @@ export default function LeadsTable({
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
       filteredLeads = filteredLeads.filter((lead) => {
-        const leadTasks = tasks.filter((t) => t.lead_id === lead.id);
-        if (leadTasks.length === 0) return false;
+        const leadTasks = lead.lead_tasks;
+        if (!leadTasks || leadTasks.length === 0) return false;
 
         return leadTasks.some((task) => {
+          if (!task.due_date) return false;
+
           const dueDate = new Date(task.due_date);
           dueDate.setHours(0, 0, 0, 0);
 
@@ -209,19 +165,12 @@ export default function LeadsTable({
     }
 
     setLeads(filteredLeads);
-  }, [
-    rawLeads,
-    tasks,
-    leadOwner,
-    leadCollector,
-    searchQuery,
-    taskDueDateFilter,
-  ]);
+  }, [rawLeads, leadOwner, leadCollector, searchQuery, taskDueDateFilter]);
 
   const grouped = LEAD_STATUSES.reduce((acc, status) => {
     acc[status.value] = leads.filter((lead) => lead.status === status.value);
     return acc;
-  }, {} as Record<number, Lead[]>);
+  }, {} as Record<number, FullLead[]>);
 
   const onDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -239,7 +188,9 @@ export default function LeadsTable({
     setRawLeads(updatedRawLeads);
 
     try {
-      await updateLead(draggableId, { status: destStatus as Lead["status"] });
+      await updateLead(draggableId, {
+        status: destStatus as FullLead["status"],
+      });
     } catch (err) {
       console.error("Failed to update lead status:", err);
       toast.error("Failed to update lead status");
@@ -264,32 +215,22 @@ export default function LeadsTable({
     }
   };
 
-  const calculateTotalForStatus = (statusLeads: Lead[]): number => {
+  const calculateTotalForStatus = (statusLeads: FullLead[]): number => {
     return statusLeads.reduce((total, lead) => {
-      const leadEstimates = estimates[lead.id];
-      if (!leadEstimates || leadEstimates.length === 0) {
-        return total;
-      }
+      if (!lead.estimates || lead.estimates.length === 0) return total;
 
-      const latestEstimate = leadEstimates.reduce((latest, current) => {
-        const latestDate = latest.created_at
-          ? new Date(latest.created_at)
-          : new Date(0);
-        const currentDate = current.created_at
-          ? new Date(current.created_at)
-          : new Date(0);
-        return currentDate > latestDate ? current : latest;
-      });
+      const latest = lead.estimates.reduce((a, b) =>
+        new Date(a.created_at || 0) > new Date(b.created_at || 0) ? a : b
+      );
 
-      if (latestEstimate?.price_data) {
-        const price =
-          lead.company && lead.company !== ""
-            ? latestEstimate.price_data.total
-            : latestEstimate.price_data["total inkl. alt"];
-        return total + (price || 0);
-      }
+      if (!latest.price_data) return total;
 
-      return total;
+      const price =
+        lead.company && lead.company !== ""
+          ? latest.price_data.total
+          : latest.price_data["total inkl. alt"];
+
+      return total + (price || 0);
     }, 0);
   };
 
@@ -333,7 +274,7 @@ export default function LeadsTable({
                           >
                             <LeadCard
                               lead={lead}
-                              tasks={tasks.filter((t) => t.lead_id === lead.id)}
+                              tasks={lead.lead_tasks}
                               onStatusChange={handleStatusChange}
                             />
                           </div>

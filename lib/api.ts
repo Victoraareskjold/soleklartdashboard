@@ -67,6 +67,25 @@ export const getLeadTasks = async (leadId: string): Promise<LeadTask[]> => {
   return apiRequest<LeadTask[]>(`/api/leads/${leadId}/tasks`);
 };
 
+export type FullLead = Lead & {
+  lead_tasks: LeadTask[];
+  estimates: Estimate[];
+};
+
+export const getFullLeads = async (
+  teamId: string,
+  installerGroupId: string,
+  teamRole: string
+): Promise<FullLead[]> => {
+  const query = new URLSearchParams({
+    teamId,
+    installerGroupId,
+    teamRole,
+  });
+
+  return apiRequest<FullLead[]>(`/api/full-lead?${query.toString()}`);
+};
+
 export const getInstallerDomain = async (
   installerGroupId: string
 ): Promise<string> => {
@@ -104,13 +123,23 @@ export const getInstallerGroup = async (
 export const getLeads = async (
   teamId: string,
   installerGroupId: string,
-  teamRole: string
+  teamRole: string,
+  leadOwner?: string,
+  leadCollector?: string,
+  searchQuery?: string,
+  taskDueDateFilter?: string
 ): Promise<Lead[]> => {
   const query = new URLSearchParams({
     teamId,
     installerGroupId,
     teamRole,
   });
+
+  if (leadOwner) query.append("leadOwner", leadOwner);
+  if (leadCollector) query.append("leadCollector", leadCollector);
+  if (searchQuery) query.append("searchQuery", searchQuery);
+  if (taskDueDateFilter) query.append("taskDueDateFilter", taskDueDateFilter);
+
   return apiRequest<Lead[]>(`/api/leads?${query.toString()}`);
 };
 
