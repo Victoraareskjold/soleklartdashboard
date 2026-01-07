@@ -168,24 +168,24 @@ export default function FacilityInfo({
               <td className="border p-1 w-1/2">Selvprodusert (%)</td>
               <td className="border p-1 w-1/2">{selfProduced()} %</td>
             </tr>
-            <tr>
+            {/* <tr>
               <td className="border p-1 w-1/2">Eget forbruk</td>
               <td className="border p-1 w-1/2">
                 {solarData.yearlyCost ?? "0"} kWh
               </td>
-            </tr>
-            <tr>
+            </tr> */}
+            {/* <tr>
               <td className="border p-1 w-1/2">Total besparing 30 år</td>
               <td className="border p-1 w-1/2">
                 {solarData.yearlyCost2 ? solarData.yearlyCost2 * 30 : "0"} kr
               </td>
-            </tr>
-            <tr>
+            </tr> */}
+            {/* <tr>
               <td className="border p-1 w-1/2">Årlig besparing</td>
               <td className="border p-1 w-1/2">
                 {solarData.yearlyCost2 ?? "0"} kr
               </td>
-            </tr>
+            </tr> */}
             <tr>
               <td className="border p-1 w-1/2">Enova støtte</td>
               <td className="border p-1 w-1/2">{enovaSupport()}</td>

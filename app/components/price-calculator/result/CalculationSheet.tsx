@@ -454,7 +454,7 @@ export default function CalculationSheet({
         }),
       },
       total: grandTotal,
-      "total inkl. alt": grandTotal * 1.25 - calculatedEnovaSupport,
+      "total inkl. alt": grandTotal * 1.25,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -839,7 +839,7 @@ export default function CalculationSheet({
             <td className="p-2 text-right"></td>
             <td className="p-2 text-right"></td>
             <td className="p-2 text-right">
-              {(grandTotal * 1.25 - calculatedEnovaSupport).toFixed(0)} kr
+              {(grandTotal * 1.25).toFixed(0)} kr
             </td>
           </tr>
         </tbody>
