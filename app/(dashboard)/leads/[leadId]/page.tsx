@@ -9,6 +9,8 @@ import {
   getRoofTypes,
   getTeam,
   updateLead,
+  getLeadNotes,
+  getStoredLeadEmails,
 } from "@/lib/api";
 
 import { useParams, useSearchParams } from "next/navigation";
@@ -16,7 +18,14 @@ import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
 import EstimateSection from "@/app/components/leads/EstimateSection";
-import { Estimate, LeadTask, RoofType, Team } from "@/lib/types";
+import {
+  Estimate,
+  LeadTask,
+  RoofType,
+  Team,
+  LeadNoteAttachment,
+  EmailAttachment,
+} from "@/lib/types";
 import Link from "next/link";
 import { LEAD_STATUSES } from "@/app/components/LeadsTable";
 import { Calendar, File, ListTodo, Mail } from "lucide-react";
@@ -87,6 +96,44 @@ export default function LeadPage() {
   const leadIdStr = Array.isArray(leadId) ? leadId[0] : leadId;
 
   const [team, setTeam] = useState<Team>();
+
+  const [allAttachments, setAllAttachments] = useState<
+    (LeadNoteAttachment | EmailAttachment)[]
+  >([]);
+
+  useEffect(() => {
+    if (!leadIdStr || !installerGroupId) return;
+
+    const fetchAttachments = async () => {
+      try {
+        const [notesData, emailsResponse] = await Promise.all([
+          getLeadNotes(leadIdStr),
+          getStoredLeadEmails(leadIdStr, installerGroupId),
+        ]);
+
+        const noteAttachments = notesData.flatMap((note) => note.attachments || []);
+
+        const emailAttachments = emailsResponse.success
+          ? emailsResponse.emails.flatMap((email) => email.attachments || [])
+          : [];
+
+        const combined = [...noteAttachments, ...emailAttachments];
+
+        combined.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        setAllAttachments(
+          combined as (LeadNoteAttachment | EmailAttachment)[]
+        );
+      } catch (error) {
+        console.error("Failed to fetch attachments:", error);
+      }
+    };
+
+    fetchAttachments();
+  }, [leadIdStr, installerGroupId]);
 
   // States
   const [loading, setLoading] = useState(true);
@@ -763,11 +810,35 @@ export default function LeadPage() {
           Opprett nytt estimat
         </button>
 
-        <div className="border-t-1 border-b-1 border-slate-700 py-4 my-4">
-          <h1>Vedlegg</h1>
-          <div className="flex gap-2">
-            <ul className="w-full"></ul>
-          </div>
+        <div className="border-t border-b border-slate-300 py-4 my-4">
+          <h1 className="text-lg font-medium mb-3">Vedlegg</h1>
+          <ul className="w-full space-y-2">
+            {allAttachments.length > 0 ? (
+              allAttachments.map((att) => (
+                <li
+                  key={att.id}
+                  className="p-2 rounded-md bg-white border border-gray-200 text-sm shadow-sm"
+                >
+                  <a
+                    href={att.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline flex items-center"
+                  >
+                    <File className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span className="truncate" title={att.file_name}>
+                      {att.file_name}
+                    </span>
+                  </a>
+                  <p className="text-xs text-gray-500 mt-1 pl-6">
+                    {new Date(att.created_at).toLocaleString("nb-NO")}
+                  </p>
+                </li>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">Ingen vedlegg funnet.</p>
+            )}
+          </ul>
         </div>
 
         <div className="border-t-1 border-b-1 border-slate-700 py-4 my-4">
