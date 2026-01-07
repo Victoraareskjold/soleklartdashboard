@@ -9,7 +9,7 @@ import {
   getTaggableUsers,
   updateLead,
 } from "@/lib/api";
-import { Lead, Note } from "@/lib/types";
+import { Lead, LeadNoteAttachment, Note } from "@/lib/types";
 import { toast } from "react-toastify";
 import { User } from "@supabase/supabase-js";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
@@ -105,6 +105,7 @@ export default function LeadNotesSection({ leadId }: Props) {
   const [commentMentionSuggestions, setCommentMentionSuggestions] = useState<
     Record<string, { id: string; name: string }[]>
   >({});
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -190,13 +191,41 @@ export default function LeadNotesSection({ leadId }: Props) {
 
     const noteContent = editor.getHTML();
 
-    const note = await createLeadNote(leadId, user.id, noteContent, "note");
+    const attachmentsPayload = await Promise.all(
+      attachments.map(async (file) => {
+        const contentBytes = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = (error) => reject(error);
+        });
+        return {
+          name: file.name,
+          contentType: file.type,
+          contentBytes,
+        };
+      })
+    );
+
+    const note = await createLeadNote(
+      leadId,
+      user.id,
+      noteContent,
+      "note",
+      undefined,
+      attachmentsPayload
+    );
+
     setAllNotes([note, ...allNotes]);
     if (lead) {
       sendMentionEmail(noteContent, lead, user, taggableUsers);
     }
 
     setNewNote("");
+    setAttachments([]);
     editor.commands.clearContent();
     setMentionSuggestions([]);
   };
@@ -427,6 +456,31 @@ export default function LeadNotesSection({ leadId }: Props) {
             </ul>
           )}
         </div>
+        <div>
+          <label
+            htmlFor="email-attachments"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          ></label>
+          <input
+            type="file"
+            id="email-attachments"
+            name="email-attachments"
+            multiple
+            onChange={(e) =>
+              setAttachments(e.target.files ? Array.from(e.target.files) : [])
+            }
+            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+          />
+          {attachments.length > 0 && (
+            <div className="mt-2 text-sm text-gray-600">
+              <ul className="list-disc list-inside">
+                {attachments.map((file, i) => (
+                  <li key={i}>{file.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
         <button
           type="submit"
           className="bg-indigo-600 text-white px-3 py-1 rounded-md text-sm hover:bg-indigo-700"
@@ -456,6 +510,28 @@ export default function LeadNotesSection({ leadId }: Props) {
                 className="text-sm text-slate-600 mb-4 mt-2"
                 dangerouslySetInnerHTML={{ __html: note.content }}
               />
+
+              {note.attachments && note.attachments.length > 0 && (
+                <div className="mt-4">
+                  <h5 className="text-sm font-semibold text-gray-600">
+                    Vedlegg
+                  </h5>
+                  <ul className="mt-2 list-disc list-inside space-y-1">
+                    {(note.attachments as LeadNoteAttachment[]).map((att) => (
+                      <li key={att.id} className="text-sm">
+                        <a
+                          href={att.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          {att.file_name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Kommentarer */}
               <div className="ml-3 border-l pl-2 space-y-1">

@@ -7,7 +7,7 @@ export const getLeadNotes = async (
 ): Promise<Note[]> => {
   const { data, error } = await client
     .from("lead_notes")
-    .select("*, user:user_id(name)")
+    .select("*, user:user_id(name), attachments:lead_note_attachments(*)")
     .eq("lead_id", leadId)
     .order("created_at", { ascending: false });
   if (error) throw error;

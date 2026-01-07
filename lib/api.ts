@@ -159,7 +159,8 @@ export const createLeadNote = async (
   userId: string,
   content: string,
   source: string,
-  noteId?: string
+  noteId?: string,
+  attachments?: { name: string; contentType: string; contentBytes: string }[]
 ): Promise<Note> => {
   return apiRequest<Note>(`/api/leadNotes`, "POST", {
     leadId,
@@ -167,6 +168,7 @@ export const createLeadNote = async (
     content,
     source,
     noteId,
+    attachments,
   });
 };
 

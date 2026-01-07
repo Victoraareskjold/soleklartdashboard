@@ -95,6 +95,16 @@ CREATE TABLE public.installer_groups (
   CONSTRAINT installer_groups_pkey PRIMARY KEY (id),
   CONSTRAINT installer_groups_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id)
 );
+CREATE TABLE public.lead_note_attachments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  note_id uuid NOT NULL,
+  file_name text NOT NULL,
+  file_url text NOT NULL,
+  file_type text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT lead_note_attachments_pkey PRIMARY KEY (id),
+  CONSTRAINT lead_note_attachments_note_id_fkey FOREIGN KEY (note_id) REFERENCES public.lead_notes(id)
+);
 CREATE TABLE public.lead_note_tags (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   note_id uuid NOT NULL,

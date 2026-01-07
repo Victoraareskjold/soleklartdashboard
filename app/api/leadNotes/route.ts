@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { leadId, userId, content, source, noteId } = body;
+    const { leadId, userId, content, source, noteId, attachments } = body;
     if (!leadId || !userId || !content || !source)
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
@@ -45,7 +45,56 @@ export async function POST(req: Request) {
       source,
       noteId
     );
-    return NextResponse.json(note);
+
+    const createdAttachments = [];
+
+    if (attachments && attachments.length > 0) {
+      for (const attachment of attachments) {
+        const { name, contentType, contentBytes } = attachment;
+        const buffer = Buffer.from(contentBytes, "base64");
+        const path = `public/${note.id}/${name}`;
+
+        const { error: uploadError } = await client.storage
+          .from("lead-notes-attachments")
+          .upload(path, buffer, {
+            contentType,
+            upsert: true,
+          });
+
+        if (uploadError) {
+          console.error("Error uploading attachment:", uploadError);
+          continue; // Or handle error more gracefully
+        }
+
+        const { data: publicUrlData } = client.storage
+          .from("lead-notes-attachments")
+          .getPublicUrl(path);
+
+        if (publicUrlData) {
+          const { data: newAttachment } = await client
+            .from("lead_note_attachments")
+            .insert({
+              note_id: note.id,
+              file_name: name,
+              file_url: publicUrlData.publicUrl,
+              file_type: contentType,
+            })
+            .select()
+            .single();
+
+          if (newAttachment) {
+            createdAttachments.push(newAttachment);
+          }
+        }
+      }
+    }
+
+    const noteWithAttachments = {
+      ...note,
+      attachments: createdAttachments,
+    };
+
+    return NextResponse.json(noteWithAttachments);
   } catch (err) {
     console.error("POST /api/leadNotes error:", err);
     return NextResponse.json(

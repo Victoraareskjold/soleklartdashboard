@@ -108,6 +108,12 @@ export type CreateEstimateInput = Partial<Estimate> & { lead_id: string } & {
   imageUrl?: File | null;
 };
 
+export type LeadNoteAttachment = {
+  id: string;
+  file_name: string;
+  file_url: string;
+};
+
 export type Note = {
   id: string;
   lead_id: string;
@@ -118,6 +124,7 @@ export type Note = {
   updated_at?: string;
   source: "note" | "comment";
   note_id?: string | null;
+  attachments?: LeadNoteAttachment[];
 };
 
 export type LeadTask = {
