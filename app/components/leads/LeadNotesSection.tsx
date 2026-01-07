@@ -12,6 +12,80 @@ import {
 import { Lead, Note } from "@/lib/types";
 import { toast } from "react-toastify";
 import { User } from "@supabase/supabase-js";
+import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [activeMarks, setActiveMarks] = useState({
+    bold: false,
+    italic: false,
+    strike: false,
+  });
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const update = () => {
+      setActiveMarks({
+        bold: editor.isActive("bold"),
+        italic: editor.isActive("italic"),
+        strike: editor.isActive("strike"),
+      });
+    };
+
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+    };
+  }, [editor]);
+
+  if (!editor) return null;
+
+  const toggle = (action: () => void) => {
+    editor?.chain().focus();
+    action();
+  };
+
+  const base = "px-2 py-1 text-sm border rounded-md transition-colors";
+  const active = "bg-blue-600 text-white border-blue-600";
+  const inactive = "bg-white text-gray-700 border-gray-300 hover:bg-gray-100";
+
+  return (
+    <div className="flex gap-2 border-b border-gray-300 p-2 bg-gray-50 rounded-t-md">
+      <button
+        type="button"
+        onClick={() => toggle(() => editor.chain().focus().toggleBold().run())}
+        className={`${base} ${editor.isActive("bold") ? active : inactive}`}
+      >
+        <strong>Bold</strong>
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          toggle(() => editor.chain().focus().toggleItalic().run())
+        }
+        className={`${base} ${editor.isActive("italic") ? active : inactive}`}
+      >
+        <em>Italic</em>
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          toggle(() => editor.chain().focus().toggleStrike().run())
+        }
+        className={`${base} ${editor.isActive("strike") ? active : inactive}`}
+      >
+        <span className="line-through">Strike</span>
+      </button>
+    </div>
+  );
+};
 
 interface Props {
   leadId: string;
@@ -31,6 +105,28 @@ export default function LeadNotesSection({ leadId }: Props) {
   const [commentMentionSuggestions, setCommentMentionSuggestions] = useState<
     Record<string, { id: string; name: string }[]>
   >({});
+
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: newNote,
+    immediatelyRender: false,
+    onUpdate: ({ editor }) => {
+      setNewNote(editor.getHTML());
+      updateMentionSuggestions(editor.getText(), setMentionSuggestions);
+    },
+    editorProps: {
+      attributes: {
+        class:
+          "prose dark:prose-invert prose-sm sm:prose-base lg:prose-lg xl:prose-2xl m-5 focus:outline-none",
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (editor && newNote !== editor.getHTML()) {
+      editor.commands.setContent(newNote);
+    }
+  }, [newNote, editor]);
 
   useEffect(() => {
     if (!leadId) return;
@@ -87,17 +183,21 @@ export default function LeadNotesSection({ leadId }: Props) {
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editor) return;
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
-    if (!newNote.trim() || !user?.id) return;
+    if (editor.isEmpty || !user?.id) return;
 
-    const note = await createLeadNote(leadId, user.id, newNote.trim(), "note");
+    const noteContent = editor.getHTML();
+
+    const note = await createLeadNote(leadId, user.id, noteContent, "note");
     setAllNotes([note, ...allNotes]);
     if (lead) {
-      sendMentionEmail(newNote.trim(), lead, user, taggableUsers);
+      sendMentionEmail(noteContent, lead, user, taggableUsers);
     }
 
     setNewNote("");
+    editor.commands.clearContent();
     setMentionSuggestions([]);
   };
 
@@ -188,11 +288,6 @@ export default function LeadNotesSection({ leadId }: Props) {
     }
   };
 
-  const handleNoteChange = (text: string) => {
-    setNewNote(text);
-    updateMentionSuggestions(text, setMentionSuggestions);
-  };
-
   const handleCommentChange = (noteId: string, text: string) => {
     setNewComments({ ...newComments, [noteId]: text });
     updateMentionSuggestions(text, (suggestions) =>
@@ -209,7 +304,21 @@ export default function LeadNotesSection({ leadId }: Props) {
   };
 
   const handleSelectMention = (name: string) => {
-    setNewNote(insertMention(newNote, name));
+    if (!editor) return;
+    const text = editor.getText();
+    const atIndex = text.lastIndexOf("@");
+    if (atIndex < 0) return;
+
+    const from = atIndex;
+    const to = editor.state.selection.to;
+
+    editor
+      .chain()
+      .focus()
+      .deleteRange({ from, to })
+      .insertContent(`@[${name}] `)
+      .run();
+
     setMentionSuggestions([]);
   };
 
@@ -300,12 +409,10 @@ export default function LeadNotesSection({ leadId }: Props) {
       {/* Legg til ny merknad */}
       <form onSubmit={handleAddNote} className="mb-3 flex flex-col gap-2">
         <div className="relative">
-          <input
-            value={newNote}
-            onChange={(e) => handleNoteChange(e.target.value)}
-            placeholder="Skriv en ny merknad..."
-            className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm"
-          />
+          <div className="border border-gray-300 bg-white rounded-md">
+            <MenuBar editor={editor} />
+            <EditorContent editor={editor} />
+          </div>
           {mentionSuggestions.length > 0 && (
             <ul className="absolute bg-white border mt-1 w-full max-h-32 overflow-auto z-10 rounded shadow-lg">
               {mentionSuggestions.map((u) => (
@@ -345,7 +452,10 @@ export default function LeadNotesSection({ leadId }: Props) {
                   {new Date(note.created_at ?? "").toLocaleString()}
                 </p>
               </div>
-              <p className="text-sm text-slate-600 mb-4 mt-2">{note.content}</p>
+              <div
+                className="text-sm text-slate-600 mb-4 mt-2"
+                dangerouslySetInnerHTML={{ __html: note.content }}
+              />
 
               {/* Kommentarer */}
               <div className="ml-3 border-l pl-2 space-y-1">

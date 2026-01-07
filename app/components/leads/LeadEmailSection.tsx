@@ -10,6 +10,7 @@ import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeMarks, setActiveMarks] = useState({
     bold: false,
     italic: false,
