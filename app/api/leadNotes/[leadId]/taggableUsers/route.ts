@@ -8,6 +8,9 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params;
+    const { searchParams } = new URL(req.url);
+    const installerGroupId = searchParams.get("installerGroupId");
+
     if (!resolvedParams?.leadId) {
       return NextResponse.json(
         { error: "Missing estimate id" },
@@ -22,7 +25,13 @@ export async function GET(
 
     const client = createSupabaseClient(token);
 
-    const users = await getTaggableUsers(client, (await params).leadId);
+    const users = await getTaggableUsers(
+      client,
+      (
+        await params
+      ).leadId,
+      installerGroupId
+    );
 
     return NextResponse.json(users);
   } catch (err) {

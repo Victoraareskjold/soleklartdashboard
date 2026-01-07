@@ -1,4 +1,4 @@
-import { Note, User } from "@/lib/types";
+import { Note } from "@/lib/types";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getLeadNotes = async (
@@ -61,25 +61,38 @@ export const createLeadNote = async (
 
 export const getTaggableUsers = async (
   client: SupabaseClient,
-  leadId: string
+  leadId: string,
+  installerGroupId?: string | null
 ) => {
   const { data: lead } = await client
     .from("leads")
-    .select("team_id, installer_group_id")
+    .select("team_id")
     .eq("id", leadId)
     .single();
+
   if (!lead) return [];
 
   const { data: teamMembers } = await client
     .from("team_members")
-    .select("user_id, user:user_id(name, email)")
+    .select("user_id, installer_group_id, user:user_id(name, email)")
     .eq("team_id", lead.team_id);
 
   const map: Record<string, { id: string; name: string; email: string }> = {};
-  [...(teamMembers ?? [])].forEach((m) => {
-    const user = Array.isArray(m.user) ? m.user[0] : (m.user as User);
-    if (m.user_id && user?.name && user.email)
-      map[m.user_id] = { id: m.user_id, name: user.name, email: user.email };
+
+  (teamMembers ?? []).forEach((m) => {
+    // 🔒 Installer-gruppe-filter
+    if (m.installer_group_id && m.installer_group_id !== installerGroupId) {
+      return;
+    }
+
+    const user = Array.isArray(m.user) ? m.user[0] : m.user;
+    if (m.user_id && user?.name && user.email) {
+      map[m.user_id] = {
+        id: m.user_id,
+        name: user.name,
+        email: user.email,
+      };
+    }
   });
 
   return Object.values(map);

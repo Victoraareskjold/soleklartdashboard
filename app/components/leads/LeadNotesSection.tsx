@@ -14,6 +14,7 @@ import { toast } from "react-toastify";
 import { User } from "@supabase/supabase-js";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { useInstallerGroup } from "@/context/InstallerGroupContext";
 
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -92,6 +93,7 @@ interface Props {
 }
 
 export default function LeadNotesSection({ leadId }: Props) {
+  const { installerGroupId } = useInstallerGroup();
   const [lead, setLead] = useState<Lead | null>(null);
   const [allNotes, setAllNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -136,7 +138,7 @@ export default function LeadNotesSection({ leadId }: Props) {
       const [leadData, notesData, users] = await Promise.all([
         getLead(leadId),
         getLeadNotes(leadId),
-        getTaggableUsers(leadId),
+        getTaggableUsers(leadId, installerGroupId),
       ]);
       setLead(leadData);
       setTaggableUsers(users);
@@ -170,7 +172,7 @@ export default function LeadNotesSection({ leadId }: Props) {
     };
 
     fetchData();
-  }, [leadId]);
+  }, [leadId, installerGroupId]);
 
   // Filtrer ut bare hovednotater (ikke kommentarer)
   const notes = allNotes.filter((note) => note.source === "note");

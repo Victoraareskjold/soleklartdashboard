@@ -173,10 +173,13 @@ export const createLeadNote = async (
 };
 
 export const getTaggableUsers = async (
-  leadId: string
+  leadId: string,
+  installerGroupId?: string | null
 ): Promise<{ id: string; name: string; email: string }[]> => {
+  const query = installerGroupId ? `?installerGroupId=${installerGroupId}` : "";
+
   return apiRequest<{ id: string; name: string; email: string }[]>(
-    `/api/leadNotes/${leadId}/taggableUsers`
+    `/api/leadNotes/${leadId}/taggableUsers${query}`
   );
 };
 
