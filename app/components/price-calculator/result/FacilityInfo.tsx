@@ -6,11 +6,13 @@ import { RoofType } from "@/lib/types";
 interface FacilityInfoProps {
   solarData?: SolarData;
   setSolarData?: (data: SolarData) => void;
+  ownConsumption?: number | null;
 }
 
 export default function FacilityInfo({
   solarData,
   setSolarData,
+  ownConsumption,
 }: FacilityInfoProps) {
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
 
@@ -34,8 +36,9 @@ export default function FacilityInfo({
   };
 
   const selfProduced = () => {
-    if (!solarData?.desiredKwh || !solarData?.yearlyProd) return 0;
-    return ((solarData.desiredKwh / solarData.yearlyProd) * 100).toFixed(2);
+    if (!solarData?.yearlyProd || !ownConsumption) return "0.00";
+    if (ownConsumption === 0) return "0.00";
+    return ((solarData.yearlyProd / ownConsumption) * 100).toFixed(2);
   };
 
   const enovaSupport = () => {
@@ -142,6 +145,10 @@ export default function FacilityInfo({
         ) : (
           <>
             <tr>
+              <td className="border p-1 w-1/2">kWp</td>
+              <td className="border p-1 w-1/2">{solarData?.kwp ?? "0"}</td>
+            </tr>
+            <tr>
               <td className="border p-1 w-1/2">Årlig kWh produksjon</td>
               <td className="border p-1 w-1/2">
                 <input
@@ -159,11 +166,16 @@ export default function FacilityInfo({
                 />
               </td>
             </tr>
-
-            <tr>
+            {/*  <tr>
+              <td className="border p-1 w-1/2">Eget forbruk (kWh)</td>
+              <td className="border p-1 w-1/2">
+                {solarData?.desiredKwh?.toLocaleString("nb-NO") ?? 0}
+              </td>
+            </tr> */}
+            {/* <tr>
               <td className="border p-1 w-1/2">Årlig CO₂ spart (kg)</td>
               <td className="border p-1 w-1/2">{yearlyCo2Saved()} kg</td>
-            </tr>
+            </tr> */}
             <tr>
               <td className="border p-1 w-1/2">Selvprodusert (%)</td>
               <td className="border p-1 w-1/2">{selfProduced()} %</td>

@@ -20,6 +20,7 @@ interface CalculatorResultsProps {
   solarData?: SolarData;
   setSolarData?: React.Dispatch<React.SetStateAction<SolarData>>;
   setPriceOverview?: (priceOverview: PriceOverview | null) => void;
+  ownConsumption?: number | null;
 }
 
 export interface CalculatorItem {
@@ -62,6 +63,7 @@ export default function CalculatorResults({
   solarData,
   setSolarData,
   setPriceOverview,
+  ownConsumption,
 }: CalculatorResultsProps) {
   const { installerGroupId } = useInstallerGroup();
   const [allCategories, setAllCategories] = useState<
@@ -801,7 +803,11 @@ export default function CalculatorResults({
 
   return (
     <div className="flex gap-2">
-      <FacilityInfo solarData={solarData} setSolarData={setSolarData} />
+      <FacilityInfo
+        solarData={solarData}
+        setSolarData={setSolarData}
+        ownConsumption={ownConsumption}
+      />
       <div>
         <table className="w-full">
           <thead>

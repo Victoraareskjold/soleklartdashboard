@@ -727,6 +727,7 @@ export default function LeadPage() {
               solarData={solarData}
               setSolarData={setSolarData}
               onEstimateCreated={handleEstimateCreated}
+              ownConsumption={ownConsumtion}
             />
           </div>
         )}

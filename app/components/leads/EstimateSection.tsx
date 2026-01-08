@@ -21,12 +21,14 @@ interface EstimateSectionProps {
   solarData: SolarData;
   setSolarData: React.Dispatch<React.SetStateAction<SolarData>>;
   onEstimateCreated?: (newEstimate: Estimate) => void;
+  ownConsumption: number;
 }
 
 export default function EstimateSection({
   solarData,
   setSolarData,
   onEstimateCreated,
+  ownConsumption,
 }: EstimateSectionProps) {
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
   const [suppliersAndProducts, setSuppliersAndProducts] = useState<
@@ -149,6 +151,7 @@ export default function EstimateSection({
         solarData={solarData}
         setSolarData={wrappedSetSolarData}
         setPriceOverview={setPriceOverview}
+        ownConsumption={ownConsumption}
       />
       <div className="mt-4">
         <label
