@@ -1,12 +1,22 @@
 {
   "newEstimate": {
-    "name": "Nytt estimat",
-    "subject": "Ditt estimat på solcelleanlegg fra oss",
-    "body": "Hei {leadName},<br /><br />Takk for din interesse! <br /><br />Vedlagt finner du et estimat for ditt solcelleanlegg. Du kan se det online her: <a href={estimateLink}>Link til ditt estimat</a><br /><br />Ta gjerne kontakt om du har spørsmål.<br /><br />Vennlig hilsen,<br />Oss"
+    "name": "Prisestimat",
+    "subject": "Estimat basert på tidligere dialog - {installerName}",
+    "body": "Hei {leadName},<br /><br />Takk for din interesse! <br /><br />Som avtalt sender vi i {installerName} over et solcelleanlegg <strong>estimat</strong> basert på tidligere dialog og informasjonen vi har fått så langt. Dette er et første estimat med vår anbefalte løsning, og er fullt fleksibelt.<br /><br />Estimatet åpnes via linken: <br/><a href={estimateLink}>{estimateLink}</a><br /><br />Gi gjerne en kort tilbakemelding, så tar vi neste steg videre derfra.<br /><br /> Vennlig hilsen,"
   },
-  "genericFollowUp": {
-    "name": "Generell oppfølging",
-    "subject": "Oppfølging angående solcelleanlegg",
-    "body": "Hei {leadName},<br /><br />Jeg følger opp vår tidligere samtale.<br /><br />Har du noen spørsmål eller er det noe mer jeg kan hjelpe deg med?<br /><br />Vennlig hilsen,<br />Oss"
+  "followUp1": {
+    "name": "Oppfølgning 1",
+    "subject": "Angående estimatet",
+    "body": "Hei {leadName},<br /><br />Ville høre om dere har sett estimatet vi sendte for solcelleløsningen?<br /><br />Vennlig hilsen,"
+  },
+  "followUp2": {
+    "name": "Oppfølging 2",
+    "subject": "Avslutning for nå",
+    "body": "Hei {leadName},<br />Siden jeg ikke har hørt noe, antar jeg at dere ikke er klare til å gå videre nå. Ta gjerne kontakt dersom dere ønsker å se videre på dette senere.<br /><br />Skulle det dukke opp en løsning fremover som jeg tror kan passe dere bedre enn det vi har sett på til nå, gir jeg beskjed.<br /><br />Vennlig hilsen,"
+  },
+  "quickQuestion": {
+    "name": "Beskjed ved bedre alternativer",
+    "subject": "Kort spørsmål",
+    "body": "Vil du at jeg holder deg oppdatert dersom det kommer endringer i markedet, for eksempel en løsning jeg tror kan passe dere bedre?<br />Gi gjerne beskjed om det er greit."
   }
 }

@@ -18,6 +18,7 @@ import {
   Session,
   Team,
   TeamCommissionType,
+  User,
 } from "./types";
 import {
   CategoryWithSubcategories,
@@ -466,4 +467,8 @@ export type AddTeamMemberPayload = {
 
 export const addUserToTeam = async (data: AddTeamMemberPayload) => {
   return apiRequest(`/api/teams/add-member`, "POST", data);
+};
+
+export const getUser = async () => {
+  return apiRequest<User>("/api/user");
 };

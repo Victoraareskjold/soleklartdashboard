@@ -1,7 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { EmailContent, Estimate } from "@/lib/types";
-import { sendLeadEmail, syncLeadEmails, getStoredLeadEmails } from "@/lib/api";
+import { EmailContent, Estimate, User } from "@/lib/types";
+import {
+  sendLeadEmail,
+  syncLeadEmails,
+  getStoredLeadEmails,
+  getInstallerGroup,
+  getUser,
+} from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { toast } from "react-toastify";
@@ -105,11 +111,12 @@ export default function LeadEmailSection({
   domain,
   estimates,
 }: LeadEmailSectionProps) {
+  const { installerGroupId } = useInstallerGroup();
+
   const [emailThreads, setEmailThreads] = useState<EmailThread[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
-  const { installerGroupId } = useInstallerGroup();
 
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -118,6 +125,9 @@ export default function LeadEmailSection({
   const [replyToMessageId, setReplyToMessageId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
+
+  const [installerName, setInstallerName] = useState("");
+  const [userData, setUserData] = useState<User>();
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -143,19 +153,29 @@ export default function LeadEmailSection({
   useEffect(() => {
     if (leadId && installerGroupId) {
       fetchEmails();
+      getInstallerGroup(installerGroupId).then((res) =>
+        setInstallerName(res.name)
+      );
+      getUser().then(setUserData);
     }
+    console.log(installerName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId, installerGroupId]);
 
   useEffect(() => {
-    if (newEstimate && leadName && domain) {
+    if (newEstimate && leadName && domain && installerName) {
       const template = mailTemplates.newEstimate;
       const estimateLink = `https://www.${domain}.no/estimat/${newEstimate.id}`;
 
-      const emailSubject = template.subject;
+      const emailSubject = template.subject.replace(
+        "{installerName}",
+        installerName
+      );
+
       const emailBody = template.body
-        .replace("{leadName}", leadName)
-        .replace("{estimateLink}", estimateLink);
+        .replaceAll("{leadName}", leadName)
+        .replaceAll("{estimateLink}", estimateLink)
+        .replaceAll("{installerName}", installerName);
 
       setSubject(emailSubject);
       setBody(emailBody);
@@ -163,7 +183,7 @@ export default function LeadEmailSection({
       setShowCompose(true);
       setSelectedTemplate("newEstimate");
     }
-  }, [newEstimate, leadName, domain, editor]);
+  }, [newEstimate, leadName, domain, editor, installerName]);
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const templateKey = e.target.value;
@@ -180,8 +200,12 @@ export default function LeadEmailSection({
     if (!template) return;
 
     let emailBody = template.body;
+    let emailSubject = template.subject;
     if (leadName) {
-      emailBody = emailBody.replace(/{leadName}/g, leadName);
+      emailSubject = emailSubject.replace(/{installerName}/g, installerName);
+      emailBody = emailBody
+        .replaceAll(/{leadName}/g, leadName)
+        .replaceAll(/{installerName}/g, installerName);
     }
 
     if (emailBody.includes("{estimateLink}")) {
@@ -204,9 +228,11 @@ export default function LeadEmailSection({
       }
     }
 
-    setSubject(template.subject);
+    const signature = `<br/>${userData?.name}<br />Nr. ${userData?.phone}`;
+
+    setSubject(emailSubject);
     setBody(emailBody);
-    editor?.commands.setContent(emailBody);
+    editor?.commands.setContent(emailBody + signature);
   };
 
   const fetchEmails = async () => {

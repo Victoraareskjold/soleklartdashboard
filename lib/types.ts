@@ -8,6 +8,7 @@ export interface User extends Base {
   email: string;
   name?: string;
   password_hash?: string;
+  phone?: string;
 }
 
 export interface Team extends Base {
