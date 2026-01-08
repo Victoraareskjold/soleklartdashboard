@@ -502,7 +502,11 @@ export default function CalculatorResults({
           }
         );
 
-        const supplierId = solarData.defaultInverterSupplierId;
+        const existingInverter = calculatorState.items.find((item) =>
+          item.id.startsWith("inverter")
+        );
+        const supplierId =
+          existingInverter?.supplierId || solarData.defaultInverterSupplierId;
         let inverterProducts: ((typeof suppliersAndProducts)[0]["products"][0] & {
           supplierId: string;
         })[] = [];
@@ -596,6 +600,7 @@ export default function CalculatorResults({
     }
 
     fetchBestInverter();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     installerGroupId,
     solarData?.kwp,
