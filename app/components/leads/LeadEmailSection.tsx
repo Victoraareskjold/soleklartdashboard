@@ -158,9 +158,10 @@ export default function LeadEmailSection({
       );
       getUser().then(setUserData);
     }
-    console.log(installerName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId, installerGroupId]);
+
+  const signature = `<br/>${userData?.name}<br />Nr. ${userData?.phone}`;
 
   useEffect(() => {
     if (newEstimate && leadName && domain && installerName) {
@@ -179,11 +180,11 @@ export default function LeadEmailSection({
 
       setSubject(emailSubject);
       setBody(emailBody);
-      editor?.commands.setContent(emailBody);
+      editor?.commands.setContent(emailBody + signature);
       setShowCompose(true);
       setSelectedTemplate("newEstimate");
     }
-  }, [newEstimate, leadName, domain, editor, installerName]);
+  }, [newEstimate, leadName, domain, editor, installerName, signature]);
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const templateKey = e.target.value;
@@ -227,8 +228,6 @@ export default function LeadEmailSection({
         );
       }
     }
-
-    const signature = `<br/>${userData?.name}<br />Nr. ${userData?.phone}`;
 
     setSubject(emailSubject);
     setBody(emailBody);
