@@ -25,6 +25,7 @@ interface CalculationSheetProps {
   mountItems: MountItem[];
   solarData?: SolarData;
   setPriceOverview?: (priceOverview: PriceOverview | null) => void;
+  leadCompany?: string | null;
 }
 
 export default function CalculationSheet({
@@ -33,6 +34,7 @@ export default function CalculationSheet({
   mountItems,
   solarData,
   setPriceOverview,
+  leadCompany,
 }: CalculationSheetProps) {
   const { installerGroupId } = useInstallerGroup();
   const { teamId } = useTeam();
@@ -454,7 +456,7 @@ export default function CalculationSheet({
         }),
       },
       total: grandTotal,
-      "total inkl. alt": grandTotal * 1.25,
+      "total inkl. alt": Number(grandTotal * 1.25 - calculatedEnovaSupport),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -800,48 +802,62 @@ export default function CalculationSheet({
           <tr>
             <td className="p-2"></td>
           </tr>
-          <tr>
-            <td className="p-2">Total kostnad eks. mva</td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
-          </tr>
-          <tr>
-            <td className="p-2">Total kostnad inkl. mva</td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right">
-              {(grandTotal * 1.25).toFixed(0)} kr
-            </td>
-          </tr>
-          <tr>
-            <td className="p-2"></td>
-          </tr>
-          <tr>
-            <td className="p-2">Enova støtte</td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right">
-              {calculatedEnovaSupport.toFixed(0)} kr
-            </td>
-          </tr>
-          <tr>
-            <td className="p-2"></td>
-          </tr>
-          <tr>
-            <td className="p-2">
-              Total kostnad inkl. mva og Enova-støtte(privat)
-            </td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right"></td>
-            <td className="p-2 text-right">
-              {(grandTotal * 1.25).toFixed(0)} kr
-            </td>
-          </tr>
+          {leadCompany ? (
+            <>
+              <tr>
+                <td className="p-2">Total kostnad eks. mva</td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
+              </tr>
+            </>
+          ) : (
+            <>
+              <tr>
+                <td className="p-2">Total kostnad eks. mva</td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
+              </tr>
+              <tr>
+                <td className="p-2">Total kostnad inkl. mva</td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right">
+                  {(grandTotal * 1.25).toFixed(0)} kr
+                </td>
+              </tr>
+              <tr>
+                <td className="p-2"></td>
+              </tr>
+              <tr>
+                <td className="p-2">Enova støtte</td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right">
+                  {calculatedEnovaSupport.toFixed(0)} kr
+                </td>
+              </tr>
+              <tr>
+                <td className="p-2"></td>
+              </tr>
+              <tr>
+                <td className="p-2">
+                  Total kostnad inkl. mva og Enova-støtte(privat)
+                </td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right"></td>
+                <td className="p-2 text-right">
+                  {(grandTotal * 1.25 - calculatedEnovaSupport).toFixed(0)} kr
+                </td>
+              </tr>
+            </>
+          )}
         </tbody>
       </table>
     </div>

@@ -21,6 +21,7 @@ interface CalculatorResultsProps {
   setSolarData?: React.Dispatch<React.SetStateAction<SolarData>>;
   setPriceOverview?: (priceOverview: PriceOverview | null) => void;
   ownConsumption?: number | null;
+  leadCompany?: string | null;
 }
 
 export interface CalculatorItem {
@@ -64,6 +65,7 @@ export default function CalculatorResults({
   setSolarData,
   setPriceOverview,
   ownConsumption,
+  leadCompany,
 }: CalculatorResultsProps) {
   const { installerGroupId } = useInstallerGroup();
   const [allCategories, setAllCategories] = useState<
@@ -864,6 +866,7 @@ export default function CalculatorResults({
           mountItems={mountItems}
           solarData={solarData}
           setPriceOverview={setPriceOverview}
+          leadCompany={leadCompany}
         />
         {showModal && (
           <div

@@ -37,12 +37,14 @@ const Input = ({
   readOnly,
   field,
   setSolarData,
+  type,
 }: {
   label: string;
   value: string | number | undefined;
   readOnly?: boolean;
   field: keyof SolarData;
   setSolarData: React.Dispatch<React.SetStateAction<SolarData>>;
+  type?: "text" | "number";
 }) => {
   return (
     <div className="flex flex-col">
@@ -54,11 +56,15 @@ const Input = ({
         onChange={(e) =>
           setSolarData((prev) => ({
             ...prev,
-            [field]: e.target.value,
+            [field]:
+              type === "number"
+                ? parseFloat(e.target.value) || 0
+                : e.target.value,
           }))
         }
         placeholder={label}
         className="border p-2 w-full rounded-md bg-white disabled:bg-slate-100"
+        type={type}
       />
     </div>
   );
@@ -78,6 +84,7 @@ export default function SolarDataView({
           readOnly={readOnly}
           field="yearlyProd"
           setSolarData={setSolarData}
+          type="number"
         />
         <Input
           label="Strømpris (kr/kWh)"
@@ -85,6 +92,7 @@ export default function SolarDataView({
           readOnly={readOnly}
           field="selectedElPrice"
           setSolarData={setSolarData}
+          type="number"
         />
         <Input
           label="Taktype"
@@ -106,6 +114,7 @@ export default function SolarDataView({
           readOnly={readOnly}
           field="totalPanels"
           setSolarData={setSolarData}
+          type="number"
         />
         <Input
           label="Desired kWh"
@@ -113,6 +122,7 @@ export default function SolarDataView({
           readOnly={readOnly}
           field="desiredKwh"
           setSolarData={setSolarData}
+          type="number"
         />
         <Input
           label="Coverage %"
@@ -120,6 +130,7 @@ export default function SolarDataView({
           readOnly={readOnly}
           field="coveragePercentage"
           setSolarData={setSolarData}
+          type="number"
         />
       </div>
 

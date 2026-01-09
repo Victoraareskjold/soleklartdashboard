@@ -46,20 +46,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing lead_id" }, { status: 400 });
     }
 
+    const sanitizeNumeric = (value: string | number | null): number | null =>
+      typeof value === "number" ? value : null;
+
     const newEstimate = {
       lead_id: lead_id,
       price_data,
       image_url: imageUrl,
-      total_panels: solarData.totalPanels,
+      total_panels: sanitizeNumeric(solarData.totalPanels),
+      yearly_cost: sanitizeNumeric(solarData.yearlyCost),
+      yearly_cost2: sanitizeNumeric(solarData.yearlyCost2),
+      yearly_prod: sanitizeNumeric(solarData.yearlyProd),
+      desired_kwh: sanitizeNumeric(solarData.desiredKwh),
+      coverage_percentage: sanitizeNumeric(solarData.coveragePercentage),
       selected_panel_type: solarData.selectedPanelType,
       selected_roof_type: solarData.selectedRoofType,
       checked_roof_data: solarData.checkedRoofData,
       selected_el_price: solarData.selectedElPrice,
-      yearly_cost: solarData.yearlyCost,
-      yearly_cost2: solarData.yearlyCost2,
-      yearly_prod: solarData.yearlyProd,
-      desired_kwh: solarData.desiredKwh,
-      coverage_percentage: solarData.coveragePercentage,
     };
 
     const { data, error } = await client

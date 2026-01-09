@@ -30,14 +30,9 @@ export default function FacilityInfo({
     fetchData();
   }, []);
 
-  const yearlyCo2Saved = () => {
-    if (!solarData?.yearlyProd) return 0;
-    return (solarData.yearlyProd * 0.207).toFixed(2);
-  };
-
   const selfProduced = () => {
-    if (!solarData?.yearlyProd || !ownConsumption) return "0.00";
-    if (ownConsumption === 0) return "0.00";
+    if (!solarData?.yearlyProd || !ownConsumption) return 0.0;
+    if (ownConsumption === 0) return 0.0;
     return ((solarData.yearlyProd / ownConsumption) * 100).toFixed(2);
   };
 

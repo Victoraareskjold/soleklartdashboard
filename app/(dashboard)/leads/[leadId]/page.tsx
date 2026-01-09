@@ -111,7 +111,9 @@ export default function LeadPage() {
           getStoredLeadEmails(leadIdStr, installerGroupId),
         ]);
 
-        const noteAttachments = notesData.flatMap((note) => note.attachments || []);
+        const noteAttachments = notesData.flatMap(
+          (note) => note.attachments || []
+        );
 
         const emailAttachments = emailsResponse.success
           ? emailsResponse.emails.flatMap((email) => email.attachments || [])
@@ -124,9 +126,7 @@ export default function LeadPage() {
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
 
-        setAllAttachments(
-          combined as (LeadNoteAttachment | EmailAttachment)[]
-        );
+        setAllAttachments(combined as (LeadNoteAttachment | EmailAttachment)[]);
       } catch (error) {
         console.error("Failed to fetch attachments:", error);
       }
@@ -728,6 +728,7 @@ export default function LeadPage() {
               setSolarData={setSolarData}
               onEstimateCreated={handleEstimateCreated}
               ownConsumption={ownConsumtion}
+              leadCompany={company}
             />
           </div>
         )}
@@ -767,30 +768,17 @@ export default function LeadPage() {
 
                     <p className="text-sm mb-2">Status - </p>
 
-                    {company ? (
-                      <p className="font-medium text-sm underline">
-                        Total eks. mva:{" "}
-                        {Number(e.price_data?.total ?? 0).toLocaleString(
-                          "nb-NO",
-                          {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                          }
-                        )}{" "}
-                        Kr
-                      </p>
-                    ) : (
-                      <p className="font-medium text-sm underline">
-                        Total inkl. mva:{" "}
-                        {Number(
-                          e.price_data?.["total inkl. alt"] ?? 0
-                        ).toLocaleString("nb-NO", {
+                    <p className="font-medium text-sm underline">
+                      Total eks. mva:{" "}
+                      {Number(e.price_data?.total ?? 0).toLocaleString(
+                        "nb-NO",
+                        {
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 0,
-                        })}{" "}
-                        Kr
-                      </p>
-                    )}
+                        }
+                      )}{" "}
+                      Kr
+                    </p>
 
                     <p className="text-sm mt-2">
                       {e.created_at
