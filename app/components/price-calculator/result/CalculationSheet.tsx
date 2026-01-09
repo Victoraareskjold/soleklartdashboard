@@ -456,7 +456,7 @@ export default function CalculationSheet({
         }),
       },
       total: grandTotal,
-      "total inkl. alt": Number(grandTotal * 1.25 - calculatedEnovaSupport),
+      "total inkl. alt": Number(grandTotal * 1.25),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

@@ -332,9 +332,13 @@ export default function TaskSection({ leadId }: Props) {
                   <input
                     type="date"
                     className="w-full p-2 border rounded mt-2"
-                    onChange={(e) => {
-                      const [year, month, day] = e.target.value.split("-");
-                      setSelectedDate(`${day}.${month}.${year}`);
+                    onBlur={(e) => {
+                      if (e.target.value) {
+                        const [year, month, day] = e.target.value.split("-");
+                        setSelectedDate(`${day}.${month}.${year}`);
+                      } else {
+                        setSelectedDate("");
+                      }
                     }}
                   />
                 )}
@@ -442,11 +446,21 @@ export default function TaskSection({ leadId }: Props) {
                     <input
                       type="date"
                       className="w-full p-2 border rounded mt-2"
-                      onChange={(e) => {
-                        const [year, month, day] = e.target.value.split("-");
-                        const formatted = `${day}.${month}.${year}`;
+                      defaultValue={
+                        task.due_date
+                          ? new Date(task.due_date)
+                              .toISOString()
+                              .split("T")[0]
+                          : ""
+                      }
+                      onBlur={(e) => {
+                        if (e.target.value) {
+                          const [year, month, day] =
+                            e.target.value.split("-");
+                          const formatted = `${day}.${month}.${year}`;
 
-                        handleUpdateDueDate(task, { date: formatted });
+                          handleUpdateDueDate(task, { date: formatted });
+                        }
                         setCustomDateTaskId(null);
                       }}
                     />
