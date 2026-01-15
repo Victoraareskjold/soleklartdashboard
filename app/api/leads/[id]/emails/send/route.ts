@@ -90,7 +90,7 @@ export async function POST(
       conversationId = originalEmail?.conversation_id || null;
 
       const createReplyRes = await fetch(
-        `https://graph.microsoft.com/v1.0/me/messages/${messageId}/createReply`,
+        `https://graph.microsoft.com/v1.0/me/messages/${messageId}/createReplyAll`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${account.access_token}` },
@@ -98,10 +98,10 @@ export async function POST(
       );
       if (!createReplyRes.ok) {
         console.error(
-          "Graph API create reply draft error:",
+          "Graph API create reply-all draft error:",
           await createReplyRes.json()
         );
-        throw new Error("Failed to create reply draft in Outlook.");
+        throw new Error("Failed to create reply-all draft in Outlook.");
       }
       draftMessage = await createReplyRes.json();
     } else {
