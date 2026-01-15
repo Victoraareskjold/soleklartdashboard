@@ -101,14 +101,15 @@ export async function POST(
     const leadEmailLower = lead.email.toLowerCase();
     const relevantEmails =
       graphData.value?.filter((email: MicrosoftGraphEmail) => {
-        const fromAddress = email.from.emailAddress.address.toLowerCase();
+        const fromAddress = email.from?.emailAddress?.address?.toLowerCase();
         const toAddresses =
-          email.toRecipients?.map((r) =>
-            r.emailAddress.address.toLowerCase()
-          ) || [];
+          email.toRecipients
+            ?.map((r) => r.emailAddress?.address?.toLowerCase())
+            .filter((address): address is string => !!address) || [];
 
         return (
-          fromAddress === leadEmailLower || toAddresses.includes(leadEmailLower)
+          (fromAddress && fromAddress === leadEmailLower) ||
+          toAddresses.includes(leadEmailLower)
         );
       }) || [];
 
@@ -119,9 +120,11 @@ export async function POST(
       message_id: email.id,
       conversation_id: email.conversationId,
       subject: email.subject || "(Ingen emne)",
-      from_address: email.from.emailAddress.address,
+      from_address: email.from?.emailAddress?.address || "",
       to_addresses:
-        email.toRecipients?.map((r) => r.emailAddress.address) || [],
+        email.toRecipients
+          ?.map((r) => r.emailAddress?.address)
+          .filter((address): address is string => !!address) || [],
       body_preview: email.bodyPreview || "",
       body: email.body?.content || "",
       received_at: email.receivedDateTime || email.sentDateTime,
