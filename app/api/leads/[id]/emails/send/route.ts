@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
 import { getRefreshedEmailAccount } from "@/lib/graph";
@@ -12,6 +13,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const customInternetMessageId = `<${randomUUID()}@soleklart.app>`;
+
   try {
     const token = req.headers.get("authorization")?.replace("Bearer ", "");
     if (!token) {
@@ -115,8 +118,11 @@ export async function POST(
         toRecipients: [
           { emailAddress: { address: lead.email, name: lead.person_info } },
         ],
-        ccRecipients: cc?.map((email: string) => ({ emailAddress: { address: email } })) || [],
+        ccRecipients:
+          cc?.map((email: string) => ({ emailAddress: { address: email } })) ||
+          [],
         attachments: hasAttachments ? graphAttachments : undefined,
+        internetMessageId: customInternetMessageId,
       };
 
       const createDraftRes = await fetch(
@@ -140,17 +146,18 @@ export async function POST(
       draftMessage = await createDraftRes.json();
     }
 
-    const sentMessageId = draftMessage.id;
+    const draftId = draftMessage.id;
 
     // --- 2. Update draft (only needed for replies now) ---
     if (isReply) {
-      const updateUrl = `https://graph.microsoft.com/v1.0/me/messages/${sentMessageId}`;
+      const updateUrl = `https://graph.microsoft.com/v1.0/me/messages/${draftId}`;
       const updatePayload = {
-        // For replies, we only need to patch the body and attachments,
-        // as createReply pre-fills the rest.
         body: { contentType: "HTML", content: body },
-        ccRecipients: cc?.map((email: string) => ({ emailAddress: { address: email } })) || [],
+        ccRecipients:
+          cc?.map((email: string) => ({ emailAddress: { address: email } })) ||
+          [],
         attachments: hasAttachments ? graphAttachments : undefined,
+        internetMessageId: customInternetMessageId,
       };
 
       const updateRes = await fetch(updateUrl, {
@@ -169,7 +176,7 @@ export async function POST(
     }
 
     // --- 3. Send the draft ---
-    const sendUrl = `https://graph.microsoft.com/v1.0/me/messages/${sentMessageId}/send`;
+    const sendUrl = `https://graph.microsoft.com/v1.0/me/messages/${draftId}/send`;
     const graphRes = await fetch(sendUrl, {
       method: "POST",
       headers: { Authorization: `Bearer ${account.access_token}` },
@@ -180,25 +187,44 @@ export async function POST(
       throw new Error("Failed to send email from Outlook.");
     }
 
-    // --- 4. Store email and attachments in DB ---
-    if (!isReply) {
-      // Wait a moment for eventual consistency, then fetch the conversationId
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      const getMsgRes = await fetch(
-        `https://graph.microsoft.com/v1.0/me/messages/${sentMessageId}?$select=conversationId`,
-        {
-          headers: { Authorization: `Bearer ${account.access_token}` },
+    // --- 4. Find sent message and store in DB ---
+    let sentMessageGraphData: { id: string; conversationId: string } | null =
+      null;
+    for (let i = 0; i < 8; i++) {
+      // Poll for up to 8 seconds
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const searchUrl = `https://graph.microsoft.com/v1.0/me/messages?$filter=internetMessageId eq '${encodeURIComponent(
+        customInternetMessageId
+      )}'&$select=id,conversationId`;
+
+      const searchRes = await fetch(searchUrl, {
+        headers: { Authorization: `Bearer ${account.access_token}` },
+      });
+
+      if (searchRes.ok) {
+        const searchResult = await searchRes.json();
+        if (searchResult.value && searchResult.value.length > 0) {
+          sentMessageGraphData = searchResult.value[0];
+          break;
         }
-      );
-      if (getMsgRes.ok) {
-        const sentMessageDetails = await getMsgRes.json();
-        conversationId = sentMessageDetails.conversationId;
-      } else {
-        console.warn(
-          `Could not fetch conversationId for sent message ${sentMessageId}`
-        );
       }
     }
+
+    if (!sentMessageGraphData) {
+      console.error(
+        `CRITICAL: Could not find sent email with internetMessageId: ${customInternetMessageId} after sending. The email was sent, but will not appear in the UI until the next successful sync. Attachments could not be saved.`
+      );
+      // The email was sent, but we can't confirm it or store attachments.
+      // The sync process will eventually pick up the email itself.
+      return NextResponse.json({
+        success: true,
+        message:
+          "Email sent, but confirmation is delayed. It will appear after the next sync.",
+      });
+    }
+
+    const finalMessageId = sentMessageGraphData.id;
+    const finalConversationId = sentMessageGraphData.conversationId || conversationId;
 
     // Insert email message into our DB
     const { data: dbEmail, error: insertError } = await client
@@ -206,8 +232,8 @@ export async function POST(
       .insert({
         installer_group_id: installerGroupId,
         lead_id: leadId,
-        message_id: sentMessageId,
-        conversation_id: conversationId,
+        message_id: finalMessageId,
+        conversation_id: finalConversationId,
         subject: subject,
         from_address: account.email,
         to_addresses: [lead.email],
@@ -229,7 +255,7 @@ export async function POST(
         attachments.map(async (att: Attachment) => {
           try {
             const buffer = Buffer.from(att.contentBytes, "base64");
-            const filePath = `${leadId}/${sentMessageId}/${att.name}`;
+            const filePath = `${leadId}/${finalMessageId}/${att.name}`;
 
             const { error: uploadError } = await client.storage
               .from("email-attachments")

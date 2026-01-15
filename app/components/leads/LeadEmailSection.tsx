@@ -190,7 +190,9 @@ export default function LeadEmailSection({
     const templateKey = e.target.value;
     setSelectedTemplate(templateKey);
     if (!templateKey) {
-      setSubject("");
+      if (!replyToMessageId) {
+        setSubject("");
+      }
       setBody("");
       setAttachments([]);
       editor?.commands.clearContent();
@@ -229,7 +231,9 @@ export default function LeadEmailSection({
       }
     }
 
-    setSubject(emailSubject);
+    if (!replyToMessageId) {
+      setSubject(emailSubject);
+    }
     setBody(emailBody);
     editor?.commands.setContent(emailBody + signature);
   };
