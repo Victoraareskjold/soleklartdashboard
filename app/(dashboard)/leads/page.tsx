@@ -49,6 +49,7 @@ export default function LeadsPage() {
               <option value="next_month">Neste måned</option>
               <option value="this_year">Dette året</option>
               <option value="next_year">Neste år</option>
+              <option value="none">Ingen oppgave</option>
             </select>
           </div>
 

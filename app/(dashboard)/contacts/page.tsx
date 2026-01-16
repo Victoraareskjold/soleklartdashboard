@@ -170,10 +170,6 @@ export default function ContactsPage() {
 
   if (!user || !team) return <LoadingScreen />;
 
-  const assignedTo = team?.members?.find(
-    (member) => member.user_id === user.id
-  );
-
   const filteredColdCalls = coldCalls.filter((lead) => {
     const query = searchQuery.toLowerCase();
     return (

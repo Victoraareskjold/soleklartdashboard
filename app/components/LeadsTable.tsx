@@ -112,6 +112,11 @@ export default function LeadsTable({
 
       filteredLeads = filteredLeads.filter((lead) => {
         const leadTasks = lead.lead_tasks;
+
+        if (taskDueDateFilter === "none") {
+          return leadTasks.length === 0;
+        }
+
         if (!leadTasks || leadTasks.length === 0) return false;
 
         return leadTasks.some((task) => {
