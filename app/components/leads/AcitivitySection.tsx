@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getEstimatesByLeadId, getLeadTasks, getLeadNotes } from "@/lib/api";
-import { BarChart, FileText, ListTodo } from "lucide-react";
+import {
+  getEstimatesByLeadId,
+  getLeadTasks,
+  getLeadNotes,
+  getStoredLeadEmails,
+  getTeam,
+} from "@/lib/api";
+import { BarChart, FileText, ListTodo, Mail } from "lucide-react";
 import React from "react";
+import { useInstallerGroup } from "@/context/InstallerGroupContext";
+import { Note, LeadTask, EmailContent, Team } from "@/lib/types";
+import { useTeam } from "@/context/TeamContext";
 
 interface Activity {
-  type: "estimate" | "task" | "note";
+  type: "estimate" | "task" | "note" | "email";
   date: Date;
   content: React.ReactNode;
   icon: React.ReactNode;
@@ -19,17 +28,26 @@ interface AcitivitySectionProps {
 export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const { installerGroupId } = useInstallerGroup();
+  const { teamId } = useTeam();
+  const [team, setTeam] = useState<Team | undefined>();
 
   useEffect(() => {
-    if (!leadId) return;
+    if (!teamId) return;
+    getTeam(teamId).then(setTeam);
+  }, [teamId]);
+
+  useEffect(() => {
+    if (!leadId || !installerGroupId || !team) return;
 
     const fetchActivities = async () => {
       setLoading(true);
       try {
-        const [estimates, tasks, notes] = await Promise.all([
+        const [estimates, tasks, notes, emailsResponse] = await Promise.all([
           getEstimatesByLeadId(leadId),
           getLeadTasks(leadId),
           getLeadNotes(leadId),
+          getStoredLeadEmails(leadId, installerGroupId),
         ]);
 
         const allActivities: Activity[] = [];
@@ -45,14 +63,24 @@ export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
           }
         });
 
-        tasks?.forEach((t) => {
+        tasks?.forEach((t: LeadTask) => {
           if (t.created_at) {
+            const assignee = team.members?.find(
+              (m) => m.user_id === t.assigned_to
+            );
             allActivities.push({
               type: "task",
               date: new Date(t.created_at),
               content: (
                 <>
                   Ny oppgave: <span className="font-semibold">{t.title}</span>
+                  {assignee && (
+                    <>
+                      {" "}
+                      tildelt til{" "}
+                      <span className="font-semibold">{assignee.name}</span>
+                    </>
+                  )}
                 </>
               ),
               icon: <ListTodo className="h-4 w-4 text-gray-500" />,
@@ -60,7 +88,7 @@ export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
           }
         });
 
-        notes?.forEach((n) => {
+        notes?.forEach((n: Note) => {
           if (n.created_at && n.source === "note") {
             allActivities.push({
               type: "note",
@@ -71,12 +99,40 @@ export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
                   <span className="font-semibold">
                     {n.user?.name || "Ukjent"}
                   </span>
+                  {n.content && (
+                    <span className="italic">
+                      : &quot;{n.content.substring(0, 70)}
+                      {n.content.length > 70 && "..."}&quot;
+                    </span>
+                  )}
                 </>
               ),
               icon: <FileText className="h-4 w-4 text-gray-500" />,
             });
           }
         });
+
+        if (emailsResponse.success) {
+          emailsResponse.emails.forEach((email: EmailContent) => {
+            if (email.created_at) {
+              allActivities.push({
+                type: "email",
+                date: new Date(email.created_at),
+                content: (
+                  <>
+                    E-post sendt til{" "}
+                    <span className="font-semibold">
+                      {email.to_addresses.join(", ")}
+                    </span>{" "}
+                    med emne:{" "}
+                    <span className="font-semibold">{email.subject}</span>
+                  </>
+                ),
+                icon: <Mail className="h-4 w-4 text-gray-500" />,
+              });
+            }
+          });
+        }
 
         allActivities.sort((a, b) => b.date.getTime() - a.date.getTime());
         setActivities(allActivities);
@@ -88,7 +144,7 @@ export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
     };
 
     fetchActivities();
-  }, [leadId]);
+  }, [leadId, installerGroupId, team]);
 
   if (loading) {
     return <div>Laster aktivitet...</div>;
