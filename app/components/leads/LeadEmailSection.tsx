@@ -313,11 +313,11 @@ export default function LeadEmailSection({
     // Convert to array and sort
     const threads: EmailThread[] = Object.entries(threadMap).map(
       ([conversationId, threadEmails]) => {
-        // Sort emails within thread by date
+        // Sort emails within thread by date (newest first)
         const sortedEmails = threadEmails.sort((a, b) => {
           const dateA = new Date(a.received_at || "").getTime();
           const dateB = new Date(b.received_at || "").getTime();
-          return dateA - dateB;
+          return dateB - dateA;
         });
 
         return {
