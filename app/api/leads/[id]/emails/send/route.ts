@@ -224,7 +224,8 @@ export async function POST(
     }
 
     const finalMessageId = sentMessageGraphData.id;
-    const finalConversationId = sentMessageGraphData.conversationId || conversationId;
+    const finalConversationId =
+      sentMessageGraphData.conversationId || conversationId;
 
     // Insert email message into our DB
     const { data: dbEmail, error: insertError } = await client
