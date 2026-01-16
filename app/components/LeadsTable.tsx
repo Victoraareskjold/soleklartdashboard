@@ -258,7 +258,7 @@ export default function LeadsTable({
                       ({statusLeads.length}){" "}
                     </h2>
                   </div>
-                  <div className="flex-1 p-2">
+                  <div className="flex-1 p-2 max-h-164 overflow-y-scroll overflow-x-hidden">
                     {statusLeads.map((lead, index) => (
                       <Draggable
                         key={lead.id}
