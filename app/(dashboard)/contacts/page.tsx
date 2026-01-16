@@ -266,7 +266,6 @@ export default function ContactsPage() {
               team={team}
               selectedMember={selectedMember}
               onSelectMember={setSelectedMember}
-              defaultUser={user.id}
             />
             <input
               type="text"
