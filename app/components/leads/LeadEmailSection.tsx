@@ -152,7 +152,13 @@ export default function LeadEmailSection({
 
   useEffect(() => {
     if (leadId && installerGroupId) {
+      // 1. Hent eksisterende e-poster fra DB umiddelbart
       fetchEmails();
+
+      // 2. Kjør synkronisering mot Outlook i bakgrunnen
+      handleSync();
+
+      // 3. Hent metadata
       getInstallerGroup(installerGroupId).then((res) =>
         setInstallerName(res.name)
       );
