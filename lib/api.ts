@@ -68,10 +68,6 @@ export const getLeadTasks = async (leadId: string): Promise<LeadTask[]> => {
   return apiRequest<LeadTask[]>(`/api/leads/${leadId}/tasks`);
 };
 
-export const deleteLeadTask = async (leadId: string, taskId: string) => {
-  return apiRequest(`/api/leads/${leadId}/tasks/${taskId}`);
-};
-
 export type FullLead = Lead & {
   lead_tasks: LeadTask[];
   estimates: Estimate[];

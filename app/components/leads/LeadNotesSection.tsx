@@ -165,7 +165,7 @@ export default function LeadNotesSection({ leadId }: Props) {
       combinedNotes.sort(
         (a, b) =>
           new Date(b.created_at ?? 0).getTime() -
-          new Date(a.created_at ?? 0).getTime()
+          new Date(a.created_at ?? 0).getTime(),
       );
 
       setAllNotes(combinedNotes);
@@ -180,7 +180,7 @@ export default function LeadNotesSection({ leadId }: Props) {
   // Hent alle kommentarer for en spesifikk note
   const getCommentsForNote = (noteId: string) => {
     return allNotes.filter(
-      (item) => item.source === "comment" && item.note_id === noteId
+      (item) => item.source === "comment" && item.note_id === noteId,
     );
   };
 
@@ -209,7 +209,7 @@ export default function LeadNotesSection({ leadId }: Props) {
           contentType: file.type,
           contentBytes,
         };
-      })
+      }),
     );
 
     const note = await createLeadNote(
@@ -218,7 +218,7 @@ export default function LeadNotesSection({ leadId }: Props) {
       noteContent,
       "note",
       undefined,
-      attachmentsPayload
+      attachmentsPayload,
     );
 
     setAllNotes([note, ...allNotes]);
@@ -247,7 +247,7 @@ export default function LeadNotesSection({ leadId }: Props) {
           leadId,
           lead.created_by,
           lead.note,
-          "note"
+          "note",
         );
 
         // Add the new comment to the permanent note
@@ -256,7 +256,7 @@ export default function LeadNotesSection({ leadId }: Props) {
           user.id,
           text,
           "comment",
-          permanentNote.id
+          permanentNote.id,
         );
 
         // Clear the original note from the lead to avoid duplication
@@ -269,7 +269,7 @@ export default function LeadNotesSection({ leadId }: Props) {
           updatedNotes.sort(
             (a, b) =>
               new Date(b.created_at ?? 0).getTime() -
-              new Date(a.created_at ?? 0).getTime()
+              new Date(a.created_at ?? 0).getTime(),
           );
           return updatedNotes;
         });
@@ -288,7 +288,7 @@ export default function LeadNotesSection({ leadId }: Props) {
         user.id,
         text,
         "comment",
-        noteId
+        noteId,
       );
       if (lead) {
         sendMentionEmail(text, lead, user, taggableUsers);
@@ -304,7 +304,7 @@ export default function LeadNotesSection({ leadId }: Props) {
 
   const updateMentionSuggestions = (
     text: string,
-    setter: (suggestions: { id: string; name: string }[]) => void
+    setter: (suggestions: { id: string; name: string }[]) => void,
   ) => {
     const atIndex = text.lastIndexOf("@");
     if (atIndex >= 0) {
@@ -312,7 +312,7 @@ export default function LeadNotesSection({ leadId }: Props) {
       setter(
         taggableUsers
           .filter((u) => u.name.toLowerCase().startsWith(query))
-          .map((u) => ({ id: u.id, name: u.name }))
+          .map((u) => ({ id: u.id, name: u.name })),
       );
     } else {
       setter([]);
@@ -325,7 +325,7 @@ export default function LeadNotesSection({ leadId }: Props) {
       setCommentMentionSuggestions({
         ...commentMentionSuggestions,
         [noteId]: suggestions,
-      })
+      }),
     );
   };
 
@@ -366,7 +366,7 @@ export default function LeadNotesSection({ leadId }: Props) {
     content: string,
     lead: Lead,
     currentUser: User,
-    users: { id: string; name: string; email: string }[]
+    users: { id: string; name: string; email: string }[],
   ) => {
     const mentions = content.match(/@\[([^\]]+)\]/g);
     if (!mentions) return;
@@ -379,7 +379,7 @@ export default function LeadNotesSection({ leadId }: Props) {
     const authorName = authorData?.name ?? "En bruker";
 
     const mentionedUserNames = mentions.map((m) =>
-      m.substring(2, m.length - 1)
+      m.substring(2, m.length - 1),
     );
 
     for (const name of mentionedUserNames) {
@@ -394,12 +394,12 @@ export default function LeadNotesSection({ leadId }: Props) {
             <div style="padding: 20px;">
               <h2 style="color: #4f46e5;">Du ble nevnt</h2>
               <p><strong>${authorName}</strong> nevnte deg i en merknad på leadet <strong>${
-          lead.person_info
-        }</strong>.</p>
+                lead.person_info
+              }</strong>.</p>
               <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 3px solid #4f46e5;">
                 <p style="margin: 0;">${content.replace(
                   /@\[([^\]]+)\]/g,
-                  "<strong>@$1</strong>"
+                  "<strong>@$1</strong>",
                 )}</p>
               </div>
               <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
@@ -410,8 +410,8 @@ export default function LeadNotesSection({ leadId }: Props) {
               </div>
               <div style="text-align: center; margin-top: 30px;">
                 <a href="${window.location.origin}/leads/${
-          lead.id
-        }?tab=Merknader" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">Vis Lead</a>
+                  lead.id
+                }?tab=Merknader" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">Vis Lead</a>
               </div>
             </div>
             <div style="background-color: #f2f2f2; text-align: center; padding: 15px; font-size: 12px; color: #666;">

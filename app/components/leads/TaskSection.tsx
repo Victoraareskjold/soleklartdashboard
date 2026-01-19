@@ -467,6 +467,27 @@ export default function TaskSection({ leadId }: Props) {
     }
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    if (!taskId) return;
+
+    const confirmDelete = window.confirm("Er du sikker på at du vil slette?");
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Kunne ikke slette oppgave");
+
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      toast.success("Oppgave slettet!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt ved sletting");
+    }
+  };
+
   if (!user) return <LoadingScreen />;
 
   return (
@@ -574,8 +595,14 @@ export default function TaskSection({ leadId }: Props) {
         )
         .map((task, i) => (
           <div className="mt-4 bg-white" key={i}>
-            <div className="bg-[#7787FF] p-2 text-white">
+            <div className="bg-[#7787FF] p-2 text-white flex flex-row items-center justify-between">
               <input value={task.title} readOnly />
+              <button
+                onClick={() => handleDeleteTask(task.id)}
+                className="py-2 px-4 bg-red-200 hover:bg-red-500 text-red-500 hover:text-white duration-200 rounded-md font-medium items-center flex flex-row gap-1 text-sm"
+              >
+                Slett
+              </button>
             </div>
             <div className="p-2">
               <div className="w-full p-2">
