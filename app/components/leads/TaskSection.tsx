@@ -394,6 +394,8 @@ export default function TaskSection({ leadId }: Props) {
 
     const outlookLink = `https://outlook.office.com/calendar/0/deeplink/compose?${outlookParams.toString()}`;
 
+    const isValidPhone = (v: unknown) => v && v !== "0" && v !== 0;
+
     const emailSubject = `Du har fått tildelt en oppgave på lead: ${lead.person_info}`;
     const emailHtml = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 5px; overflow: hidden;">
@@ -426,7 +428,13 @@ export default function TaskSection({ leadId }: Props) {
           <p><strong>Navn:</strong> ${lead.person_info}</p>
           <p><strong>Adresse:</strong> ${lead.address || "Ikke oppgitt"}</p>
           <p><strong>E-post:</strong> ${lead.email || "Ikke oppgitt"}</p>
-          <p><strong>Telefon:</strong> ${lead.phone || lead.mobile || "Ikke oppgitt"}</p>
+          <p><strong>Telefon:</strong> ${
+            isValidPhone(lead.phone)
+              ? lead.phone
+              : isValidPhone(lead.mobile)
+                ? lead.mobile
+                : "Ikke oppgitt"
+          }</p>
         </div>
         
         <div style="text-align: center; margin-top: 30px;">
