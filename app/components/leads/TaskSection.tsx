@@ -1,13 +1,15 @@
 "use client";
-import { LeadTask, Team } from "@/lib/types";
+import { Lead, LeadTask, Team } from "@/lib/types";
 import TeamMemberSelector from "../cold-calling/TeamMemberSelector";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthProvider";
-import { getLeadTaskComments, getLeadTasks, getTeam } from "@/lib/api";
+import { getLead, getLeadTaskComments, getLeadTasks, getTeam } from "@/lib/api";
 import { useTeam } from "@/context/TeamContext";
 import LoadingScreen from "../LoadingScreen";
 import { toast } from "react-toastify";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
+import { supabase } from "@/lib/supabase";
+import { User } from "@supabase/supabase-js";
 
 interface Props {
   leadId: string;
@@ -16,7 +18,9 @@ interface Props {
 export default function TaskSection({ leadId }: Props) {
   const { user } = useAuth();
   const { teamId } = useTeam();
+
   const { installerGroupId } = useInstallerGroup();
+  const [lead, setLead] = useState<Lead | null>(null);
   const [team, setTeam] = useState<Team>();
   const [tasks, setTasks] = useState<LeadTask[]>([]);
 
@@ -63,12 +67,13 @@ export default function TaskSection({ leadId }: Props) {
                 [task.id]: comments.sort(
                   (a, b) =>
                     new Date(b.created_at).getTime() -
-                    new Date(a.created_at).getTime()
+                    new Date(a.created_at).getTime(),
                 ),
               }));
             })
             .catch(console.error);
         });
+        getLead(leadId).then(setLead);
       })
       .catch(console.error);
   }, [teamId, leadId]);
@@ -160,6 +165,9 @@ export default function TaskSection({ leadId }: Props) {
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData?.session?.user;
+    if (!user?.id) return;
 
     try {
       const res = await fetch(`/api/leads/${leadId}/tasks`, {
@@ -176,6 +184,20 @@ export default function TaskSection({ leadId }: Props) {
       });
 
       if (!res.ok) throw new Error("Feil ved oppdatering av leads");
+
+      const [day, month, year] = selectedDate.split(".");
+      const localIsoString = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${selectedTime}:00`;
+
+      if (lead && selectedMember) {
+        sendMentionEmail(
+          description,
+          lead,
+          user,
+          selectedMember,
+          title,
+          localIsoString,
+        );
+      }
 
       setDescription("");
       setSelectedDate("");
@@ -216,7 +238,7 @@ export default function TaskSection({ leadId }: Props) {
 
   const handleUpdateDueDate = async (
     task: LeadTask,
-    options: { date?: string; time?: string }
+    options: { date?: string; time?: string },
   ) => {
     if (!task.due_date) return;
 
@@ -254,8 +276,8 @@ export default function TaskSection({ leadId }: Props) {
       // Oppdater lokalt state
       setTasks((prev) =>
         prev.map((t) =>
-          t.id === task.id ? { ...t, due_date: current.toISOString() } : t
-        )
+          t.id === task.id ? { ...t, due_date: current.toISOString() } : t,
+        ),
       );
     } catch {
       toast.error("Kunne ikke oppdatere dato");
@@ -275,11 +297,168 @@ export default function TaskSection({ leadId }: Props) {
       if (!res.ok) throw new Error("Could not update assignee");
 
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, assigned_to: userId } : t))
+        prev.map((t) => (t.id === taskId ? { ...t, assigned_to: userId } : t)),
       );
     } catch (err) {
       console.error(err);
       toast.error("Kunne ikke oppdatere tildeling");
+    }
+  };
+
+  const sendMentionEmail = async (
+    description: string,
+    lead: Lead,
+    currentUser: User,
+    selectedMemberId: string,
+    taskTitle: string,
+    taskDueDate: string,
+  ) => {
+    if (!selectedMemberId || !team) return;
+    console.log("DEBUG: taskDueDate mottatt fra API:", taskDueDate);
+    console.log("DEBUG: Type of taskDueDate:", typeof taskDueDate);
+
+    // Sjekk at brukeren finnes i teamet
+    const allMembers = team.members || [];
+    const assignedMember = allMembers.find(
+      (member) => member.user_id === selectedMemberId,
+    );
+
+    if (!assignedMember) {
+      console.log("Kunne ikke finne bruker i teamet");
+      return;
+    }
+
+    // Hent e-postadressen fra users tabellen
+    const { data: assignedUserData, error: userError } = await supabase
+      .from("users")
+      .select("email, name")
+      .eq("id", selectedMemberId)
+      .single();
+
+    if (userError || !assignedUserData?.email) {
+      console.log("Kunne ikke finne brukerens e-post:", userError);
+      return;
+    }
+
+    // Hent navnet til personen som oppretter oppgaven
+    const { data: authorData } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", currentUser.id)
+      .single();
+    const authorName = authorData?.name ?? "En bruker";
+
+    const normalizedDate = taskDueDate.replace("Z", "");
+    const startDate = new Date(normalizedDate);
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+
+    if (isNaN(startDate.getTime())) return;
+
+    const formatNorwegianDate = (date: Date) => {
+      return date.toLocaleString("no-NO", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    const formatForOutlook = (date: Date) => {
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    };
+
+    let calendarBody = description || "";
+    calendarBody += `\n\n--- Lead Informasjon ---\n`;
+    calendarBody += `Navn: ${lead.person_info}\n`;
+    calendarBody += `Adresse: ${lead.address || "Ikke oppgitt"}\n`;
+    calendarBody += `E-post: ${lead.email || "Ikke oppgitt"}\n`;
+    calendarBody += `Telefon: ${lead.phone || lead.mobile || "Ikke oppgitt"}\n`;
+    calendarBody += `\nLink til lead: ${window.location.origin}/leads/${lead.id}`;
+
+    const outlookParams = new URLSearchParams({
+      path: "/calendar/action/compose",
+      rru: "addevent",
+      subject: taskTitle || "Oppgave",
+      body: calendarBody,
+      startdt: formatForOutlook(startDate),
+      enddt: formatForOutlook(endDate),
+    });
+
+    const outlookLink = `https://outlook.office.com/calendar/0/deeplink/compose?${outlookParams.toString()}`;
+
+    const emailSubject = `Du har fått tildelt en oppgave på lead: ${lead.person_info}`;
+    const emailHtml = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 5px; overflow: hidden;">
+      <div style="background-color: #4f46e5; color: white; padding: 20px; text-align: center;">
+        <h1>Soleklart Dashboard</h1>
+      </div>
+      <div style="padding: 20px;">
+        <h2 style="color: #4f46e5;">Du har fått tildelt en oppgave</h2>
+        <p><strong>${authorName}</strong> har tildelt deg en oppgave på leadet <strong>${lead.person_info}</strong>.</p>
+        
+        <div style="background-color: #f0f4ff; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 3px solid #0078D4;">
+          <h3 style="color: #0078D4; margin-top: 0;">📅 ${taskTitle}</h3>
+          <p style="margin: 5px 0;"><strong>Dato:</strong> ${formatNorwegianDate(startDate)}</p>
+        </div>
+
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 3px solid #4f46e5;">
+          <p style="margin: 0; white-space: pre-wrap;">${description.replace(/\n/g, "<br>")}</p>
+        </div>
+
+        <div style="text-align: center; margin: 25px 0;">
+          <a href="${outlookLink}" style="background-color: #0078D4; color: white; padding: 14px 28px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
+            📅 Legg til i Outlook-kalender
+          </a>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
+        
+        <div>
+          <h3 style="color: #4f46e5;">Lead Detaljer:</h3>
+          <p><strong>Navn:</strong> ${lead.person_info}</p>
+          <p><strong>Adresse:</strong> ${lead.address || "Ikke oppgitt"}</p>
+          <p><strong>E-post:</strong> ${lead.email || "Ikke oppgitt"}</p>
+          <p><strong>Telefon:</strong> ${lead.phone || lead.mobile || "Ikke oppgitt"}</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+          <a href="${window.location.origin}/leads/${lead.id}?tab=Oppgaver" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Se lead i dashboard
+          </a>
+        </div>
+      </div>
+      <div style="background-color: #f2f2f2; text-align: center; padding: 15px; font-size: 12px; color: #666;">
+        <p>Dette er en automatisk varsling fra Soleklart Dashboard.</p>
+      </div>
+    </div>
+  `;
+
+    console.log(
+      "Sender e-post til:",
+      assignedUserData.email,
+      "Emne:",
+      emailSubject,
+    );
+
+    try {
+      await fetch("/api/send-mail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: assignedUserData.email,
+          subject: emailSubject,
+          html: emailHtml,
+        }),
+      });
+      toast.success(
+        `E-post sendt til ${assignedUserData.name || assignedUserData.email}`,
+      );
+    } catch (error) {
+      console.error("Feil ved sending av e-post:", error);
+      toast.error("Kunne ikke sende e-postvarsel");
     }
   };
 
@@ -385,7 +564,7 @@ export default function TaskSection({ leadId }: Props) {
       {tasks
         .sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
         .map((task, i) => (
           <div className="mt-4 bg-white" key={i}>
@@ -409,8 +588,8 @@ export default function TaskSection({ leadId }: Props) {
                       customDateTaskId === task.id
                         ? "custom"
                         : task.due_date
-                        ? new Date(task.due_date).toLocaleDateString("no-NO")
-                        : ""
+                          ? new Date(task.due_date).toLocaleDateString("no-NO")
+                          : ""
                     }
                     onChange={(e) => {
                       if (e.target.value === "custom") {
@@ -426,7 +605,7 @@ export default function TaskSection({ leadId }: Props) {
                     {task.due_date && (
                       <option
                         value={new Date(task.due_date).toLocaleDateString(
-                          "no-NO"
+                          "no-NO",
                         )}
                       >
                         {new Date(task.due_date).toLocaleDateString("no-NO")}
@@ -448,15 +627,12 @@ export default function TaskSection({ leadId }: Props) {
                       className="w-full p-2 border rounded mt-2"
                       defaultValue={
                         task.due_date
-                          ? new Date(task.due_date)
-                              .toISOString()
-                              .split("T")[0]
+                          ? new Date(task.due_date).toISOString().split("T")[0]
                           : ""
                       }
                       onBlur={(e) => {
                         if (e.target.value) {
-                          const [year, month, day] =
-                            e.target.value.split("-");
+                          const [year, month, day] = e.target.value.split("-");
                           const formatted = `${day}.${month}.${year}`;
 
                           handleUpdateDueDate(task, { date: formatted });

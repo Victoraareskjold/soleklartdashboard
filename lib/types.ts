@@ -19,6 +19,7 @@ export interface Team extends Base {
 export interface TeamMember {
   user_id: string;
   name: string;
+  email?: string; // Added email property
   role: string;
   created_at?: string;
   installer_group_id?: string;

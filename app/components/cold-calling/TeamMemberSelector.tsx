@@ -33,8 +33,9 @@ export default function TeamMemberSelector({
 }: Props) {
   const { teamMembers, installers } = useMemo(() => {
     const members = team?.members || [];
+
     const teamMembers = members.filter(
-      (member) => member.role === "admin" || member.role === "member"
+      (member) => member.role === "admin" || member.role === "member",
     );
 
     let installers: TeamMember[] = [];
@@ -54,7 +55,7 @@ export default function TeamMemberSelector({
     const allSelectableMembers = [...teamMembers, ...installers];
     if (defaultUser && allSelectableMembers.length > 0 && !selectedMember) {
       const isUserInList = allSelectableMembers.some(
-        (member) => member.user_id === defaultUser
+        (member) => member.user_id === defaultUser,
       );
       if (isUserInList) {
         onSelectMember(defaultUser);
