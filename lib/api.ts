@@ -35,7 +35,7 @@ export const getToken = async (): Promise<string> => {
 const apiRequest = async <T>(
   url: string,
   method: string = "GET",
-  body?: unknown
+  body?: unknown,
 ): Promise<T> => {
   const token = await getToken();
   const res = await fetch(url, {
@@ -68,6 +68,10 @@ export const getLeadTasks = async (leadId: string): Promise<LeadTask[]> => {
   return apiRequest<LeadTask[]>(`/api/leads/${leadId}/tasks`);
 };
 
+export const deleteLeadTask = async (leadId: string, taskId: string) => {
+  return apiRequest(`/api/leads/${leadId}/tasks/${taskId}`);
+};
+
 export type FullLead = Lead & {
   lead_tasks: LeadTask[];
   estimates: Estimate[];
@@ -76,7 +80,7 @@ export type FullLead = Lead & {
 export const getFullLeads = async (
   teamId: string,
   installerGroupId: string,
-  teamRole: string
+  teamRole: string,
 ): Promise<FullLead[]> => {
   const query = new URLSearchParams({
     teamId,
@@ -88,17 +92,17 @@ export const getFullLeads = async (
 };
 
 export const getInstallerDomain = async (
-  installerGroupId: string
+  installerGroupId: string,
 ): Promise<string> => {
   return apiRequest(`/api/installerGroups/${installerGroupId}/domain`);
 };
 
 export const getLeadTaskComments = async (
   leadId: string,
-  leadTaskId: string
+  leadTaskId: string,
 ): Promise<LeadTask[]> => {
   return apiRequest<LeadTask[]>(
-    `/api/leads/${leadId}/tasks/comments?leadTaskId=${leadTaskId}`
+    `/api/leads/${leadId}/tasks/comments?leadTaskId=${leadTaskId}`,
   );
 };
 
@@ -106,16 +110,16 @@ export const getLeadTaskComments = async (
 export const getInstallerGroups = async (
   teamId: string,
   installer_group_id: string | null,
-  teamRole: string
+  teamRole: string,
 ): Promise<InstallerGroup[]> => {
   return apiRequest<InstallerGroup[]>(
-    `/api/installerGroups?team_id=${teamId}&installer_group_id=${installer_group_id}&teamRole=${teamRole}`
+    `/api/installerGroups?team_id=${teamId}&installer_group_id=${installer_group_id}&teamRole=${teamRole}`,
   );
 };
 
 // Single installerGroup
 export const getInstallerGroup = async (
-  groupId: string
+  groupId: string,
 ): Promise<InstallerGroup> => {
   return apiRequest<InstallerGroup>(`/api/installerGroups/${groupId}`);
 };
@@ -128,7 +132,7 @@ export const getLeads = async (
   leadOwner?: string,
   leadCollector?: string,
   searchQuery?: string,
-  taskDueDateFilter?: string
+  taskDueDateFilter?: string,
 ): Promise<Lead[]> => {
   const query = new URLSearchParams({
     teamId,
@@ -190,7 +194,7 @@ export const createLeadNote = async (
   content: string,
   source: string,
   noteId?: string,
-  attachments?: { name: string; contentType: string; contentBytes: string }[]
+  attachments?: { name: string; contentType: string; contentBytes: string }[],
 ): Promise<Note> => {
   return apiRequest<Note>(`/api/leadNotes`, "POST", {
     leadId,
@@ -204,12 +208,12 @@ export const createLeadNote = async (
 
 export const getTaggableUsers = async (
   leadId: string,
-  installerGroupId?: string | null
+  installerGroupId?: string | null,
 ): Promise<{ id: string; name: string; email: string }[]> => {
   const query = installerGroupId ? `?installerGroupId=${installerGroupId}` : "";
 
   return apiRequest<{ id: string; name: string; email: string }[]>(
-    `/api/leadNotes/${leadId}/taggableUsers${query}`
+    `/api/leadNotes/${leadId}/taggableUsers${query}`,
   );
 };
 
@@ -219,41 +223,41 @@ export const getSuppliers = async () => {
 
 export const getSuppliersWithCategories = async (installerGroupId: string) => {
   return apiRequest<SupplierCategory[]>(
-    `/api/price_table/suppliers/categories?installerGroupId=${installerGroupId}`
+    `/api/price_table/suppliers/categories?installerGroupId=${installerGroupId}`,
   );
 };
 
 export const updateSuppliersWithCategories = async (
   installerGroupId: string,
   name: string,
-  markup_percentage: number
+  markup_percentage: number,
 ) => {
   return apiRequest<SupplierCategory>(
     `/api/price_table/suppliers/categories?installerGroupId=${installerGroupId}`,
     "PATCH",
-    { name, markup_percentage }
+    { name, markup_percentage },
   );
 };
 
 export const getSuppliersWithProducts = async () => {
   return apiRequest<SupplierWithProducts[]>(
-    "/api/price_table/suppliers/products"
+    "/api/price_table/suppliers/products",
   );
 };
 
 export const getMarkupPercentages = async () => {
   return apiRequest<SupplierWithProducts[]>(
-    "/api/price_table/suppliers/products"
+    "/api/price_table/suppliers/products",
   );
 };
 
 export const addSupplierProduct = async (
-  newProduct: unknown
+  newProduct: unknown,
 ): Promise<Product> => {
   return apiRequest<Product>(
     `/api/price_table/suppliers/products`,
     "POST",
-    newProduct
+    newProduct,
   );
 };
 
@@ -261,14 +265,14 @@ export const updateSupplierPrice = async (productId: string, price: number) => {
   return apiRequest(
     `/api/price_table/suppliers/products/${productId}`,
     "PATCH",
-    { price }
+    { price },
   );
 };
 
 export const deleteSupplierProduct = async (productId: string) => {
   return apiRequest(
     `/api/price_table/suppliers/products/${productId}`,
-    "DELETE"
+    "DELETE",
   );
 };
 
@@ -277,52 +281,52 @@ export const getCategories = async () => {
 };
 
 export const getElectricalInstallationCategories = async (
-  installerGroupId: string
+  installerGroupId: string,
 ) => {
   return apiRequest<CategoryWithSubcategories[]>(
-    `/api/price_table/categories/electrical?installerGroupId=${installerGroupId}`
+    `/api/price_table/categories/electrical?installerGroupId=${installerGroupId}`,
   );
 };
 
 export const getElectricalInstallationItems = async (
-  installerGroupId: string
+  installerGroupId: string,
 ) => {
   return apiRequest<ElectricalInstallationItem[]>(
-    `/api/price_table/electrical_items?installerGroupId=${installerGroupId}`
+    `/api/price_table/electrical_items?installerGroupId=${installerGroupId}`,
   );
 };
 
 export const addElectricalInstallationItem = async (
-  newProduct: unknown
+  newProduct: unknown,
 ): Promise<ElectricalInstallationItem> => {
   return apiRequest<ElectricalInstallationItem>(
     `/api/price_table/electrical_items`,
     "POST",
-    newProduct
+    newProduct,
   );
 };
 
 export const updateElectricalInstallationItem = async (
   productId: string,
-  price: number
+  price: number,
 ) => {
   return apiRequest(
     `/api/price_table/electrical_items?productId=${productId}`,
     "PATCH",
-    { price }
+    { price },
   );
 };
 
 export const deleteElectricalInstallationItem = async (productId: string) => {
   return apiRequest(
     `/api/price_table/electrical_items?productId=${productId}`,
-    "DELETE"
+    "DELETE",
   );
 };
 
 export const getStoredLeadEmails = async (
   leadId: string,
-  installerGroupId: string
+  installerGroupId: string,
 ) => {
   return apiRequest<{
     success: boolean;
@@ -334,7 +338,7 @@ export const getStoredLeadEmails = async (
 export const syncLeadEmails = async (
   leadId: string,
   userId: string,
-  installerGroupId: string
+  installerGroupId: string,
 ) => {
   return apiRequest<{
     success: boolean;
@@ -354,7 +358,7 @@ export const sendLeadEmail = async (
   body: string,
   messageId?: string,
   attachments?: { name: string; contentType: string; contentBytes: string }[],
-  cc?: string[]
+  cc?: string[],
 ) => {
   return apiRequest<{
     success: boolean;
@@ -376,7 +380,7 @@ export const getRoofTypes = async () => {
 
 export const getMountItems = async (installerGroupId: string) => {
   return apiRequest<MountItem[]>(
-    `/api/price_table/mount_items?installerGroupId=${installerGroupId}`
+    `/api/price_table/mount_items?installerGroupId=${installerGroupId}`,
   );
 };
 
@@ -387,7 +391,7 @@ export const updateMountItems = async (
     supplier_id: string | null;
     product_id: string | null;
     price_per: number;
-  }
+  },
 ) => {
   return apiRequest<MountItem>(`/api/price_table/mount_items`, "PATCH", {
     roof_type_id: roofTypeId,
@@ -398,7 +402,7 @@ export const updateMountItems = async (
 
 export const getMountVolumeReductions = async (installerGroupId: string) => {
   return apiRequest<MountVolumeReductionType[]>(
-    `/api/price_table/mount_volume_reductions?installerGroupId=${installerGroupId}`
+    `/api/price_table/mount_volume_reductions?installerGroupId=${installerGroupId}`,
   );
 };
 
@@ -409,7 +413,7 @@ export const updateMountVolumeReductions = async (
     amount: number;
     amount2: number;
     reduction: number;
-  }
+  },
 ) => {
   return apiRequest<MountVolumeReductionType>(
     `/api/price_table/mount_volume_reductions`,
@@ -417,19 +421,19 @@ export const updateMountVolumeReductions = async (
     {
       installer_group_id: installerGroupId,
       ...data,
-    }
+    },
   );
 };
 
 export const getTeamCommission = async (teamId: string) => {
   return apiRequest<TeamCommissionType[]>(
-    `/api/price_table/team_commission?teamId=${teamId}`
+    `/api/price_table/team_commission?teamId=${teamId}`,
   );
 };
 
 export const updateTeamCommission = async (
   teamId: string,
-  data: TeamCommissionType
+  data: TeamCommissionType,
 ) => {
   return apiRequest<TeamCommissionType>(
     `/api/price_table/team_commission`,
@@ -437,19 +441,19 @@ export const updateTeamCommission = async (
     {
       team_id: teamId,
       ...data,
-    }
+    },
   );
 };
 
 export const addUserToInstallerGroupOrTeam = async (
   activeSelection: string,
   userId: string,
-  code: string
+  code: string,
 ) => {
   return apiRequest<MountVolumeReductionType>(
     `/api/${activeSelection}/add_user`,
     "POST",
-    { userId, code }
+    { userId, code },
   );
 };
 

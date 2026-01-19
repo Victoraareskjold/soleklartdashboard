@@ -187,6 +187,7 @@ export default function TaskSection({ leadId }: Props) {
       });
 
       if (!res.ok) throw new Error("Feil ved oppdatering av leads");
+      const newTask: LeadTask = await res.json();
 
       const [day, month, year] = selectedDate.split(".");
       const localIsoString = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${selectedTime}:00`;
@@ -202,11 +203,12 @@ export default function TaskSection({ leadId }: Props) {
         );
       }
 
+      setTasks((prev) => [...prev, newTask]);
+
       setDescription("");
       setSelectedDate("");
       setSelectedTime("");
       setTaskModal(false);
-      window.location.reload();
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt");

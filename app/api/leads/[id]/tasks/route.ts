@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const resolvedParams = await params;
@@ -32,7 +32,7 @@ export async function GET(
     console.error("GET /api/leads/[id] error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -72,23 +72,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { error } = await supabase.from("lead_tasks").insert({
-      lead_id: leadId,
-      title,
-      description,
-      assigned_to: selectedMember || null,
-      due_date: dueDate,
-    });
+    const { data, error } = await supabase
+      .from("lead_tasks")
+      .insert({
+        lead_id: leadId,
+        title,
+        description,
+        assigned_to: selectedMember || null,
+        due_date: dueDate,
+      })
+      .select("*")
+      .single();
 
     if (error) {
       console.error("Supabase error:", error);
       return NextResponse.json(
         { error: `Feil ved opprettelse av oppgave` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("Import error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -97,7 +101,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const resolvedParams = await params;
   if (!resolvedParams?.id) {
@@ -124,7 +128,7 @@ export async function PATCH(
       console.error("Supabase error:", error);
       return NextResponse.json(
         { error: `Feil ved opprettelse av oppgave` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
