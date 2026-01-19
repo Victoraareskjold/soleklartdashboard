@@ -517,7 +517,7 @@ export default function TaskSection({ leadId }: Props) {
             />
           </div>
           <div className="p-2">
-            <div className="mt-2 flex flex-row gap-2">
+            <div className="mt-2 flex flex-row gap-5">
               <div className="flex flex-col w-full">
                 <label className="opacity-70 text-sm mb-1">
                   Aktivitetsdato
@@ -587,7 +587,8 @@ export default function TaskSection({ leadId }: Props) {
                   installerGroupId={installerGroupId}
                 />
               </div>
-              <div className="items-center justify-center flex pl-4">
+              <div>
+                <label className="text-white text-sm mb-1">.</label>
                 <img
                   src={`${sendMail ? "/icons/bellOn.png" : "/icons/bellOff.png"}`}
                   className="w-20 cursor-pointer"
