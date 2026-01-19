@@ -32,7 +32,6 @@ export default function TaskSection({ leadId }: Props) {
   >({});
   const [newComment, setNewComment] = useState("");
 
-  const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("08:00");
   const [useCustomDate, setUseCustomDate] = useState(false);
   const [customDateTaskId, setCustomDateTaskId] = useState<string | null>(null);
@@ -98,6 +97,10 @@ export default function TaskSection({ leadId }: Props) {
     result.setMonth(result.getMonth() + months);
     return result;
   };
+
+  const [selectedDate, setSelectedDate] = useState<string>(
+    formatDate(addBusinessDays(new Date(), 3)),
+  );
 
   // Generer datoalternativer
   const dateOptions = [
@@ -525,6 +528,7 @@ export default function TaskSection({ leadId }: Props) {
               <div className="flex flex-col w-full">
                 <label className="text-white">.</label>
                 <select
+                  value={selectedTime}
                   className="w-full p-2 border rounded"
                   onChange={(e) => setSelectedTime(e.target.value)}
                 >
