@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
       mobile,
       phone,
       address,
+      roof_type_id,
       assigned_to,
       note,
       company,
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
         mobile: mobile || null,
         phone: phone || null,
         address: address || null,
+        roof_type_id: roof_type_id || null,
         assigned_to: assigned_to || null,
         status: 7,
         note: note || null,
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
       console.error(error);
       return NextResponse.json(
         { error: `Feil ved opprettelse av avtale` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -64,7 +66,7 @@ export async function PATCH(req: NextRequest) {
     if (!id || !userId) {
       return NextResponse.json(
         { error: "Mangler id eller userId" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -83,7 +85,7 @@ export async function PATCH(req: NextRequest) {
     if (error) {
       return NextResponse.json(
         { error: `Feil ved opprettelse av avtale ${id}` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 

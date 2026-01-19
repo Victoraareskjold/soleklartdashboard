@@ -311,7 +311,7 @@ export default function ContactsPage() {
                 {/* Bytt ut den gamle <td> for lead-innhenter med denne: */}
                 <td className="border p-1 w-1/8">
                   {team?.members?.find(
-                    (m) => m.user_id === coldCall.assigned_to
+                    (m) => m.user_id === coldCall.assigned_to,
                   )?.name ||
                     coldCall.assigned_to ||
                     "Ingen leadinnhenter"}
