@@ -39,6 +39,8 @@ export default function TaskSection({ leadId }: Props) {
   const [description, setDescription] = useState("");
   const [selectedMember, setSelectedMember] = useState<string>("");
 
+  const [sendMail, setSendMail] = useState<boolean>(false);
+
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString("no-NO", {
       day: "2-digit",
@@ -192,7 +194,7 @@ export default function TaskSection({ leadId }: Props) {
       const [day, month, year] = selectedDate.split(".");
       const localIsoString = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${selectedTime}:00`;
 
-      if (lead && selectedMember) {
+      if (lead && selectedMember && sendMail) {
         sendMentionEmail(
           description,
           lead,
@@ -517,7 +519,9 @@ export default function TaskSection({ leadId }: Props) {
           <div className="p-2">
             <div className="mt-2 flex flex-row gap-2">
               <div className="flex flex-col w-full">
-                <label>Aktivitetsdato</label>
+                <label className="opacity-70 text-sm mb-1">
+                  Aktivitetsdato
+                </label>
                 <select
                   className="w-full p-2 border rounded"
                   value={useCustomDate ? "custom" : selectedDate}
@@ -557,7 +561,7 @@ export default function TaskSection({ leadId }: Props) {
                 )}
               </div>
               <div className="flex flex-col w-full">
-                <label className="text-white">.</label>
+                <label className="text-white text-sm mb-1">.</label>
                 <select
                   value={selectedTime}
                   className="w-full p-2 border rounded"
@@ -571,7 +575,9 @@ export default function TaskSection({ leadId }: Props) {
                 </select>
               </div>
               <div className="flex flex-col w-full">
-                <label>Aktivitet tilordnet</label>
+                <label className="opacity-70 text-sm mb-1">
+                  Aktivitet tilordnet
+                </label>
                 <TeamMemberSelector
                   team={team}
                   selectedMember={selectedMember}
@@ -579,6 +585,14 @@ export default function TaskSection({ leadId }: Props) {
                   defaultUser={user.id}
                   includeInstallers
                   installerGroupId={installerGroupId}
+                />
+              </div>
+              <div className="items-center justify-center flex pl-4">
+                <img
+                  src={`${sendMail ? "/icons/bellOn.png" : "/icons/bellOff.png"}`}
+                  className="w-20 cursor-pointer"
+                  onClick={() => setSendMail(!sendMail)}
+                  alt="bell-icon"
                 />
               </div>
             </div>
