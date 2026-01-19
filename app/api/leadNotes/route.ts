@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     console.error("GET /api/leadNotes error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       userId,
       content,
       source,
-      noteId
+      noteId,
     );
 
     const createdAttachments = [];
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
     console.error("POST /api/leadNotes error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

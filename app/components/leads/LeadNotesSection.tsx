@@ -433,6 +433,27 @@ export default function LeadNotesSection({ leadId }: Props) {
     }
   };
 
+  const handleDeleteNote = async (noteId: string) => {
+    if (!noteId) return;
+
+    const confirmDelete = window.confirm("Er du sikker på at du vil slette?");
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`/api/leadNotes/notes/${noteId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Kunne ikke slette merknad");
+
+      setAllNotes((prev) => prev.filter((t) => t.id !== noteId));
+      toast.success("Merknad slettet!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt ved sletting");
+    }
+  };
+
   return (
     <section className="mt-8 border-t pt-4">
       <h2 className="text-lg font-semibold mb-2">Merknader</h2>
@@ -503,11 +524,20 @@ export default function LeadNotesSection({ leadId }: Props) {
               className="border p-2 rounded-md bg-white shadow-sm"
             >
               <div className="flex flex-row justify-between">
-                <p className="text-lg">Merknad av {note.user?.name}</p>
-                <p className="text-sm text-gray-400">
-                  {new Date(note.created_at ?? "").toLocaleString()}
-                </p>
+                <div>
+                  <p className="text-lg">Merknad av {note.user?.name}</p>
+                  <p className="text-sm text-gray-400">
+                    {new Date(note.created_at ?? "").toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleDeleteNote(note.id)}
+                  className="py-2 px-4 h-fit bg-red-200 hover:bg-red-500 text-red-500 hover:text-white duration-200 rounded-md font-medium items-center flex flex-row gap-1 text-sm"
+                >
+                  Slett
+                </button>
               </div>
+
               <div
                 className="text-sm text-slate-600 mb-4 mt-2"
                 dangerouslySetInnerHTML={{ __html: note.content }}
