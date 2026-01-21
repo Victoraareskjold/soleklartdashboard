@@ -172,7 +172,7 @@ export default function CalculatorResults({
     if (panels > 0) {
       setCalculatorState((prev) => {
         const panelItem = prev.items.find(
-          (item) => item.id === "solcellepanel"
+          (item) => item.id === "solcellepanel",
         );
         if (panelItem && panelItem.quantity === panels) {
           return prev;
@@ -220,7 +220,7 @@ export default function CalculatorResults({
         if (!item.defaultSupplier) return item;
 
         const found = suppliers.find(
-          (s) => s.name.toLowerCase() === item.defaultSupplier!.toLowerCase()
+          (s) => s.name.toLowerCase() === item.defaultSupplier!.toLowerCase(),
         );
 
         return found ? { ...item, supplierId: found.id } : item;
@@ -235,11 +235,11 @@ export default function CalculatorResults({
 
     const panelTypeToMatch = solarData.selectedPanelType;
     const allProducts = suppliersAndProducts.flatMap((s) =>
-      s.products.map((p) => ({ ...p, supplierId: s.id }))
+      s.products.map((p) => ({ ...p, supplierId: s.id })),
     );
 
     const matchedProduct = allProducts.find(
-      (p) => p.name.toLowerCase() === panelTypeToMatch.toLowerCase()
+      (p) => p.name.toLowerCase() === panelTypeToMatch.toLowerCase(),
     );
 
     if (matchedProduct) {
@@ -252,7 +252,7 @@ export default function CalculatorResults({
                 supplierId: matchedProduct!.supplierId,
                 productId: matchedProduct!.id,
               }
-            : item
+            : item,
         ),
       }));
     }
@@ -266,11 +266,11 @@ export default function CalculatorResults({
 
     setCalculatorState((prev) => {
       const ballasteinCategory = allCategories.find(
-        (c) => c.name === "ballastein"
+        (c) => c.name === "ballastein",
       );
 
       const ballasteinExists = prev.items.some(
-        (item) => item.id === "ballastein"
+        (item) => item.id === "ballastein",
       );
 
       if (isFlatRoof && !ballasteinExists) {
@@ -310,10 +310,10 @@ export default function CalculatorResults({
       const craneExists = prev.items.some((i) => i.id === "solcellekran");
       if (shouldAddCrane && !craneExists) {
         const allProducts = suppliersAndProducts.flatMap((s) =>
-          s.products.map((p) => ({ ...p, supplierId: s.id }))
+          s.products.map((p) => ({ ...p, supplierId: s.id })),
         );
         const solarCrane = allProducts.find((p) =>
-          p.name.toLowerCase().includes("solcellekran")
+          p.name.toLowerCase().includes("solcellekran"),
         );
         if (!solarCrane) return prev;
 
@@ -353,7 +353,7 @@ export default function CalculatorResults({
         if (!mountItems || mountItems.length === 0) return;
 
         const matchingMount = mountItems.find(
-          (item) => item.roof_type?.name === solarData.selectedRoofType
+          (item) => item.roof_type?.name === solarData.selectedRoofType,
         );
 
         if (!matchingMount || !matchingMount.product) return;
@@ -370,7 +370,7 @@ export default function CalculatorResults({
                   mountPricePer: matchingMount.product.price_ex_vat,
                   index: 2,
                 }
-              : item
+              : item,
           ),
         }));
       } catch (err) {
@@ -397,14 +397,14 @@ export default function CalculatorResults({
         const count100 = Math.max(1, Math.ceil(totalPanels / 100));
 
         const allProducts = suppliersAndProducts.flatMap((s) =>
-          s.products.map((p) => ({ ...p, supplierId: s.id }))
+          s.products.map((p) => ({ ...p, supplierId: s.id })),
         );
 
         const standardPall = allProducts.find((p) =>
-          p.name.toLowerCase().includes("standardpall")
+          p.name.toLowerCase().includes("standardpall"),
         );
         const europaPall = allProducts.find((p) =>
-          p.name.toLowerCase().includes("europall")
+          p.name.toLowerCase().includes("europall"),
         );
 
         // Finn FRAKT kategori
@@ -413,7 +413,7 @@ export default function CalculatorResults({
         setCalculatorState((prev) => {
           // Fjern eksisterende frakt-items for å unngå duplikater
           const itemsWithoutFrakt = prev.items.filter(
-            (item) => item.id !== "frakt" && item.id !== "frakt2"
+            (item) => item.id !== "frakt" && item.id !== "frakt2",
           );
 
           const newItems = [...itemsWithoutFrakt];
@@ -473,7 +473,7 @@ export default function CalculatorResults({
         const desiredCapacity = totalKwp * 0.85; // 85 % av total kWp
 
         const inverterCategory = allCategories.find(
-          (c) => c.name.toLowerCase() === "inverter"
+          (c) => c.name.toLowerCase() === "inverter",
         );
 
         const voltage = solarData.voltage || 230;
@@ -501,11 +501,11 @@ export default function CalculatorResults({
               n.includes("1fas") ||
               n.includes("1 phase")
             );
-          }
+          },
         );
 
         const existingInverter = calculatorState.items.find((item) =>
-          item.id.startsWith("inverter")
+          item.id.startsWith("inverter"),
         );
         const supplierId =
           existingInverter?.supplierId || solarData.defaultInverterSupplierId;
@@ -515,7 +515,7 @@ export default function CalculatorResults({
 
         if (supplierId) {
           const supplier = suppliersAndProducts.find(
-            (s) => s.id === supplierId
+            (s) => s.id === supplierId,
           );
           if (supplier) {
             inverterProducts = supplier.products
@@ -527,7 +527,7 @@ export default function CalculatorResults({
           inverterProducts = suppliersAndProducts.flatMap((s) =>
             s.products
               .filter((p) => p.subcategory?.id === inverterSubcategory?.id)
-              .map((p) => ({ ...p, supplierId: s.id }))
+              .map((p) => ({ ...p, supplierId: s.id })),
           );
         }
 
@@ -567,7 +567,7 @@ export default function CalculatorResults({
         // Beregn total valgt kapasitet
         const totalSelectedPower = selected.reduce(
           (sum, s) => sum + s.product.power * s.quantity,
-          0
+          0,
         );
 
         // Ikke legg til invertere hvis totalen er for lav (<85 % av ønsket kapasitet)
@@ -575,15 +575,15 @@ export default function CalculatorResults({
         if (totalSelectedPower < minAcceptable) {
           console.log(
             `Kunne ikke dekke ønsket kapasitet (${desiredCapacity.toFixed(
-              2
-            )} kWp), valgt kun ${totalSelectedPower.toFixed(2)} kW`
+              2,
+            )} kWp), valgt kun ${totalSelectedPower.toFixed(2)} kW`,
           );
           return;
         }
 
         setCalculatorState((prev) => {
           const itemsWithoutInverter = prev.items.filter(
-            (item) => !item.id.startsWith("inverter")
+            (item) => !item.id.startsWith("inverter"),
           );
           const newItems = selected.map((s, index) => ({
             id: `inverter-${index}`,
@@ -622,10 +622,10 @@ export default function CalculatorResults({
           return item;
 
         const supplier = suppliersAndProducts.find(
-          (s) => s.id === item.supplierId
+          (s) => s.id === item.supplierId,
         );
         const product = supplier?.products.find(
-          (p) => p.name.toLowerCase() === item.defaultProduct!.toLowerCase()
+          (p) => p.name.toLowerCase() === item.defaultProduct!.toLowerCase(),
         );
 
         return product ? { ...item, productId: product.id } : item;
@@ -647,7 +647,7 @@ export default function CalculatorResults({
           id: id,
           displayName:
             `${category?.name.charAt(0).toUpperCase()}${category?.name.slice(
-              1
+              1,
             )}` || "Nytt utstyr",
           categoryId: newItem.categoryId!,
           quantity: newItem.quantity || 1,
@@ -678,7 +678,7 @@ export default function CalculatorResults({
 
     if (itemId === "feste" && updates.productId) {
       const selectedMount = mountItems.find(
-        (item) => item.product.id === updates.productId
+        (item) => item.product.id === updates.productId,
       );
       if (
         selectedMount &&
@@ -705,7 +705,7 @@ export default function CalculatorResults({
       });
       localStorage.setItem(
         `defaultPanel_${installerGroupId}`,
-        updates.productName
+        updates.productName,
       );
     }
 
@@ -732,7 +732,7 @@ export default function CalculatorResults({
           items: updatedItems.map((item) =>
             item.id === "feste"
               ? { ...item, quantity: updates.quantity as number }
-              : item
+              : item,
           ),
         };
       }
@@ -748,7 +748,7 @@ export default function CalculatorResults({
       if (!item.productId || !item.supplierId) return sum;
 
       const supplier = suppliersAndProducts.find(
-        (s) => s.id === item.supplierId
+        (s) => s.id === item.supplierId,
       );
       const product = supplier?.products.find((p) => p.id === item.productId);
 
@@ -768,7 +768,7 @@ export default function CalculatorResults({
   useEffect(() => {
     if (!setSolarData) return;
     const panelItem = calculatorState.items.find(
-      (item) => item.id === "solcellepanel"
+      (item) => item.id === "solcellepanel",
     );
     if (panelItem) {
       setSolarData((prev) => {

@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 
 interface Props {
   leadId: string;
@@ -18,6 +19,7 @@ interface Props {
 export default function TaskSection({ leadId }: Props) {
   const { user } = useAuth();
   const { teamId } = useTeam();
+  const router = useRouter();
 
   const { installerGroupId } = useInstallerGroup();
   const [lead, setLead] = useState<Lead | null>(null);
@@ -241,6 +243,8 @@ export default function TaskSection({ leadId }: Props) {
       console.error(err);
       toast.error("Noe gikk galt ved oppretting av kommentar");
     }
+    window.location.reload();
+    router.push(`?tab=Oppgaver`);
   };
 
   const handleUpdateDueDate = async (
