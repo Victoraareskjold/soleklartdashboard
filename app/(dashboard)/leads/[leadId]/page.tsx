@@ -90,6 +90,7 @@ export default function LeadPage() {
   const { teamId } = useTeam();
   const { user } = useAuth();
   const { installerGroupId } = useInstallerGroup();
+
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
 

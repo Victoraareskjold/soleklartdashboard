@@ -16,6 +16,8 @@ import { toast } from "react-toastify";
 import { supabase } from "@/lib/supabase";
 import { CreateEstimateInput, Estimate } from "@/lib/types";
 import { getPanelWp } from "@/utils/getPanelWp";
+import { useInstallerGroup } from "@/context/InstallerGroupContext";
+import LoadingScreen from "../LoadingScreen";
 
 interface EstimateSectionProps {
   solarData: SolarData;
@@ -46,6 +48,8 @@ export default function EstimateSection({
   const [initialSolarData, setInitialSolarData] = useState<SolarData | null>(
     null,
   );
+  const [isStorageReady, setIsStorageReady] = useState(false);
+  const { installerGroupId } = useInstallerGroup();
 
   useEffect(() => {
     if (
@@ -65,6 +69,33 @@ export default function EstimateSection({
       setSuppliersAndProducts(data);
     });
   }, []);
+
+  useEffect(() => {
+    if (!installerGroupId) {
+      setIsStorageReady(true);
+      return;
+    }
+
+    const panelSupplierId =
+      localStorage.getItem(`defaultPanelSupplierId_${installerGroupId}`) || "";
+    const panelProductId =
+      localStorage.getItem(`defaultPanelProductId_${installerGroupId}`) || "";
+    const festeId =
+      localStorage.getItem(`defaultFesteSupplierId_${installerGroupId}`) || "";
+    const inverterId =
+      localStorage.getItem(`defaultInverterSupplierId_${installerGroupId}`) ||
+      "";
+
+    setSolarData((prev) => ({
+      ...prev,
+      defaultPanelSupplierId: panelSupplierId,
+      defaultPanelProductId: panelProductId,
+      defaultFesteSupplierId: festeId,
+      defaultInverterSupplierId: inverterId,
+    }));
+
+    setIsStorageReady(true);
+  }, [installerGroupId, setSolarData]);
 
   const wrappedSetSolarData = (action: React.SetStateAction<SolarData>) => {
     setSolarData((prevSolarData) => {
@@ -146,6 +177,10 @@ export default function EstimateSection({
       );
     }
   };
+
+  if (!isStorageReady || !suppliers || !suppliersAndProducts) {
+    return <LoadingScreen />;
+  }
 
   return (
     <>
