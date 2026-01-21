@@ -112,7 +112,7 @@ export default function LeadPage() {
         ]);
 
         const noteAttachments = notesData.flatMap(
-          (note) => note.attachments || []
+          (note) => note.attachments || [],
         );
 
         const emailAttachments = emailsResponse.success
@@ -123,7 +123,7 @@ export default function LeadPage() {
 
         combined.sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
 
         setAllAttachments(combined as (LeadNoteAttachment | EmailAttachment)[]);
@@ -273,7 +273,7 @@ export default function LeadPage() {
       const matchingRoofType = roofTypes.find(
         (rt) =>
           rt.name === solarData.selectedRoofType ||
-          rt.id === solarData.selectedRoofType
+          rt.id === solarData.selectedRoofType,
       );
 
       if (matchingRoofType) {
@@ -331,7 +331,7 @@ export default function LeadPage() {
 
   const updateSingleField = async <K extends string>(
     field: K,
-    value: string | number
+    value: string | number,
   ) => {
     setLoading(true);
 
@@ -349,8 +349,13 @@ export default function LeadPage() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === "PVMAP_DATA") {
-        const payload = event.data.payload;
-        setSolarData(payload);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { selectedRoofType, ...rest } = event.data.payload;
+
+        setSolarData((prev) => ({
+          ...prev,
+          ...rest,
+        }));
         setActiveRoute("Estimat");
         setIsModalOpen(false);
       }
@@ -370,7 +375,7 @@ export default function LeadPage() {
   };
 
   const formatDateForInput = (
-    dateString: string | null | undefined
+    dateString: string | null | undefined,
   ): string => {
     if (!dateString) return "";
 
@@ -400,7 +405,7 @@ export default function LeadPage() {
     .filter((t) => t.created_at)
     .sort(
       (a, b) =>
-        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime(),
     )[0];
 
   let dueText = "Ingen oppgave";
@@ -426,7 +431,7 @@ export default function LeadPage() {
 
     return [...estimates].sort(
       (a, b) =>
-        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime(),
     )[0];
   };
 
@@ -744,7 +749,7 @@ export default function LeadPage() {
               ?.sort(
                 (a, b) =>
                   new Date(b.created_at!).getTime() -
-                  new Date(a.created_at!).getTime()
+                  new Date(a.created_at!).getTime(),
               )
               .map((e) => (
                 <li
@@ -758,7 +763,7 @@ export default function LeadPage() {
                     <p className="font-semibold">
                       Tilbud -{" "}
                       {getkWp(e.selected_panel_type!, e.total_panels!).toFixed(
-                        1
+                        1,
                       )}{" "}
                       kWp
                     </p>
@@ -775,7 +780,7 @@ export default function LeadPage() {
                         {
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 0,
-                        }
+                        },
                       )}{" "}
                       Kr
                     </p>

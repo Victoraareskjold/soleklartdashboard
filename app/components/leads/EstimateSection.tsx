@@ -37,14 +37,14 @@ export default function EstimateSection({
     SupplierWithProducts[] | null
   >(null);
   const [priceOverview, setPriceOverview] = useState<PriceOverview | null>(
-    null
+    null,
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const params = useParams();
   const leadId = params.leadId as string;
 
   const [initialSolarData, setInitialSolarData] = useState<SolarData | null>(
-    null
+    null,
   );
 
   useEffect(() => {
@@ -142,7 +142,7 @@ export default function EstimateSection({
     } catch (err) {
       console.error("Kunne ikke opprette estimat:", err);
       toast.error(
-        err instanceof Error ? err.message : "En ukjent feil oppstod."
+        err instanceof Error ? err.message : "En ukjent feil oppstod.",
       );
     }
   };

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 import { Lead, LeadTask, Team } from "@/lib/types";
 import TeamMemberSelector from "../cold-calling/TeamMemberSelector";

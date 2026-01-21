@@ -146,8 +146,7 @@ CREATE TABLE public.lead_tasks_comments (
   lead_task_id uuid NOT NULL,
   description text,
   CONSTRAINT lead_tasks_comments_pkey PRIMARY KEY (id),
-  CONSTRAINT lead_tasks_comments_lead_task_id_fkey FOREIGN KEY (lead_task_id) REFERENCES public.lead_tasks(id),
-  CONSTRAINT lead_tasks_comments_lead_task_id_fkey1 FOREIGN KEY (lead_task_id) REFERENCES public.lead_tasks(id)
+  CONSTRAINT lead_tasks_comments_lead_task_id_fkey FOREIGN KEY (lead_task_id) REFERENCES public.lead_tasks(id) ON DELETE CASCADE
 );
 CREATE TABLE public.leads (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
