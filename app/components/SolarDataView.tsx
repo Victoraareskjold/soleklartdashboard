@@ -22,6 +22,9 @@ export interface SolarData {
   coveragePercentage?: number;
   kwp?: number;
   voltage?: number;
+  defaultPanelSupplierId?: string;
+  defaultPanelProductId?: string;
+  defaultFesteSupplierId?: string;
   defaultInverterSupplierId?: string;
 }
 

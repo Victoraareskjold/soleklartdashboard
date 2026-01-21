@@ -23,62 +23,75 @@ export default function PriceTablePage() {
     SupplierWithProducts[] | null
   >(null);
   const [loading, setLoading] = useState(true);
-  const [solarData, setSolarData] = useState<SolarData>(() => {
-    const defaultInverterSupplierId =
-      (typeof window !== "undefined" &&
-        localStorage.getItem("defaultInverterSupplier")) ||
-      "";
-    return {
-      selectedPanelType: "",
-      defaultInverterSupplierId,
-      totalPanels: 1,
-      selectedRoofType: "Enkeltkrummet takstein",
-      checkedRoofData: [
-        {
-          roofId: "",
-          adjustedPanelCount: 0,
-          maxPanels: 0,
-          direction: "",
-          angle: 0,
-        },
-      ],
-    };
+
+  // Ny state for å vite når localStorage er ferdig lest
+  const [isStorageReady, setIsStorageReady] = useState(false);
+
+  const [solarData, setSolarData] = useState<SolarData>({
+    defaultPanelSupplierId: "",
+    defaultPanelProductId: "",
+    defaultFesteSupplierId: "",
+    defaultInverterSupplierId: "",
+    totalPanels: 1,
+    selectedRoofType: "Enkeltkrummet takstein",
+    checkedRoofData: [
+      {
+        roofId: "",
+        adjustedPanelCount: 0,
+        maxPanels: 0,
+        direction: "",
+        angle: 0,
+      },
+    ],
   });
 
-  useEffect(() => {
-    getSuppliers().then((data) => {
-      setSuppliers(data);
-    });
-    getSuppliersWithProducts().then((data) => {
-      setSuppliersAndProducts(data);
-    });
-    setLoading(false);
-  }, []);
-
+  // Last inn fra localStorage
   useEffect(() => {
     if (!installerGroupId) return;
 
-    const panelKey = `defaultPanel_${installerGroupId}`;
-    const inverterKey = `defaultInverterSupplier_${installerGroupId}`;
-
-    const savedPanel = localStorage.getItem(panelKey) || "";
-    const savedInverter = localStorage.getItem(inverterKey) || "";
+    const panelSupplierId =
+      localStorage.getItem(`defaultPanelSupplierId_${installerGroupId}`) || "";
+    const panelProductId =
+      localStorage.getItem(`defaultPanelProductId_${installerGroupId}`) || "";
+    const festeId =
+      localStorage.getItem(`defaultFesteSupplierId_${installerGroupId}`) || "";
+    const inverterId =
+      localStorage.getItem(`defaultInverterSupplierId_${installerGroupId}`) ||
+      "";
 
     setSolarData((prev) => ({
       ...prev,
-      selectedPanelType: savedPanel || "",
-      defaultInverterSupplierId: savedInverter || "",
+      defaultPanelSupplierId: panelSupplierId,
+      defaultPanelProductId: panelProductId,
+      defaultFesteSupplierId: festeId,
+      defaultInverterSupplierId: inverterId,
     }));
+
+    // Nå vet vi at vi har prøvd å hente verdiene
+    setIsStorageReady(true);
   }, [installerGroupId]);
 
+  useEffect(() => {
+    Promise.all([getSuppliers(), getSuppliersWithProducts()]).then(
+      ([s, sp]) => {
+        setSuppliers(s);
+        setSuppliersAndProducts(sp);
+        setLoading(false);
+      },
+    );
+  }, []);
+
+  // Oppdatert sjekk: Vi venter spesifikt på isStorageReady
   if (
     loading ||
+    !isStorageReady ||
     !suppliers ||
     !suppliersAndProducts ||
     !installerGroupId ||
     !teamId
-  )
+  ) {
     return <LoadingScreen />;
+  }
 
   return (
     <div className="flex gap-2 min-h-screen">

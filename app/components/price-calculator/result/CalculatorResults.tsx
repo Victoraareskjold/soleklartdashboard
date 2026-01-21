@@ -2,6 +2,7 @@
 import {
   MountItem,
   PriceOverview,
+  Product,
   Supplier,
   SupplierWithProducts,
 } from "@/types/price_table";
@@ -32,8 +33,8 @@ export interface CalculatorItem {
   quantity: number;
   supplierId: string;
   productId: string;
-  defaultSupplier?: string;
-  defaultProduct?: string;
+  defaultSupplierId?: string;
+  defaultProductId?: string; // Added defaultProductId
   mountPricePer?: number;
   index?: number;
 }
@@ -90,7 +91,9 @@ export default function CalculatorResults({
         categoryId: "",
         quantity: solarData?.totalPanels || 1,
         supplierId: "",
+        defaultSupplierId: solarData?.defaultPanelSupplierId || "",
         productId: "",
+        defaultProductId: solarData?.defaultPanelProductId || "",
         index: 1,
       },
       {
@@ -100,7 +103,7 @@ export default function CalculatorResults({
         quantity: solarData?.totalPanels || 1,
         supplierId: "",
         productId: "",
-        defaultSupplier: "Solar Technologies Scandinavia AS",
+        defaultSupplierId: solarData?.defaultFesteSupplierId || "",
         index: 2,
       },
       {
@@ -108,7 +111,8 @@ export default function CalculatorResults({
         displayName: "Inverter",
         categoryId: "",
         quantity: 1,
-        supplierId: solarData?.defaultInverterSupplierId || "",
+        supplierId: "",
+        defaultSupplierId: solarData?.defaultInverterSupplierId || "",
         productId: "",
         index: 3,
       },
@@ -117,44 +121,12 @@ export default function CalculatorResults({
         displayName: "Stillase",
         categoryId: "",
         quantity: 1,
-        supplierId: "ba4f75fd-26fd-44ef-9c18-25110d3b4448",
-        productId: "1557c4ef-2e78-41ef-904c-8113d8ba76cd",
-        defaultSupplier: "Stillase Moss AS",
+        supplierId: "",
+        productId: "",
+        defaultSupplierId: "ba4f75fd-26fd-44ef-9c18-25110d3b4448",
+        defaultProductId: "1557c4ef-2e78-41ef-904c-8113d8ba76cd",
         index: 4,
       },
-      /* {
-      {
-        id: "frakt",
-        displayName: "Frakt",
-        categoryId: "",
-        quantity: 1,
-        supplierId: "",
-        productId: "",
-        defaultSupplier: "DHL Freight",
-      },
-        id: "battery",
-        displayName: "Batteri",
-        categoryId: "",
-        quantity: 1,
-        supplierId: "",
-        productId: "",
-      },
-      {
-        id: "ballastein",
-        displayName: "Ballastein",
-        categoryId: "",
-        quantity: 1,
-        supplierId: "",
-        productId: "",
-      },
-      {
-        id: "solcellekran",
-        displayName: "Solcellekran",
-        categoryId: "",
-        quantity: 1,
-        supplierId: "",
-        productId: "",
-      }, */
     ],
     totalPrice: 0,
   });
@@ -166,30 +138,6 @@ export default function CalculatorResults({
     supplierId: "",
     productId: "",
   });
-
-  useEffect(() => {
-    const panels = solarData?.totalPanels ?? 0;
-    if (panels > 0) {
-      setCalculatorState((prev) => {
-        const panelItem = prev.items.find(
-          (item) => item.id === "solcellepanel",
-        );
-        if (panelItem && panelItem.quantity === panels) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          items: prev.items.map((item) => {
-            if (item.id === "solcellepanel" || item.id === "feste") {
-              return { ...item, quantity: panels };
-            }
-            return item;
-          }),
-        };
-      });
-    }
-  }, [solarData?.totalPanels]);
 
   // koble kategorier
   useEffect(() => {
@@ -217,46 +165,14 @@ export default function CalculatorResults({
       ...prev,
       items: prev.items.map((item) => {
         if (item.supplierId) return item;
-        if (!item.defaultSupplier) return item;
+        if (!item.defaultSupplierId) return item;
 
-        const found = suppliers.find(
-          (s) => s.name.toLowerCase() === item.defaultSupplier!.toLowerCase(),
-        );
+        const found = suppliers.find((s) => s.id === item.defaultSupplierId);
 
         return found ? { ...item, supplierId: found.id } : item;
       }),
     }));
   }, [suppliers]);
-
-  // Auto-select panel product based on solarData.panelType
-  useEffect(() => {
-    if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
-    if (!solarData?.selectedPanelType) return;
-
-    const panelTypeToMatch = solarData.selectedPanelType;
-    const allProducts = suppliersAndProducts.flatMap((s) =>
-      s.products.map((p) => ({ ...p, supplierId: s.id })),
-    );
-
-    const matchedProduct = allProducts.find(
-      (p) => p.name.toLowerCase() === panelTypeToMatch.toLowerCase(),
-    );
-
-    if (matchedProduct) {
-      setCalculatorState((prev) => ({
-        ...prev,
-        items: prev.items.map((item) =>
-          item.id === "solcellepanel"
-            ? {
-                ...item,
-                supplierId: matchedProduct!.supplierId,
-                productId: matchedProduct!.id,
-              }
-            : item,
-        ),
-      }));
-    }
-  }, [suppliersAndProducts, solarData?.selectedPanelType]);
 
   // Auto-add ballastein for flatt tak
   useEffect(() => {
@@ -300,6 +216,7 @@ export default function CalculatorResults({
     });
   }, [solarData?.selectedRoofType, solarData?.totalPanels, allCategories]);
 
+  // Auto-add crane-logic
   useEffect(() => {
     if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
     if (!solarData?.totalPanels) return;
@@ -381,6 +298,7 @@ export default function CalculatorResults({
     fetchMountItem();
   }, [installerGroupId, solarData?.selectedRoofType, mountItems]);
 
+  // Auto-add stillase-logic
   useEffect(() => {
     async function fetchStillase() {
       if (
@@ -457,160 +375,118 @@ export default function CalculatorResults({
     allCategories,
   ]);
 
-  // Auto-select inverter basert på default eller andre regler
+  // Auto-select inverter basert på valgt leverandør
   useEffect(() => {
-    async function fetchBestInverter() {
-      if (
-        !solarData?.kwp ||
-        !installerGroupId ||
-        !suppliersAndProducts ||
-        allCategories.length === 0
-      )
-        return;
+    if (
+      !solarData?.kwp ||
+      !installerGroupId ||
+      !suppliersAndProducts ||
+      allCategories.length === 0
+    )
+      return;
 
-      try {
-        const totalKwp = solarData.kwp; // kWp
-        const desiredCapacity = totalKwp * 0.85; // 85 % av total kWp
+    try {
+      const totalKwp = solarData.kwp || 0;
+      const desiredCapacity = totalKwp * 0.85;
 
-        const inverterCategory = allCategories.find(
-          (c) => c.name.toLowerCase() === "inverter",
-        );
+      const inverterCategory = allCategories.find(
+        (c) => c.name.toLowerCase() === "inverter",
+      );
 
-        const voltage = solarData.voltage || 230;
-        const subcategoryName =
-          voltage === 400 ? "inverter 3-fas" : "inverter 1-fas";
+      const voltage = solarData.voltage || 230;
 
-        // Match subkategori basert på voltage
-        const inverterSubcategory = inverterCategory?.subcategories?.find(
-          (sub) => {
-            const n = sub.name.toLowerCase();
-
-            if (voltage === 400) {
-              return (
-                n.includes("400") ||
-                n.includes("3-fas") ||
-                n.includes("3fas") ||
-                n.includes("3 phase")
-              );
-            }
-
-            // Default 230V
+      // Finn riktig subkategori basert på spenning
+      const inverterSubcategory = inverterCategory?.subcategories?.find(
+        (sub) => {
+          const n = sub.name.toLowerCase();
+          if (voltage === 400) {
             return (
-              n.includes("230") ||
-              n.includes("1-fas") ||
-              n.includes("1fas") ||
-              n.includes("1 phase")
+              n.includes("400") || n.includes("3-fas") || n.includes("3fas")
             );
-          },
-        );
-
-        const existingInverter = calculatorState.items.find((item) =>
-          item.id.startsWith("inverter"),
-        );
-        const supplierId =
-          existingInverter?.supplierId || solarData.defaultInverterSupplierId;
-        let inverterProducts: ((typeof suppliersAndProducts)[0]["products"][0] & {
-          supplierId: string;
-        })[] = [];
-
-        if (supplierId) {
-          const supplier = suppliersAndProducts.find(
-            (s) => s.id === supplierId,
-          );
-          if (supplier) {
-            inverterProducts = supplier.products
-              .filter((p) => p.subcategory?.id === inverterSubcategory?.id)
-              .map((p) => ({ ...p, supplierId: supplier.id }));
           }
-        } else {
-          // Fallback to all suppliers if no default is set
-          inverterProducts = suppliersAndProducts.flatMap((s) =>
-            s.products
-              .filter((p) => p.subcategory?.id === inverterSubcategory?.id)
-              .map((p) => ({ ...p, supplierId: s.id })),
-          );
-        }
+          return n.includes("230") || n.includes("1-fas") || n.includes("1fas");
+        },
+      );
 
-        if (!inverterProducts || inverterProducts.length === 0) {
-          console.log(`No inverters found for subcategory ${subcategoryName}`);
-          // Remove existing inverters if any, as they might be for the wrong voltage
-          setCalculatorState((prev) => ({
-            ...prev,
-            items: prev.items.filter((item) => !item.id.startsWith("inverter")),
-          }));
-          return;
-        }
+      // VIKTIG: Finn ut hvilken leverandør som er valgt i tabellen akkurat nå
+      const currentInverter = calculatorState.items.find((item) =>
+        item.id.startsWith("inverter"),
+      );
 
-        const parsePower = (name: string) => {
-          const match = name.match(/(\d+\.?\d*)\s?kW/i);
-          return match ? parseFloat(match[1]) : 0;
-        };
+      // Bruk eksisterende valg, eller fallback til default hvis tabellen er tom
+      const activeSupplierId =
+        currentInverter?.supplierId || solarData?.defaultInverterSupplierId;
 
-        const sorted = inverterProducts
-          .map((p) => ({ ...p, power: parsePower(p.name) }))
-          .filter((p) => p.power > 0)
-          .sort((a, b) => b.power - a.power);
-
-        let remaining = desiredCapacity;
-        const selected: { product: (typeof sorted)[0]; quantity: number }[] =
-          [];
-
-        for (const p of sorted) {
-          if (remaining <= 0) break;
-          const qty = Math.floor(remaining / p.power);
-          if (qty > 0) {
-            selected.push({ product: p, quantity: qty });
-            remaining -= qty * p.power;
-          }
-        }
-
-        // Beregn total valgt kapasitet
-        const totalSelectedPower = selected.reduce(
-          (sum, s) => sum + s.product.power * s.quantity,
-          0,
-        );
-
-        // Ikke legg til invertere hvis totalen er for lav (<85 % av ønsket kapasitet)
-        const minAcceptable = desiredCapacity * 0.85;
-        if (totalSelectedPower < minAcceptable) {
-          console.log(
-            `Kunne ikke dekke ønsket kapasitet (${desiredCapacity.toFixed(
-              2,
-            )} kWp), valgt kun ${totalSelectedPower.toFixed(2)} kW`,
-          );
-          return;
-        }
-
-        setCalculatorState((prev) => {
-          const itemsWithoutInverter = prev.items.filter(
-            (item) => !item.id.startsWith("inverter"),
-          );
-          const newItems = selected.map((s, index) => ({
-            id: `inverter-${index}`,
-            displayName: "Inverter",
-            categoryId: inverterCategory!.id,
-            quantity: s.quantity,
-            supplierId: s.product.supplierId,
-            productId: s.product.id,
-            index: 3,
-          }));
-          return { ...prev, items: [...itemsWithoutInverter, ...newItems] };
-        });
-      } catch (err) {
-        console.error("Feil ved lasting av inverter:", err);
+      if (!activeSupplierId) {
+        console.log("Ingen leverandør valgt for inverter ennå.");
+        return;
       }
-    }
 
-    fetchBestInverter();
+      // HENT KUN produkter fra den aktive leverandøren
+      const supplier = suppliersAndProducts.find(
+        (s) => s.id === activeSupplierId,
+      );
+      if (!supplier) return;
+
+      const inverterProducts = supplier.products
+        .filter((p) => p.subcategory?.id === inverterSubcategory?.id)
+        .map((p) => ({
+          ...p,
+          supplierId: supplier.id,
+          power: parseFloat(p.name.match(/(\d+\.?\d*)\s?kW/i)?.[1] || "0"),
+        }))
+        .filter((p) => p.power > 0)
+        .sort((a, b) => b.power - a.power); // Størst først
+
+      if (inverterProducts.length === 0) {
+        console.log(
+          `Leverandør ${supplier.name} har ingen passende invertere for ${voltage}V`,
+        );
+        return;
+      }
+
+      // Algoritme for å velge antall invertere (fra valgt leverandør)
+      let remaining = desiredCapacity;
+      const selected: { product: Product; quantity: number }[] = [];
+
+      for (const p of inverterProducts) {
+        if (remaining <= 0.5) break; // Stopper når vi er nær nok (f.eks 0.5kW rest)
+        const qty = Math.floor(remaining / p.power);
+        if (qty > 0) {
+          selected.push({ product: p, quantity: qty });
+          remaining -= qty * p.power;
+        }
+      }
+
+      // Hvis vi har rest som er mer enn 0, men ingen mindre invertere passer,
+      // legg til én av den minste inverteren for å dekke gapet
+      if (remaining > 1 && inverterProducts.length > 0) {
+        const smallestProduct = inverterProducts[inverterProducts.length - 1];
+        selected.push({ product: smallestProduct, quantity: 1 });
+      }
+
+      if (selected.length === 0) return;
+
+      setCalculatorState((prev) => {
+        const itemsWithoutInverter = prev.items.filter(
+          (item) => !item.id.startsWith("inverter"),
+        );
+        const newItems = selected.map((s, index) => ({
+          id: `inverter-${index}`,
+          displayName: "Inverter",
+          categoryId: inverterCategory!.id,
+          quantity: s.quantity,
+          supplierId: activeSupplierId, // LÅST til valgt leverandør
+          productId: s.product.id,
+          index: 3,
+        }));
+        return { ...prev, items: [...itemsWithoutInverter, ...newItems] };
+      });
+    } catch (err) {
+      console.error("Feil ved beregning av invertere:", err);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    installerGroupId,
-    solarData?.kwp,
-    solarData?.voltage,
-    suppliersAndProducts,
-    allCategories,
-    solarData?.defaultInverterSupplierId,
-  ]);
+  }, [solarData?.kwp, solarData?.voltage]); // Vi lytter KUN på effekt og spenning
 
   useEffect(() => {
     if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
@@ -618,14 +494,14 @@ export default function CalculatorResults({
     setCalculatorState((prev) => ({
       ...prev,
       items: prev.items.map((item) => {
-        if (item.productId || !item.supplierId || !item.defaultProduct)
+        if (item.productId || !item.supplierId || !item.defaultProductId)
           return item;
 
         const supplier = suppliersAndProducts.find(
           (s) => s.id === item.supplierId,
         );
         const product = supplier?.products.find(
-          (p) => p.name.toLowerCase() === item.defaultProduct!.toLowerCase(),
+          (p) => p.name.toLowerCase() === item.defaultProductId!.toLowerCase(),
         );
 
         return product ? { ...item, productId: product.id } : item;
@@ -676,69 +552,73 @@ export default function CalculatorResults({
       return;
     }
 
-    if (itemId === "feste" && updates.productId) {
-      const selectedMount = mountItems.find(
-        (item) => item.product.id === updates.productId,
-      );
-      if (
-        selectedMount &&
-        selectedMount.roof_type &&
-        setSolarData &&
-        solarData
-      ) {
-        setSolarData({
-          ...solarData,
-          selectedRoofType: selectedMount.roof_type.name,
-        });
-      }
-    }
-
-    if (
-      itemId === "solcellepanel" &&
-      updates.productName &&
-      setSolarData &&
-      solarData
-    ) {
-      setSolarData({
-        ...solarData,
-        selectedPanelType: updates.productName,
-      });
-      localStorage.setItem(
-        `defaultPanel_${installerGroupId}`,
-        updates.productName,
-      );
-    }
-
-    if (
-      itemId === "inverter" &&
-      updates.supplierId &&
-      setSolarData &&
-      solarData
-    ) {
-      localStorage.setItem("defaultInverterSupplier", updates.supplierId);
-    }
-
     setCalculatorState((prev) => {
-      const updatedItems = prev.items.map((item) => {
-        if (item.id === itemId) {
-          return { ...item, ...updates };
-        }
-        return item;
-      });
+      const updatedItems = prev.items.map((item) =>
+        item.id === itemId ? { ...item, ...updates } : item,
+      );
 
       if (itemId === "solcellepanel" && updates.quantity !== undefined) {
+        const newQty = updates.quantity;
+
+        // FIX: Bruk setTimeout for å unngå "update while rendering"-feil
+        if (setSolarData) {
+          setTimeout(() => {
+            setSolarData((prevSolar) => ({
+              ...prevSolar,
+              totalPanels: newQty,
+            }));
+          }, 0);
+        }
+
         return {
           ...prev,
           items: updatedItems.map((item) =>
-            item.id === "feste"
-              ? { ...item, quantity: updates.quantity as number }
-              : item,
+            item.id === "feste" ? { ...item, quantity: newQty } : item,
           ),
         };
       }
-
       return { ...prev, items: updatedItems };
     });
+
+    // 2. Lagre preferanser i localStorage KUN når spesifikke felt endres
+    if (updates.supplierId) {
+      const keyMap: Record<string, string> = {
+        solcellepanel: "defaultPanelSupplierId",
+        feste: "defaultFesteSupplierId",
+        inverter: "defaultInverterSupplierId",
+      };
+      if (keyMap[itemId]) {
+        localStorage.setItem(
+          `${keyMap[itemId]}_${installerGroupId}`,
+          updates.supplierId,
+        );
+      }
+    }
+
+    if (itemId === "solcellepanel" && updates.productId) {
+      // Finn produktnavnet for å lagre det (siden getPanelWp bruker navn)
+      const supplier = suppliersAndProducts?.find(
+        (s) =>
+          s.id ===
+          (updates.supplierId ||
+            calculatorState.items.find((i) => i.id === itemId)?.supplierId),
+      );
+      const product = supplier?.products.find(
+        (p) => p.id === updates.productId,
+      );
+
+      if (product) {
+        localStorage.setItem(
+          `defaultPanelProductId_${installerGroupId}`,
+          product.name,
+        );
+        // Oppdater navnet i solarData så FacilityInfo etc. er syncet, men IKKE rør supplierId her
+        setSolarData?.((prev) => ({
+          ...prev,
+          defaultPanelProductId: product.name,
+        }));
+      }
+    }
   };
 
   useMemo(() => {
@@ -782,26 +662,30 @@ export default function CalculatorResults({
   }, [calculatorState.items, setSolarData]);
 
   useEffect(() => {
-    if (!setSolarData || !solarData) return;
+    if (!setSolarData || !suppliersAndProducts) return;
 
-    const { totalPanels, selectedPanelType } = solarData;
-    if (!totalPanels || !selectedPanelType) {
-      setSolarData((prev) => {
-        if (!prev || prev.kwp === 0) return prev!;
-        return { ...prev, kwp: 0 };
-      });
-      return;
+    const panelItem = calculatorState.items.find(
+      (i) => i.id === "solcellepanel",
+    );
+    if (!panelItem?.productId || !panelItem?.supplierId) return;
+
+    const supplier = suppliersAndProducts.find(
+      (s) => s.id === panelItem.supplierId,
+    );
+    const product = supplier?.products.find(
+      (p) => p.id === panelItem.productId,
+    );
+
+    if (!product) return;
+
+    const panelWp = getPanelWp(product.name);
+    const newKwp = (panelItem.quantity * panelWp) / 1000;
+
+    if (Math.abs((solarData?.kwp || 0) - newKwp) > 0.001) {
+      setSolarData((prev) => ({ ...prev, kwp: newKwp }));
     }
-
-    const panelWp = getPanelWp(selectedPanelType);
-    const newKwp = (totalPanels * panelWp) / 1000;
-
-    setSolarData((prev) => {
-      if (!prev || prev.kwp === newKwp) return prev!;
-      return { ...prev, kwp: newKwp };
-    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [solarData?.totalPanels, solarData?.selectedPanelType, setSolarData]);
+  }, [calculatorState.items, suppliersAndProducts]);
 
   if (!suppliers || suppliers.length === 0) return <p>Ingen suppliers</p>;
   if (!suppliersAndProducts || suppliersAndProducts.length === 0)
