@@ -34,7 +34,7 @@ export interface CalculatorItem {
   supplierId: string;
   productId: string;
   defaultSupplierId?: string;
-  defaultProductId?: string; // Added defaultProductId
+  defaultProductId?: string;
   mountPricePer?: number;
   index?: number;
 }
@@ -122,7 +122,7 @@ export default function CalculatorResults({
         categoryId: "",
         quantity: 1,
         supplierId: "",
-        productId: "",
+        productId: "1557c4ef-2e78-41ef-904c-8113d8ba76cd",
         defaultSupplierId: "ba4f75fd-26fd-44ef-9c18-25110d3b4448",
         defaultProductId: "1557c4ef-2e78-41ef-904c-8113d8ba76cd",
         index: 4,
@@ -263,6 +263,7 @@ export default function CalculatorResults({
 
   // hent feste hvis vi har solarData
   useEffect(() => {
+    console.log(solarData?.selectedRoofType);
     async function fetchMountItem() {
       if (!solarData?.selectedRoofType || !installerGroupId) return;
       console.log(solarData.selectedRoofType, installerGroupId);
