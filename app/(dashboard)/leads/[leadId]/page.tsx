@@ -215,6 +215,18 @@ export default function LeadPage() {
   const [newlyCreatedEstimate, setNewlyCreatedEstimate] =
     useState<Estimate | null>(null);
 
+  useEffect(() => {
+    if (roofTypeId && roofTypes.length > 0) {
+      const selectedRoof = roofTypes.find((rt) => rt.id === roofTypeId);
+      if (selectedRoof) {
+        setSolarData((prev) => ({
+          ...prev,
+          selectedRoofType: selectedRoof.name,
+        }));
+      }
+    }
+  }, [roofTypeId, roofTypes, setSolarData]);
+
   const handleEstimateCreated = (newEstimate: Estimate) => {
     setEstimates((prev) => (prev ? [newEstimate, ...prev] : [newEstimate]));
     setNewlyCreatedEstimate(newEstimate);
@@ -242,7 +254,7 @@ export default function LeadPage() {
         setPhases(data.phases ?? 0);
         setRoofSlope(data.roof_slope ?? 0);
         setRoofAge(data.roof_age ?? 0);
-        setRoofType(data.roof_type_id ?? "");
+        setRoofTypeId(data.roof_type_id ?? "");
         setStatus(data.status ?? 0);
         setPriority(data.priority ?? "iron");
         setRole(data.role ?? "");
