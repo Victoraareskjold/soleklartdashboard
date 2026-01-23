@@ -141,7 +141,21 @@ export default function FacilityInfo({
           <>
             <tr>
               <td className="border p-1 w-1/2">kWp</td>
-              <td className="border p-1 w-1/2">{solarData?.kwp ?? "0"}</td>
+              <td className="border p-1 w-1/2">
+                <input
+                  type="number"
+                  value={solarData?.kwp ?? 0}
+                  min={0}
+                  onChange={(e) => {
+                    if (!solarData || !setSolarData) return;
+                    setSolarData({
+                      ...solarData,
+                      kwp: Number(e.target.value),
+                    });
+                  }}
+                  className="w-full p-1"
+                />
+              </td>
             </tr>
             <tr>
               <td className="border p-1 w-1/2">Årlig kWh produksjon</td>
