@@ -160,7 +160,7 @@ export default function LeadEmailSection({
 
       // 3. Hent metadata
       getInstallerGroup(installerGroupId).then((res) =>
-        setInstallerName(res.name)
+        setInstallerName(res.name),
       );
       getUser().then(setUserData);
     }
@@ -172,11 +172,14 @@ export default function LeadEmailSection({
   useEffect(() => {
     if (newEstimate && leadName && domain && installerName) {
       const template = mailTemplates.newEstimate;
-      const estimateLink = `https://www.${domain}.no/estimat/${newEstimate.id}`;
+
+      const estimateLink = newEstimate.finished
+        ? `https://www.${domain}.no/estimat/${newEstimate.id}?f=1`
+        : `https://www.${domain}.no/estimat/${newEstimate.id}`;
 
       const emailSubject = template.subject.replace(
         "{installerName}",
-        installerName
+        installerName,
       );
 
       const emailBody = template.body
@@ -220,7 +223,7 @@ export default function LeadEmailSection({
     if (emailBody.includes("{estimateLink}")) {
       const sortedEstimates = estimates?.sort(
         (a, b) =>
-          new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+          new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime(),
       );
       const latestEstimate = sortedEstimates?.[0];
       if (latestEstimate && domain) {
@@ -228,11 +231,11 @@ export default function LeadEmailSection({
         emailBody = emailBody.replace(/{estimateLink}/g, estimateLink);
       } else {
         toast.warn(
-          "Kan ikke fylle ut estimatlenke. Ingen estimater funnet for denne leaden."
+          "Kan ikke fylle ut estimatlenke. Ingen estimater funnet for denne leaden.",
         );
         emailBody = emailBody.replace(
           /{estimateLink}/g,
-          "[MANGLER ESTMATLENKE]"
+          "[MANGLER ESTMATLENKE]",
         );
       }
     }
@@ -272,8 +275,8 @@ export default function LeadEmailSection({
           emailWithoutConv.subject === emailWithConv.subject &&
           Math.abs(
             new Date(emailWithoutConv.received_at).getTime() -
-              new Date(emailWithConv.received_at).getTime()
-          ) < 60000 // 1 minute threshold
+              new Date(emailWithConv.received_at).getTime(),
+          ) < 60000, // 1 minute threshold
       );
 
       if (duplicateIndex > -1) {
@@ -326,7 +329,7 @@ export default function LeadEmailSection({
           lastDate: sortedEmails[sortedEmails.length - 1]?.received_at || "",
           subject: sortedEmails[0]?.subject || "Ingen emne",
         };
-      }
+      },
     );
 
     // Sort threads by last message date (newest first)
@@ -432,7 +435,7 @@ export default function LeadEmailSection({
             contentType: file.type,
             contentBytes,
           };
-        })
+        }),
       );
 
       const ccArray = cc
@@ -448,7 +451,7 @@ export default function LeadEmailSection({
         body,
         replyToMessageId || undefined,
         attachmentsPayload,
-        ccArray
+        ccArray,
       );
 
       if (response.success) {
@@ -617,7 +620,7 @@ export default function LeadEmailSection({
                     multiple
                     onChange={(e) =>
                       setAttachments(
-                        e.target.files ? Array.from(e.target.files) : []
+                        e.target.files ? Array.from(e.target.files) : [],
                       )
                     }
                     className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
@@ -735,7 +738,7 @@ export default function LeadEmailSection({
                                   year: "numeric",
                                   hour: "2-digit",
                                   minute: "2-digit",
-                                }
+                                },
                               )}
                             </p>
                           </div>

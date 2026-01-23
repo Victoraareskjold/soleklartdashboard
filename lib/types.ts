@@ -103,11 +103,15 @@ export interface Estimate {
   desired_kwh?: number;
   coverage_percentage?: number;
   price_data?: PriceOverview;
+
+  finished?: boolean;
+  signed?: boolean;
 }
 
 export type CreateEstimateInput = Partial<Estimate> & { lead_id: string } & {
   solarData: SolarData;
   imageUrl?: File | null;
+  finished: boolean;
 };
 
 export type LeadNoteAttachment = {

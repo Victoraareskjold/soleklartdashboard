@@ -48,6 +48,8 @@ export default function EstimateSection({
   const [initialSolarData, setInitialSolarData] = useState<SolarData | null>(
     null,
   );
+  const [finished, setFinished] = useState(false);
+
   const [isStorageReady, setIsStorageReady] = useState(false);
   const { installerGroupId } = useInstallerGroup();
 
@@ -164,6 +166,7 @@ export default function EstimateSection({
         solarData,
         price_data: priceOverview,
         imageUrl,
+        finished,
       } as CreateEstimateInput);
 
       toast.success("Estimat og prisestimat opprettet!");
@@ -184,6 +187,17 @@ export default function EstimateSection({
 
   return (
     <>
+      <div>
+        <label htmlFor="finished" className="mr-2">
+          Ferdigstilt?
+        </label>
+        <input
+          id="finished"
+          type="checkbox"
+          checked={finished}
+          onChange={(e) => setFinished(e.target.checked)}
+        />
+      </div>
       <CalculatorResults
         suppliers={suppliers}
         suppliersAndProducts={suppliersAndProducts}

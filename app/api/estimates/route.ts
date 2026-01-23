@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     console.error("GET /api/estimates error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -40,7 +40,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const client = createSupabaseClient(token);
-    const { lead_id, solarData, price_data, imageUrl } = await req.json();
+    const { lead_id, solarData, price_data, imageUrl, finished } =
+      await req.json();
 
     if (!lead_id) {
       return NextResponse.json({ error: "Missing lead_id" }, { status: 400 });
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
       selected_roof_type: solarData.selectedRoofType,
       checked_roof_data: solarData.checkedRoofData,
       selected_el_price: solarData.selectedElPrice,
+      finished: Boolean(finished),
     };
 
     const { data, error } = await client
@@ -78,7 +80,7 @@ export async function POST(req: Request) {
     console.error("POST /api/estimates error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

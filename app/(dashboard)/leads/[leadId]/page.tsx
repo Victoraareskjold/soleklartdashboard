@@ -764,48 +764,68 @@ export default function LeadPage() {
                   new Date(b.created_at!).getTime() -
                   new Date(a.created_at!).getTime(),
               )
-              .map((e) => (
-                <li
-                  key={e.id}
-                  className="p-2 rounded-md w-full bg-white mb-2 border"
-                >
-                  <Link
-                    target="_blank"
-                    href={`https://www.${domain}.no/estimat/${e.id}`}
+              .map((e) => {
+                const estimateUrl = e.finished
+                  ? `https://www.${domain}.no/estimat/${e.id}?f=1`
+                  : `https://www.${domain}.no/estimat/${e.id}`;
+
+                return (
+                  <li
+                    key={e.id}
+                    className="p-2 rounded-md w-full bg-white mb-2 border"
                   >
-                    <p className="font-semibold">
-                      Tilbud -{" "}
-                      {getkWp(e.selected_panel_type!, e.total_panels!).toFixed(
-                        1,
-                      )}{" "}
-                      kWp
-                    </p>
-                    <p className="underline text-xs text-blue-500 mb-3">
-                      https://www.{domain}.no/estimat/{e.id}
-                    </p>
+                    <Link target="_blank" href={estimateUrl}>
+                      <p className="font-semibold">
+                        Tilbud –{" "}
+                        {getkWp(
+                          e.selected_panel_type!,
+                          e.total_panels!,
+                        ).toFixed(1)}{" "}
+                        kWp
+                      </p>
 
-                    <p className="text-sm mb-2">Status - </p>
+                      <p className="underline text-xs text-blue-500 mb-3">
+                        {estimateUrl}
+                      </p>
 
-                    <p className="font-medium text-sm underline">
-                      Total eks. mva:{" "}
-                      {Number(e.price_data?.total ?? 0).toLocaleString(
-                        "nb-NO",
-                        {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        },
-                      )}{" "}
-                      Kr
-                    </p>
+                      <p className="text-sm mb-2 flex flex-row gap-2 items-center">
+                        <strong>Status:</strong>
+                        <div className="flex flex-row gap-2 items-center">
+                          {e.signed ? (
+                            <>
+                              <div className="w-5 h-5 rounded-sm bg-green-500" />
+                              <p>Signert</p>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-5 h-5 rounded-sm bg-red-500" />
+                              <p>Uavklart</p>
+                            </>
+                          )}
+                        </div>
+                      </p>
 
-                    <p className="text-sm mt-2">
-                      {e.created_at
-                        ? new Date(e.created_at).toLocaleString("NO")
-                        : "N/A"}
-                    </p>
-                  </Link>
-                </li>
-              ))}
+                      <p className="font-medium text-sm underline">
+                        Total eks. mva:{" "}
+                        {Number(e.price_data?.total ?? 0).toLocaleString(
+                          "nb-NO",
+                          {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          },
+                        )}{" "}
+                        kr
+                      </p>
+
+                      <p className="text-sm mt-2">
+                        {e.created_at
+                          ? new Date(e.created_at).toLocaleString("nb-NO")
+                          : "N/A"}
+                      </p>
+                    </Link>
+                  </li>
+                );
+              })}
           </ul>
         </div>
 

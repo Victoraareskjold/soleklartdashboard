@@ -48,11 +48,14 @@ export default function CalculationSheet({
     MountVolumeReductionType[]
   >([]);
   const [teamCommissions, setTeamCommissions] = useState<TeamCommissionType[]>(
-    []
+    [],
   );
 
   const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>(
-    {}
+    {},
+  );
+  const [textOverrides, setTextOverrides] = useState<Record<string, string>>(
+    {},
   );
 
   const categoryMapping: Record<string, string> = {
@@ -70,7 +73,7 @@ export default function CalculationSheet({
     const mappedName =
       categoryMapping[categoryName.toLowerCase()] || categoryName;
     const category = suppliersWithCategories.find(
-      (c) => c.name.toLowerCase() === mappedName.toLowerCase()
+      (c) => c.name.toLowerCase() === mappedName.toLowerCase(),
     );
     return category?.markup_percentage || 0;
   };
@@ -127,7 +130,7 @@ export default function CalculationSheet({
       }
 
       const supplier = suppliersAndProducts.find(
-        (s) => s.id === item.supplierId
+        (s) => s.id === item.supplierId,
       );
       const product = supplier?.products.find((p) => p.id === item.productId);
 
@@ -153,7 +156,7 @@ export default function CalculationSheet({
       const mountMatch = mountItems.find(
         (m) =>
           m.product.id === product.id &&
-          m.roof_type?.name === solarData?.selectedRoofType
+          m.roof_type?.name === solarData?.selectedRoofType,
       );
 
       const mountingItem = mountMatch
@@ -177,6 +180,9 @@ export default function CalculationSheet({
 
   const getFinalPrice = (itemId: string, calculatedPrice: number) => {
     return priceOverrides[itemId] ?? calculatedPrice;
+  };
+  const getFinalText = (itemId: string, defaultText: string) => {
+    return textOverrides[itemId] ?? defaultText;
   };
 
   const supplierItems = items.filter((i) => i.source === "supplier");
@@ -206,12 +212,12 @@ export default function CalculationSheet({
 
   const totalMountingCost = mountingItems.reduce(
     (sum, item) => sum + getFinalPrice(item.id, item.price),
-    0
+    0,
   );
 
   const panelCount = solarData?.totalPanels || 0;
   const applicableReduction = mountVolumeReductions.find(
-    (r) => panelCount >= r.amount && panelCount <= r.amount2
+    (r) => panelCount >= r.amount && panelCount <= r.amount2,
   );
   const reductionPercentage = applicableReduction?.reduction || 0;
   const reductionAmount = totalMountingCost * (reductionPercentage / 100);
@@ -227,7 +233,7 @@ export default function CalculationSheet({
   }, 0);
 
   const søknadItems = eletricalData.filter(
-    (item) => item.category?.name?.toLowerCase() === "søknad"
+    (item) => item.category?.name?.toLowerCase() === "søknad",
   );
 
   const søknadTotal = søknadItems.reduce((sum, item) => {
@@ -238,7 +244,7 @@ export default function CalculationSheet({
   const electricalMarkup = getCategoryMarkup("elektrisk installasjon");
 
   const solcelleAnleggItems = eletricalData.filter(
-    (item) => item.category?.name?.toLowerCase() === "solcelleanlegg"
+    (item) => item.category?.name?.toLowerCase() === "solcelleanlegg",
   );
 
   const solcelleAnleggBaseTotal = solcelleAnleggItems.reduce((sum, item) => {
@@ -254,18 +260,18 @@ export default function CalculationSheet({
     .filter((i) => i.category?.toLowerCase() === "batteri")
     .reduce((sum, i) => sum + i.quantity, 0);
   const batteryOptions = eletricalData.filter(
-    (item) => item.category?.name.toLowerCase() === "batteri"
+    (item) => item.category?.name.toLowerCase() === "batteri",
   );
   const [selectedBatteryId, setSelectedBatteryId] = useState<string | null>(
-    null
+    null,
   );
   const selectedBattery = batteryOptions.find(
-    (battery) => battery.id === selectedBatteryId
+    (battery) => battery.id === selectedBatteryId,
   );
   const batteryBasePrice = selectedBattery?.price_per || 0;
 
   const additionalCostOptions = eletricalData.filter(
-    (item) => item.category?.name?.toLowerCase() === "tilleggskostnader"
+    (item) => item.category?.name?.toLowerCase() === "tilleggskostnader",
   );
   const [additionalCosts, setAdditionalCosts] = useState<
     { id: string; quantity: number }[]
@@ -277,7 +283,7 @@ export default function CalculationSheet({
     const isSteepRoof = solarData.checkedRoofData.some((r) => r.angle > 35);
 
     const brattTakItem = additionalCostOptions.find((ac) =>
-      ac.name?.toLowerCase().includes("bratt-tak")
+      ac.name?.toLowerCase().includes("bratt-tak"),
     );
     if (!brattTakItem) return;
 
@@ -290,7 +296,7 @@ export default function CalculationSheet({
       ]);
     } else if (!isSteepRoof && hasBrattTak) {
       setAdditionalCosts((prev) =>
-        prev.filter((ac) => ac.id !== brattTakItem.id)
+        prev.filter((ac) => ac.id !== brattTakItem.id),
       );
     }
   }, [solarData?.checkedRoofData, additionalCosts, additionalCostOptions]);
@@ -306,10 +312,10 @@ export default function CalculationSheet({
   const handleUpdateAdditionalCost = (
     index: number,
     field: "id" | "quantity",
-    value: string | number
+    value: string | number,
   ) => {
     setAdditionalCosts((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     );
   };
 
@@ -326,11 +332,11 @@ export default function CalculationSheet({
   const søknadFinal = getFinalPrice("søknad", søknadTotal);
   const solcelleAnleggFinal = getFinalPrice(
     "solcelle_anlegg",
-    solcelleAnleggBaseTotal * inverterCount
+    solcelleAnleggBaseTotal * inverterCount,
   );
   const batteryFinal = getFinalPrice(
     "batteri",
-    batteryBasePrice * batteryCount
+    batteryBasePrice * batteryCount,
   );
 
   const totalInstallationMarkup =
@@ -371,13 +377,13 @@ export default function CalculationSheet({
 
   const applicableCommission = teamCommissions.find(
     (c) =>
-      panelCount >= c.amount && (c.amount2 ? panelCount <= c.amount2 : true)
+      panelCount >= c.amount && (c.amount2 ? panelCount <= c.amount2 : true),
   );
   const commissionPercentage = applicableCommission?.commission || 0;
   const commissionAmount = subTotalForCommission * (commissionPercentage / 100);
   const finalCommissionAmount = getFinalPrice(
     "team_commission",
-    commissionAmount
+    commissionAmount,
   );
 
   const displayCommissionPercentage =
@@ -400,7 +406,7 @@ export default function CalculationSheet({
         const price = getFinalPrice(item.id, item.price);
         return {
           id: item.id,
-          name: item.name,
+          name: getFinalText(item.id, item.name),
           supplier: item.supplier,
           product: item.product,
           category: item.category,
@@ -413,7 +419,7 @@ export default function CalculationSheet({
         const price = getFinalPrice(item.id, item.price);
         return {
           id: item.id,
-          name: item.name,
+          name: getFinalText(item.id, item.name),
           supplier: item.supplier,
           product: item.product,
           category: item.category,
@@ -430,7 +436,7 @@ export default function CalculationSheet({
           priceWithMarkup:
             getFinalPrice(
               "solcelle_anlegg",
-              solcelleAnleggBaseTotal * inverterCount
+              solcelleAnleggBaseTotal * inverterCount,
             ) *
             (1 + electricalMarkup / 100),
         },
@@ -442,7 +448,7 @@ export default function CalculationSheet({
         },
         additionalCosts: additionalCosts.map((ac, index) => {
           const selectedItem = additionalCostOptions.find(
-            (i) => i.id === ac.id
+            (i) => i.id === ac.id,
           );
           const base = selectedItem?.price_per || 0;
           const overrideId = `additional_${index}`;
@@ -479,6 +485,7 @@ export default function CalculationSheet({
       setPriceOverview(priceOverview);
       prevPriceOverviewString.current = priceOverviewString;
     }
+    console.log(priceOverview);
   }, [priceOverview, setPriceOverview]);
 
   return (
@@ -508,7 +515,18 @@ export default function CalculationSheet({
                 : `${item.name} - ${item.product} - ${item.supplier}`;
             return (
               <tr key={item.id}>
-                <td className="p-2">{displayValue}</td>
+                <td className="p-2">
+                  <textarea
+                    value={getFinalText(item.id, displayValue)}
+                    onChange={(e) =>
+                      setTextOverrides((prev) => ({
+                        ...prev,
+                        [item.id]: e.target.value,
+                      }))
+                    }
+                    className="w-full bg-gray-100 p-1 border border-gray-200"
+                  />
+                </td>
                 <td className="p-2 text-right">{item.quantity} stk.</td>
                 <td className="p-2 text-right">
                   <input
@@ -546,10 +564,21 @@ export default function CalculationSheet({
           </tr>
           {mountingItems.map((item) => {
             const markup = getCategoryMarkup(item.category || "");
+            const defaultText = `Paneler og fester for ${solarData?.selectedRoofType ?? ""}`;
+
             return (
               <tr key={item.id}>
                 <td className="p-2">
-                  Paneler og fester for {solarData?.selectedRoofType}
+                  <textarea
+                    value={getFinalText(item.id, defaultText)}
+                    onChange={(e) =>
+                      setTextOverrides((prev) => ({
+                        ...prev,
+                        [item.id]: e.target.value,
+                      }))
+                    }
+                    className="w-full bg-gray-100 p-1 border border-gray-200"
+                  />
                 </td>
                 <td className="p-2 text-right">{item.quantity} stk.</td>
                 <td className="p-2 text-right">
@@ -628,7 +657,7 @@ export default function CalculationSheet({
                   className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
                   value={getFinalPrice(
                     "solcelle_anlegg",
-                    solcelleAnleggBaseTotal * inverterCount
+                    solcelleAnleggBaseTotal * inverterCount,
                   ).toFixed(0)}
                   onChange={(e) =>
                     updatePriceOverride("solcelle_anlegg", e.target.value)
@@ -640,7 +669,7 @@ export default function CalculationSheet({
                 {(
                   getFinalPrice(
                     "solcelle_anlegg",
-                    solcelleAnleggBaseTotal * inverterCount
+                    solcelleAnleggBaseTotal * inverterCount,
                   ) *
                   (1 + electricalMarkup / 100)
                 ).toFixed(0)}{" "}
@@ -671,7 +700,7 @@ export default function CalculationSheet({
                   className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
                   value={getFinalPrice(
                     "batteri",
-                    batteryBasePrice * batteryCount
+                    batteryBasePrice * batteryCount,
                   ).toFixed(0)}
                   onChange={(e) =>
                     updatePriceOverride("batteri", e.target.value)
@@ -690,7 +719,7 @@ export default function CalculationSheet({
           )}
           {additionalCosts.map((ac, index) => {
             const selectedItem = additionalCostOptions.find(
-              (i) => i.id === ac.id
+              (i) => i.id === ac.id,
             );
             const base = selectedItem?.price_per || 0;
             const defaultPrice = base * ac.quantity;
@@ -733,7 +762,7 @@ export default function CalculationSheet({
                       handleUpdateAdditionalCost(
                         index,
                         "quantity",
-                        Number(e.target.value)
+                        Number(e.target.value),
                       )
                     }
                     className="w-14 border rounded p-1 text-left"
