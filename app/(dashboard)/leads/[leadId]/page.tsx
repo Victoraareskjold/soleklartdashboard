@@ -788,7 +788,7 @@ export default function LeadPage() {
                         {estimateUrl}
                       </p>
 
-                      <p className="text-sm mb-2 flex flex-row gap-2 items-center">
+                      <div className="text-sm mb-2 flex flex-row gap-2 items-center">
                         <strong>Status:</strong>
                         <div className="flex flex-row gap-2 items-center">
                           {e.signed ? (
@@ -803,7 +803,7 @@ export default function LeadPage() {
                             </>
                           )}
                         </div>
-                      </p>
+                      </div>
 
                       <p className="font-medium text-sm underline">
                         Total eks. mva:{" "}

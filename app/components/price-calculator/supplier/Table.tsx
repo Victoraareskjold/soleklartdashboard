@@ -164,8 +164,8 @@ export default function SupplierTable({
                 ...supplier,
                 products: supplier.products.filter((p) => p.id !== productId),
               }
-            : supplier
-        )
+            : supplier,
+        ),
       );
       toast.success("Produkt slettet");
     } catch (error) {
@@ -182,9 +182,9 @@ export default function SupplierTable({
         (prev ?? []).map((s) => ({
           ...s,
           products: s.products.map((p) =>
-            p.id === productId ? { ...p, price_ex_vat: price } : p
+            p.id === productId ? { ...p, price_ex_vat: price } : p,
           ),
-        }))
+        })),
       );
       toast.success("Pris oppdatert!");
     } catch (err) {
@@ -197,7 +197,7 @@ export default function SupplierTable({
     supplierId: string,
     supplierName: string,
     categoryId?: string,
-    subcategoryId?: string
+    subcategoryId?: string,
   ) => {
     setModal({
       isOpen: true,
@@ -278,8 +278,8 @@ export default function SupplierTable({
         (prev ?? []).map((s) =>
           s.id === modal.supplierId
             ? { ...s, products: [...s.products, createdProduct] }
-            : s
-        )
+            : s,
+        ),
       );
 
       toast.success("Produkt lagt til!");
@@ -291,7 +291,7 @@ export default function SupplierTable({
   };
 
   const selectedCategory = allCategories.find(
-    (c) => c.id === formData.categoryId
+    (c) => c.id === formData.categoryId,
   );
 
   return (
@@ -300,7 +300,7 @@ export default function SupplierTable({
         {suppliers.map((supplier) => {
           const categories = buildCategoriesFromProducts(
             supplier.products,
-            allCategories
+            allCategories,
           );
 
           return (
@@ -353,7 +353,7 @@ export default function SupplierTable({
                                       supplier.id,
                                       supplier.name,
                                       cat.id,
-                                      subcat.id
+                                      subcat.id,
                                     )
                                   }
                                   className="ml-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
@@ -423,7 +423,8 @@ export default function SupplierTable({
                   <option value="">Velg kategori...</option>
                   {allCategories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
-                      {cat.name.charAt(0).toUpperCase() + cat.name.slice(1)}{" "}
+                      {cat.name.charAt(0).toUpperCase() +
+                        cat.name.slice(1)}{" "}
                     </option>
                   ))}
                 </select>
@@ -535,7 +536,7 @@ export default function SupplierTable({
 
 function buildCategoriesFromProducts(
   products: Product[],
-  allCategories: CategoryWithSubcategories[]
+  allCategories: CategoryWithSubcategories[],
 ) {
   const categoryMap = new Map<
     string,
@@ -552,13 +553,13 @@ function buildCategoriesFromProducts(
   >();
 
   const categoryIndexLookup = Object.fromEntries(
-    allCategories.map((c) => [c.id, c.index])
+    allCategories.map((c) => [c.id, c.index]),
   );
 
   const subcategoryIndexLookup = Object.fromEntries(
     allCategories.flatMap((c) =>
-      (c.subcategories ?? []).map((s) => [s.id, s.index])
-    )
+      (c.subcategories ?? []).map((s) => [s.id, s.index]),
+    ),
   );
 
   products.forEach((product) => {
@@ -598,7 +599,7 @@ function buildCategoriesFromProducts(
 
   const sorter = (
     a: { index?: number | null; name: string },
-    b: { index?: number | null; name: string }
+    b: { index?: number | null; name: string },
   ) => {
     const aHasIndex = a.index != null;
     const bHasIndex = b.index != null;
@@ -630,12 +631,12 @@ function ProductTable({
   onPriceChange: (productId: string, newPrice: string) => void;
 }) {
   const [localPrices, setLocalPrices] = useState(
-    Object.fromEntries(products.map((p) => [p.id, String(p.price_ex_vat)]))
+    Object.fromEntries(products.map((p) => [p.id, String(p.price_ex_vat)])),
   );
 
   useEffect(() => {
     setLocalPrices(
-      Object.fromEntries(products.map((p) => [p.id, String(p.price_ex_vat)]))
+      Object.fromEntries(products.map((p) => [p.id, String(p.price_ex_vat)])),
     );
   }, [products]);
 
