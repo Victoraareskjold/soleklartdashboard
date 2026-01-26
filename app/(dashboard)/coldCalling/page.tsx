@@ -88,15 +88,30 @@ export default function ColdCallingPage() {
   useEffect(() => {
     if (!user || !teamId || !installerGroupId) return;
 
+    const controller = new AbortController();
+    const { signal } = controller;
+
     fetch(
-      `/api/leads/status-summary?userId=${user.id}&teamId=${teamId}&installerGroupId=${installerGroupId}&selectedMember=${selectedMember}`
+      `/api/leads/status-summary?userId=${user.id}&teamId=${teamId}&installerGroupId=${installerGroupId}&selectedMember=${selectedMember}`,
+      { signal },
     )
       .then((res) => res.json())
-      .then(setLeadSummary);
+      .then(setLeadSummary)
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          console.error("Failed to fetch lead summary:", err);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
   }, [user, teamId, installerGroupId, selectedMember]);
 
   useEffect(() => {
     if (!installerGroupId || !teamId) return;
+    const controller = new AbortController();
+    const { signal } = controller;
 
     const fetchLeadsForUser = async () => {
       const params = new URLSearchParams({
@@ -106,50 +121,63 @@ export default function ColdCallingPage() {
         status: String(status),
       });
 
-      const res = await fetch(`/api/coldCalling?${params.toString()}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
+      try {
+        const res = await fetch(`/api/coldCalling?${params.toString()}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          signal,
+        });
 
-      if (!res.ok) {
-        toast.error("Error ved henting av leads");
-        return;
-      }
+        if (!res.ok) {
+          toast.error("Error ved henting av leads");
+          return;
+        }
 
-      const data = await res.json();
-      setColdCalls(data || []);
-      if (data) {
-        const initialFormData = data.reduce(
-          (acc: FormData, lead: ColdCallLead) => {
-            const toStringOrNull = (val: string | number | null | undefined) =>
-              val !== null && val !== undefined ? String(val) : null;
+        const data = await res.json();
+        setColdCalls(data || []);
+        if (data) {
+          const initialFormData = data.reduce(
+            (acc: FormData, lead: ColdCallLead) => {
+              const toStringOrNull = (
+                val: string | number | null | undefined,
+              ) => (val !== null && val !== undefined ? String(val) : null);
 
-            acc[lead.id] = {
-              gtStatus: null,
-              email: toStringOrNull(lead.email),
-              roof_type_id: toStringOrNull(lead.roof_type_id),
-              own_consumption: toStringOrNull(lead.own_consumption),
-              voltage: toStringOrNull(lead.voltage),
-              roof_age: toStringOrNull(lead.roof_age),
-              note: toStringOrNull(lead.note),
-              status: toStringOrNull(lead.status),
-            };
-            return acc;
-          },
-          {} as FormData
-        );
-        setFormData(initialFormData);
-      } else {
-        setFormData({});
+              acc[lead.id] = {
+                gtStatus: null,
+                email: toStringOrNull(lead.email),
+                roof_type_id: toStringOrNull(lead.roof_type_id),
+                own_consumption: toStringOrNull(lead.own_consumption),
+                voltage: toStringOrNull(lead.voltage),
+                roof_age: toStringOrNull(lead.roof_age),
+                note: toStringOrNull(lead.note),
+                status: toStringOrNull(lead.status),
+              };
+              return acc;
+            },
+            {} as FormData,
+          );
+          setFormData(initialFormData);
+        } else {
+          setFormData({});
+        }
+      } catch (err) {
+        if (err !== "AbortError") {
+          console.error("Failed to fetch leads:", err);
+          toast.error("Noe gikk galt under henting av leads");
+        }
       }
     };
     fetchLeadsForUser();
+
+    return () => {
+      controller.abort();
+    };
   }, [installerGroupId, selectedMember, teamId, status]);
 
   const handleFormDataChange = (
     leadId: string,
     fieldKey: string,
-    value: string
+    value: string,
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -249,7 +277,7 @@ export default function ColdCallingPage() {
           if (newStatus === "" && status === 0) return true;
 
           return false;
-        })
+        }),
       );
     } catch (err) {
       console.error(err);
@@ -294,37 +322,40 @@ export default function ColdCallingPage() {
       lead.note,
     ];
     return searchableFields.some(
-      (field) => field && field.toString().toLowerCase().includes(query)
+      (field) => field && field.toString().toLowerCase().includes(query),
     );
   });
 
-  const leadSummaryWithColor = leadSummary.reduce((acc, { status, count }) => {
-    let label: string;
-    let color: string;
+  const leadSummaryWithColor = leadSummary.reduce(
+    (acc, { status, count }) => {
+      let label: string;
+      let color: string;
 
-    if (status === 0) {
-      label = "Ingen status";
-      color = "#CCCCCC"; // grå for udefinert
-    } else if (status > 5) {
-      label = "Vil ha tilbud";
-      color = "#69FF59";
-    } else {
-      const info = LeadStatus.find((s) => s.value === status);
-      if (!info) return acc;
-      label = info.label;
-      color = info.color;
-    }
+      if (status === 0) {
+        label = "Ingen status";
+        color = "#CCCCCC"; // grå for udefinert
+      } else if (status > 5) {
+        label = "Vil ha tilbud";
+        color = "#69FF59";
+      } else {
+        const info = LeadStatus.find((s) => s.value === status);
+        if (!info) return acc;
+        label = info.label;
+        color = info.color;
+      }
 
-    // Summer tellerne per label
-    const existing = acc.find((a) => a.label === label);
-    if (existing) {
-      existing.count += count;
-    } else {
-      acc.push({ label, count, color });
-    }
+      // Summer tellerne per label
+      const existing = acc.find((a) => a.label === label);
+      if (existing) {
+        existing.count += count;
+      } else {
+        acc.push({ label, count, color });
+      }
 
-    return acc;
-  }, [] as { label: string; count: number; color: string }[]);
+      return acc;
+    },
+    [] as { label: string; count: number; color: string }[],
+  );
 
   return (
     <div>
