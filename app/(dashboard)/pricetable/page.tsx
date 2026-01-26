@@ -106,6 +106,8 @@ export default function PriceTablePage() {
             suppliersAndProducts={suppliersAndProducts}
             solarData={solarData}
             setSolarData={setSolarData}
+            finished={false}
+            leadId={""}
           />
         </div>
 
