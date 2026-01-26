@@ -207,6 +207,8 @@ export default function EstimateSection({
         setPriceOverview={setPriceOverview}
         ownConsumption={ownConsumption}
         leadCompany={leadCompany}
+        finished={finished}
+        leadId={leadId}
       />
       <div className="mt-4">
         <label

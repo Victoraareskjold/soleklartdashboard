@@ -769,20 +769,22 @@ export default function LeadPage() {
                   ? `https://www.${domain}.no/estimat/${e.id}?f=1`
                   : `https://www.${domain}.no/estimat/${e.id}`;
 
+                const currentPanel = e.price_data?.suppliers?.find(
+                  (i) => i.category === "solcellepanel",
+                );
+
+                // Bruk din getkWp funksjon med det spesifikke panelet
+                const kwp = currentPanel
+                  ? getkWp(currentPanel.product, e.total_panels!)
+                  : 0;
+
                 return (
                   <li
                     key={e.id}
                     className="p-2 rounded-md w-full bg-white mb-2 border"
                   >
                     <Link target="_blank" href={estimateUrl}>
-                      <p className="font-semibold">
-                        Tilbud –{" "}
-                        {getkWp(
-                          e.selected_panel_type!,
-                          e.total_panels!,
-                        ).toFixed(1)}{" "}
-                        kWp
-                      </p>
+                      <p className="font-semibold">Tilbud – {kwp} kWp</p>
 
                       <p className="underline text-xs text-blue-500 mb-3">
                         {estimateUrl}

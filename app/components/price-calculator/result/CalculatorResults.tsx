@@ -23,6 +23,8 @@ interface CalculatorResultsProps {
   setPriceOverview?: (priceOverview: PriceOverview | null) => void;
   ownConsumption?: number | null;
   leadCompany?: string | null;
+  finished: boolean;
+  leadId: string;
 }
 
 export interface CalculatorItem {
@@ -67,6 +69,8 @@ export default function CalculatorResults({
   setPriceOverview,
   ownConsumption,
   leadCompany,
+  finished,
+  leadId,
 }: CalculatorResultsProps) {
   const { installerGroupId } = useInstallerGroup();
   const [allCategories, setAllCategories] = useState<
@@ -750,6 +754,8 @@ export default function CalculatorResults({
           solarData={solarData}
           setPriceOverview={setPriceOverview}
           leadCompany={leadCompany}
+          finished={finished}
+          leadId={leadId}
         />
         {showModal && (
           <div

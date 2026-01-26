@@ -18,6 +18,7 @@ import { MountVolumeReductionType, TeamCommissionType } from "@/lib/types";
 import { toast } from "react-toastify";
 import { ElectricalInstallationItem } from "../supplier/Table";
 import { SolarData } from "../../SolarDataView";
+import { supabase } from "@/lib/supabase"; // NEW
 
 interface CalculationSheetProps {
   calculatorState: CalculatorState;
@@ -26,6 +27,8 @@ interface CalculationSheetProps {
   solarData?: SolarData;
   setPriceOverview?: (priceOverview: PriceOverview | null) => void;
   leadCompany?: string | null;
+  finished: boolean; // NEW
+  leadId: string; // NEW
 }
 
 export default function CalculationSheet({
@@ -35,6 +38,8 @@ export default function CalculationSheet({
   solarData,
   setPriceOverview,
   leadCompany,
+  finished, // NEW
+  leadId, // NEW
 }: CalculationSheetProps) {
   const { installerGroupId } = useInstallerGroup();
   const { teamId } = useTeam();
@@ -57,6 +62,40 @@ export default function CalculationSheet({
   const [textOverrides, setTextOverrides] = useState<Record<string, string>>(
     {},
   );
+  const [attachments, setAttachments] = useState<Record<string, string>>({}); // NEW
+
+  const handleFileUpload = async (itemId: string, file: File) => {
+    // NEW
+    if (!file || !leadId) {
+      toast.warn("Mangler fil eller lead ID for opplasting.");
+      return;
+    }
+
+    toast.info(`Laster opp ${file.name}...`);
+    const filePath = `${leadId}/attachments/${itemId}-${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from("estimate-attachments")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast.error(`Bildeopplasting feilet: ${uploadError.message}`);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("estimate-attachments")
+      .getPublicUrl(filePath);
+
+    if (publicUrlData) {
+      setAttachments((prev) => ({
+        ...prev,
+        [itemId]: publicUrlData.publicUrl,
+      }));
+      toast.success(`${file.name} er lastet opp.`);
+    } else {
+      toast.error("Kunne ikke hente offentlig URL for filen.");
+    }
+  }; // NEW
 
   const categoryMapping: Record<string, string> = {
     solcellepanel: "solcellemateriell",
@@ -430,6 +469,7 @@ export default function CalculationSheet({
           category: item.category,
           quantity: item.quantity,
           priceWithMarkup: price * (1 + markup / 100),
+          attachmentUrl: attachments[item.id], // NEW
         };
       }),
       mounting: mountingItems.map((item) => {
@@ -443,12 +483,14 @@ export default function CalculationSheet({
           category: item.category,
           quantity: item.quantity,
           priceWithMarkup: price * (1 + markup / 100),
+          attachmentUrl: attachments[item.id], // NEW
         };
       }),
       installation: {
         søknad: {
           priceWithMarkup:
             getFinalPrice("søknad", søknadTotal) * (1 + electricalMarkup / 100),
+          attachmentUrl: attachments["søknad"], // NEW
         },
         solcelleAnlegg: {
           priceWithMarkup:
@@ -457,12 +499,14 @@ export default function CalculationSheet({
               solcelleAnleggBaseTotal * inverterCount,
             ) *
             (1 + electricalMarkup / 100),
+          attachmentUrl: attachments["solcelle_anlegg"], // NEW
         },
         battery: {
           selectedBatteryId,
           priceWithMarkup:
             getFinalPrice("batteri", batteryBasePrice * batteryCount) *
             (1 + electricalMarkup / 100),
+          attachmentUrl: attachments["batteri"], // NEW
         },
         additionalCosts: additionalCosts.map((ac, index) => {
           const selectedItem = additionalCostOptions.find(
@@ -476,6 +520,7 @@ export default function CalculationSheet({
             name: selectedItem?.name || "",
             quantity: ac.quantity,
             priceWithMarkup: finalPrice * (1 + electricalMarkup / 100),
+            attachmentUrl: attachments[overrideId], // NEW
           };
         }),
       },
@@ -491,6 +536,7 @@ export default function CalculationSheet({
     totalWithInstallation,
     grandTotal,
     calculatedEnovaSupport,
+    attachments, // NEW: Add attachments to dependency array
   ]);
 
   const prevPriceOverviewString = useRef<string | null>(null);
@@ -517,11 +563,12 @@ export default function CalculationSheet({
             <th className="p-2 text-left">Kostnad eks. mva</th>
             <th className="p-2 text-right">Påslag i %</th>
             <th className="p-2 text-right">Total eks. mva</th>
+            {finished && <th className="p-2 text-left">Vedlegg</th>}
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>
+            <td colSpan={finished ? 6 : 5}>
               <h2 className="p-1 font-bold">LEVERANDØRER</h2>
             </td>
           </tr>
@@ -531,6 +578,7 @@ export default function CalculationSheet({
               item.category === "feste"
                 ? `${item.name} - ${item.product}`
                 : `${item.name} - ${item.product}`;
+            const attachmentUrl = attachments[item.id];
             return (
               <tr key={item.id}>
                 <td className="p-2 flex flex-row items-center gap-1">
@@ -565,11 +613,35 @@ export default function CalculationSheet({
                   ).toFixed(0)}{" "}
                   kr
                 </td>
+                {finished && ( // NEW
+                  <td className="p-2">
+                    {attachmentUrl ? (
+                      <a
+                        href={attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline text-xs"
+                      >
+                        Vis fil
+                      </a>
+                    ) : (
+                      <input
+                        type="file"
+                        className="text-xs w-28"
+                        onChange={(e) =>
+                          e.target.files &&
+                          handleFileUpload(item.id, e.target.files[0])
+                        }
+                      />
+                    )}
+                  </td>
+                )}{" "}
+                {/* NEW */}
               </tr>
             );
           })}
           <tr className="text-gray-600">
-            <td colSpan={4} className="p-2">
+            <td colSpan={finished ? 5 : 4} className="p-2">
               Total leverandør påslag
             </td>
             <td className="p-2 text-right">
@@ -578,14 +650,14 @@ export default function CalculationSheet({
           </tr>
 
           <tr>
-            <td>
+            <td colSpan={finished ? 6 : 5}>
               <h2 className="p-1 font-bold">MONTERING</h2>
             </td>
           </tr>
           {mountingItems.map((item) => {
             const markup = getCategoryMarkup(item.category || "");
             const defaultText = `Paneler og fester for ${solarData?.selectedRoofType ?? ""}`;
-
+            const attachmentUrl = attachments[item.id]; // NEW
             return (
               <tr key={item.id}>
                 <td className="p-2">
@@ -618,12 +690,36 @@ export default function CalculationSheet({
                   ).toFixed(0)}{" "}
                   kr
                 </td>
+                {finished && ( // NEW
+                  <td className="p-2">
+                    {attachmentUrl ? (
+                      <a
+                        href={attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline text-xs"
+                      >
+                        Vis fil
+                      </a>
+                    ) : (
+                      <input
+                        type="file"
+                        className="text-xs w-28"
+                        onChange={(e) =>
+                          e.target.files &&
+                          handleFileUpload(item.id, e.target.files[0])
+                        }
+                      />
+                    )}
+                  </td>
+                )}{" "}
+                {/* NEW */}
               </tr>
             );
           })}
           {reductionAmount > 0 && (
             <tr className="text-gray-600">
-              <td colSpan={4} className="p-2">
+              <td colSpan={finished ? 5 : 4} className="p-2">
                 Volumreduksjon ({reductionPercentage}%)
               </td>
               <td className="p-2 text-right">
@@ -632,7 +728,7 @@ export default function CalculationSheet({
             </tr>
           )}
           <tr className="text-gray-600">
-            <td colSpan={4} className="p-2">
+            <td colSpan={finished ? 5 : 4} className="p-2">
               Total montering påslag
             </td>
             <td className="p-2 text-right">
@@ -641,7 +737,7 @@ export default function CalculationSheet({
           </tr>
 
           <tr>
-            <td>
+            <td colSpan={finished ? 6 : 5}>
               <h2 className="p-1 font-bold">INSTALLASJON</h2>
             </td>
           </tr>
@@ -666,6 +762,30 @@ export default function CalculationSheet({
                 ).toFixed(0)}{" "}
                 kr
               </td>
+              {finished && ( // NEW
+                <td className="p-2">
+                  {attachments["søknad"] ? (
+                    <a
+                      href={attachments["søknad"]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline text-xs"
+                    >
+                      Vis fil
+                    </a>
+                  ) : (
+                    <input
+                      type="file"
+                      className="text-xs w-28"
+                      onChange={(e) =>
+                        e.target.files &&
+                        handleFileUpload("søknad", e.target.files[0])
+                      }
+                    />
+                  )}
+                </td>
+              )}{" "}
+              {/* NEW */}
             </tr>
           )}
           {inverterCount > 0 && (
@@ -695,6 +815,30 @@ export default function CalculationSheet({
                 ).toFixed(0)}{" "}
                 kr
               </td>
+              {finished && ( // NEW
+                <td className="p-2">
+                  {attachments["solcelle_anlegg"] ? (
+                    <a
+                      href={attachments["solcelle_anlegg"]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline text-xs"
+                    >
+                      Vis fil
+                    </a>
+                  ) : (
+                    <input
+                      type="file"
+                      className="text-xs w-28"
+                      onChange={(e) =>
+                        e.target.files &&
+                        handleFileUpload("solcelle_anlegg", e.target.files[0])
+                      }
+                    />
+                  )}
+                </td>
+              )}{" "}
+              {/* NEW */}
             </tr>
           )}
           {batteryCount > 0 && (
@@ -735,6 +879,30 @@ export default function CalculationSheet({
                 ).toFixed(0)}{" "}
                 kr
               </td>
+              {finished && ( // NEW
+                <td className="p-2">
+                  {attachments["batteri"] ? (
+                    <a
+                      href={attachments["batteri"]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline text-xs"
+                    >
+                      Vis fil
+                    </a>
+                  ) : (
+                    <input
+                      type="file"
+                      className="text-xs w-28"
+                      onChange={(e) =>
+                        e.target.files &&
+                        handleFileUpload("batteri", e.target.files[0])
+                      }
+                    />
+                  )}
+                </td>
+              )}{" "}
+              {/* NEW */}
             </tr>
           )}
           {additionalCosts.map((ac, index) => {
@@ -744,6 +912,7 @@ export default function CalculationSheet({
             const base = selectedItem?.price_per || 0;
             const defaultPrice = base * ac.quantity;
             const overrideId = `additional_${index}`;
+            const attachmentUrl = attachments[overrideId]; // NEW
 
             const totalWithMarkup =
               getFinalPrice(overrideId, defaultPrice) *
@@ -801,11 +970,35 @@ export default function CalculationSheet({
                 <td className="p-2 text-right">
                   {totalWithMarkup.toFixed(0)} kr
                 </td>
+                {finished && ( // NEW
+                  <td className="p-2">
+                    {attachmentUrl ? (
+                      <a
+                        href={attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline text-xs"
+                      >
+                        Vis fil
+                      </a>
+                    ) : (
+                      <input
+                        type="file"
+                        className="text-xs w-28"
+                        onChange={(e) =>
+                          e.target.files &&
+                          handleFileUpload(overrideId, e.target.files[0])
+                        }
+                      />
+                    )}
+                  </td>
+                )}{" "}
+                {/* NEW */}
               </tr>
             );
           })}
           <tr>
-            <td>
+            <td colSpan={finished ? 6 : 5}>
               <button
                 onClick={handleAddAdditionalCost}
                 className="text-red-500 p-2"
@@ -816,7 +1009,7 @@ export default function CalculationSheet({
           </tr>
 
           <tr className="text-gray-600">
-            <td colSpan={4} className="p-2">
+            <td colSpan={finished ? 5 : 4} className="p-2">
               Total installasjon påslag
             </td>
             <td className="p-2 text-right">
@@ -825,7 +1018,7 @@ export default function CalculationSheet({
           </tr>
 
           <tr>
-            <td>
+            <td colSpan={finished ? 6 : 5}>
               <h2 className="p-1 font-bold">Soleklart Salgsprovisjon</h2>
             </td>
           </tr>
@@ -846,10 +1039,12 @@ export default function CalculationSheet({
                   }
                 />
               </td>
+              {finished && <td className="p-2"></td>}{" "}
+              {/* NEW empty cell for alignment */}
             </tr>
           )}
           <tr>
-            <td className="p-2"></td>
+            <td className="p-2" colSpan={finished ? 6 : 5}></td>
           </tr>
           {leadCompany ? (
             <>
@@ -859,6 +1054,8 @@ export default function CalculationSheet({
                 <td className="p-2 text-right"></td>
                 <td className="p-2 text-right"></td>
                 <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
+                {finished && <td className="p-2"></td>}{" "}
+                {/* NEW empty cell for alignment */}
               </tr>
             </>
           ) : (
@@ -869,6 +1066,8 @@ export default function CalculationSheet({
                 <td className="p-2 text-right"></td>
                 <td className="p-2 text-right"></td>
                 <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
+                {finished && <td className="p-2"></td>}{" "}
+                {/* NEW empty cell for alignment */}
               </tr>
               <tr>
                 <td className="p-2">Total kostnad inkl. mva</td>
@@ -878,9 +1077,11 @@ export default function CalculationSheet({
                 <td className="p-2 text-right">
                   {(grandTotal * 1.25).toFixed(0)} kr
                 </td>
+                {finished && <td className="p-2"></td>}{" "}
+                {/* NEW empty cell for alignment */}
               </tr>
               <tr>
-                <td className="p-2"></td>
+                <td className="p-2" colSpan={finished ? 6 : 5}></td>
               </tr>
               <tr>
                 <td className="p-2">Enova støtte</td>
@@ -890,9 +1091,11 @@ export default function CalculationSheet({
                 <td className="p-2 text-right">
                   {calculatedEnovaSupport.toFixed(0)} kr
                 </td>
+                {finished && <td className="p-2"></td>}{" "}
+                {/* NEW empty cell for alignment */}
               </tr>
               <tr>
-                <td className="p-2"></td>
+                <td className="p-2" colSpan={finished ? 6 : 5}></td>
               </tr>
               <tr>
                 <td className="p-2">
@@ -904,6 +1107,8 @@ export default function CalculationSheet({
                 <td className="p-2 text-right">
                   {(grandTotal * 1.25 - calculatedEnovaSupport).toFixed(0)} kr
                 </td>
+                {finished && <td className="p-2"></td>}{" "}
+                {/* NEW empty cell for alignment */}
               </tr>
             </>
           )}

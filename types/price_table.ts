@@ -81,6 +81,7 @@ export type PriceOverview = {
     category: string;
     quantity: number;
     priceWithMarkup: number;
+    attachmentUrl?: string;
   }[];
   mounting: {
     id: string;
@@ -90,23 +91,28 @@ export type PriceOverview = {
     category: string;
     quantity: number;
     priceWithMarkup: number;
+    attachmentUrl?: string;
   }[];
   installation: {
     søknad: {
       priceWithMarkup: number;
+      attachmentUrl?: string;
     };
     solcelleAnlegg: {
       priceWithMarkup: number;
+      attachmentUrl?: string;
     };
     battery: {
       selectedBatteryId: string | null;
       priceWithMarkup: number;
+      attachmentUrl?: string;
     };
     additionalCosts: {
       id: string;
       name: string;
       quantity: number;
       priceWithMarkup: number;
+      attachmentUrl?: string;
     }[];
   };
   total: number;
