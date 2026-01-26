@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const client = createSupabaseClient(token);
-    const { lead_id, solarData, price_data, imageUrl, finished } =
+    const { lead_id, solarData, price_data, imageUrl, finished, leadCompany } =
       await req.json();
 
     if (!lead_id) {
@@ -49,6 +49,12 @@ export async function POST(req: Request) {
 
     const sanitizeNumeric = (value: string | number | null): number | null =>
       typeof value === "number" ? value : null;
+
+    const panelName =
+      price_data?.suppliers?.find(
+        (s: unknown) =>
+          (s as Record<string, unknown>).category === "solcellepanel",
+      )?.name ?? null;
 
     const newEstimate = {
       lead_id: lead_id,
@@ -60,11 +66,12 @@ export async function POST(req: Request) {
       yearly_prod: sanitizeNumeric(solarData.yearlyProd),
       desired_kwh: sanitizeNumeric(solarData.desiredKwh),
       coverage_percentage: sanitizeNumeric(solarData.coveragePercentage),
-      selected_panel_type: solarData.selectedPanelType,
+      selected_panel_type: panelName || solarData.selectedPanelType,
       selected_roof_type: solarData.selectedRoofType,
       checked_roof_data: solarData.checkedRoofData,
       selected_el_price: solarData.selectedElPrice,
       finished: Boolean(finished),
+      private: leadCompany != null && leadCompany !== "" ? true : false,
     };
 
     const { data, error } = await client

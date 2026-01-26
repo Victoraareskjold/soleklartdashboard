@@ -189,12 +189,21 @@ export default function LeadNotesSection({ leadId }: Props) {
     if (!editor) return;
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
-    if (editor.isEmpty || !user?.id) return;
+    if (!user?.id) return;
 
     const noteContent = editor.getHTML();
 
+    const sanitizeFileName = (name: string) => {
+      return name
+        .replace(/[åÅ]/g, "a")
+        .replace(/[æÆ]/g, "ae")
+        .replace(/[øØ]/g, "o")
+        .replace(/[^a-zA-Z0-9.-]/g, "_"); // Erstatter alt annet enn bokstaver, tall, punktum og bindestrek med underscore
+    };
+
     const attachmentsPayload = await Promise.all(
       attachments.map(async (file) => {
+        const cleanedName = sanitizeFileName(file.name); // Rens navnet her!
         const contentBytes = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.readAsDataURL(file);
@@ -205,7 +214,7 @@ export default function LeadNotesSection({ leadId }: Props) {
           reader.onerror = (error) => reject(error);
         });
         return {
-          name: file.name,
+          name: cleanedName,
           contentType: file.type,
           contentBytes,
         };

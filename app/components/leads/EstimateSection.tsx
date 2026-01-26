@@ -167,6 +167,7 @@ export default function EstimateSection({
         price_data: priceOverview,
         imageUrl,
         finished,
+        leadCompany,
       } as CreateEstimateInput);
 
       toast.success("Estimat og prisestimat opprettet!");

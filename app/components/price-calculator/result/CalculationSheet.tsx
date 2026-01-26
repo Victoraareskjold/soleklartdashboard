@@ -159,7 +159,14 @@ export default function CalculationSheet({
           m.roof_type?.name === solarData?.selectedRoofType,
       );
 
-      const mountingItem = mountMatch
+      // Fallback: Hvis vi ikke finner match på taktype, prøv å finne bare produktet
+      const fallbackMatch = !mountMatch
+        ? mountItems.find((m) => m.product.id === product.id)
+        : null;
+
+      const finalMountData = mountMatch || fallbackMatch;
+
+      const mountingItem = finalMountData
         ? {
             id: item.id + "_mount",
             name: item.displayName,
@@ -168,13 +175,24 @@ export default function CalculationSheet({
             category: "feste-mount",
             quantity: item.quantity,
             source: "mounting",
-            price: mountMatch.price_per * item.quantity,
-            roofTypeName: mountMatch.roof_type?.name,
-            mountProductName: mountMatch.product.name,
+            price: finalMountData.price_per * item.quantity,
+            roofTypeName: finalMountData.roof_type?.name || "Standard/Fallback",
+            mountProductName: finalMountData.product.name,
           }
-        : null;
+        : {
+            // Hard fallback hvis produktet ikke finnes i mountItems i det hele tatt
+            id: item.id + "_mount_empty",
+            name: "Montering (pris ikke satt)",
+            product: product.name,
+            supplier: supplier?.name || "Ukjent",
+            category: "feste-mount",
+            quantity: item.quantity,
+            source: "mounting",
+            price: 0, // Lar brukeren overstyre prisen manuelt i tabellen
+            roofTypeName: "Ingen match",
+          };
 
-      return mountingItem ? [supplierItem, mountingItem] : [supplierItem];
+      return [supplierItem, mountingItem];
     })
     .filter((i) => i.quantity > 0 && i.supplier !== "Ukjent");
 
@@ -511,11 +529,11 @@ export default function CalculationSheet({
             const markup = getCategoryMarkup(item.category || "");
             const displayValue =
               item.category === "feste"
-                ? `${item.name} - ${item.product} - ${item.supplier}`
-                : `${item.name} - ${item.product} - ${item.supplier}`;
+                ? `${item.name} - ${item.product}`
+                : `${item.name} - ${item.product}`;
             return (
               <tr key={item.id}>
-                <td className="p-2">
+                <td className="p-2 flex flex-row items-center gap-1">
                   <textarea
                     value={getFinalText(item.id, displayValue)}
                     onChange={(e) =>
@@ -526,6 +544,8 @@ export default function CalculationSheet({
                     }
                     className="w-full bg-gray-100 p-1 border border-gray-200"
                   />
+                  <p>-</p>
+                  <p>{item.supplier}</p>
                 </td>
                 <td className="p-2 text-right">{item.quantity} stk.</td>
                 <td className="p-2 text-right">
