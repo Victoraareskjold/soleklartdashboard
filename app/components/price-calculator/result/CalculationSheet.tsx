@@ -613,7 +613,7 @@ export default function CalculationSheet({
                   ).toFixed(0)}{" "}
                   kr
                 </td>
-                {finished && ( // NEW
+                {finished && (
                   <td className="p-2">
                     {attachmentUrl ? (
                       <a
@@ -635,8 +635,7 @@ export default function CalculationSheet({
                       />
                     )}
                   </td>
-                )}{" "}
-                {/* NEW */}
+                )}
               </tr>
             );
           })}
@@ -712,8 +711,7 @@ export default function CalculationSheet({
                       />
                     )}
                   </td>
-                )}{" "}
-                {/* NEW */}
+                )}
               </tr>
             );
           })}
@@ -784,8 +782,7 @@ export default function CalculationSheet({
                     />
                   )}
                 </td>
-              )}{" "}
-              {/* NEW */}
+              )}
             </tr>
           )}
           {inverterCount > 0 && (
@@ -815,7 +812,7 @@ export default function CalculationSheet({
                 ).toFixed(0)}{" "}
                 kr
               </td>
-              {finished && ( // NEW
+              {finished && (
                 <td className="p-2">
                   {attachments["solcelle_anlegg"] ? (
                     <a
@@ -837,8 +834,7 @@ export default function CalculationSheet({
                     />
                   )}
                 </td>
-              )}{" "}
-              {/* NEW */}
+              )}
             </tr>
           )}
           {batteryCount > 0 && (
@@ -879,7 +875,7 @@ export default function CalculationSheet({
                 ).toFixed(0)}{" "}
                 kr
               </td>
-              {finished && ( // NEW
+              {finished && (
                 <td className="p-2">
                   {attachments["batteri"] ? (
                     <a
@@ -901,8 +897,7 @@ export default function CalculationSheet({
                     />
                   )}
                 </td>
-              )}{" "}
-              {/* NEW */}
+              )}
             </tr>
           )}
           {additionalCosts.map((ac, index) => {
@@ -912,7 +907,7 @@ export default function CalculationSheet({
             const base = selectedItem?.price_per || 0;
             const defaultPrice = base * ac.quantity;
             const overrideId = `additional_${index}`;
-            const attachmentUrl = attachments[overrideId]; // NEW
+            const attachmentUrl = attachments[overrideId];
 
             const totalWithMarkup =
               getFinalPrice(overrideId, defaultPrice) *
@@ -970,7 +965,7 @@ export default function CalculationSheet({
                 <td className="p-2 text-right">
                   {totalWithMarkup.toFixed(0)} kr
                 </td>
-                {finished && ( // NEW
+                {finished && (
                   <td className="p-2">
                     {attachmentUrl ? (
                       <a
@@ -992,8 +987,7 @@ export default function CalculationSheet({
                       />
                     )}
                   </td>
-                )}{" "}
-                {/* NEW */}
+                )}
               </tr>
             );
           })}
@@ -1039,8 +1033,7 @@ export default function CalculationSheet({
                   }
                 />
               </td>
-              {finished && <td className="p-2"></td>}{" "}
-              {/* NEW empty cell for alignment */}
+              {finished && <td className="p-2"></td>}
             </tr>
           )}
           <tr>
@@ -1054,8 +1047,7 @@ export default function CalculationSheet({
                 <td className="p-2 text-right"></td>
                 <td className="p-2 text-right"></td>
                 <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
-                {finished && <td className="p-2"></td>}{" "}
-                {/* NEW empty cell for alignment */}
+                {finished && <td className="p-2"></td>}
               </tr>
             </>
           ) : (
@@ -1066,8 +1058,7 @@ export default function CalculationSheet({
                 <td className="p-2 text-right"></td>
                 <td className="p-2 text-right"></td>
                 <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
-                {finished && <td className="p-2"></td>}{" "}
-                {/* NEW empty cell for alignment */}
+                {finished && <td className="p-2"></td>}
               </tr>
               <tr>
                 <td className="p-2">Total kostnad inkl. mva</td>
@@ -1077,8 +1068,7 @@ export default function CalculationSheet({
                 <td className="p-2 text-right">
                   {(grandTotal * 1.25).toFixed(0)} kr
                 </td>
-                {finished && <td className="p-2"></td>}{" "}
-                {/* NEW empty cell for alignment */}
+                {finished && <td className="p-2"></td>}
               </tr>
               <tr>
                 <td className="p-2" colSpan={finished ? 6 : 5}></td>
@@ -1091,8 +1081,7 @@ export default function CalculationSheet({
                 <td className="p-2 text-right">
                   {calculatedEnovaSupport.toFixed(0)} kr
                 </td>
-                {finished && <td className="p-2"></td>}{" "}
-                {/* NEW empty cell for alignment */}
+                {finished && <td className="p-2"></td>}
               </tr>
               <tr>
                 <td className="p-2" colSpan={finished ? 6 : 5}></td>
@@ -1107,8 +1096,7 @@ export default function CalculationSheet({
                 <td className="p-2 text-right">
                   {(grandTotal * 1.25 - calculatedEnovaSupport).toFixed(0)} kr
                 </td>
-                {finished && <td className="p-2"></td>}{" "}
-                {/* NEW empty cell for alignment */}
+                {finished && <td className="p-2"></td>}
               </tr>
             </>
           )}
