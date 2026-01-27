@@ -43,15 +43,12 @@ export default function Navbar() {
           </Link>
         ))}
 
-        {/* Bjelle-ikonet (kanskje installatører også skal ha denne etter hvert?) */}
-        {teamRole !== "installer" && (
-          <button
-            className="bg-slate-100 p-2 h-10 flex items-center justify-center w-10 rounded-full text-slate-700 font-medium text-sm"
-            onClick={openMentions}
-          >
-            <BellIcon size={20} />
-          </button>
-        )}
+        <button
+          className="bg-slate-100 p-2 h-10 flex items-center justify-center w-10 rounded-full text-slate-700 font-medium text-sm"
+          onClick={openMentions}
+        >
+          <BellIcon size={20} />
+        </button>
       </div>
 
       {isMentionsOpen && <MentionsCenter onClose={closeMentions} />}

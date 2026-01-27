@@ -11,7 +11,7 @@ export default function ConnectOutlook() {
       "openid profile email offline_access Mail.ReadWrite Mail.Send";
 
     const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${encodeURIComponent(
-      scope
+      scope,
     )}&response_mode=query&state=outlook`;
 
     router.push(authUrl);
@@ -21,7 +21,7 @@ export default function ConnectOutlook() {
     <div>
       <button
         onClick={connectOutlook}
-        className="bg-blue-600 text-white p-2 rounded"
+        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
       >
         Koble til Outlook
       </button>
