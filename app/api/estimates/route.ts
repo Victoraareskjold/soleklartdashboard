@@ -72,6 +72,7 @@ export async function POST(req: Request) {
       selected_el_price: solarData.selectedElPrice,
       finished: Boolean(finished),
       private: leadCompany != null && leadCompany !== "" ? true : false,
+      kwp: solarData.kwp,
     };
 
     const { data, error } = await client

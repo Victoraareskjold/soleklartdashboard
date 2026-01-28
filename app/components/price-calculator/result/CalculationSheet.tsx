@@ -465,11 +465,11 @@ export default function CalculationSheet({
           id: item.id,
           name: item.name,
           supplier: item.supplier,
-          product: item.product,
+          product: getFinalText(item.id, item.name),
           category: item.category,
           quantity: item.quantity,
           priceWithMarkup: price * (1 + markup / 100),
-          attachmentUrl: attachments[item.id], // NEW
+          attachmentUrl: attachments[item.id],
         };
       }),
       mounting: mountingItems.map((item) => {
@@ -483,14 +483,14 @@ export default function CalculationSheet({
           category: item.category,
           quantity: item.quantity,
           priceWithMarkup: price * (1 + markup / 100),
-          attachmentUrl: attachments[item.id], // NEW
+          attachmentUrl: attachments[item.id],
         };
       }),
       installation: {
         søknad: {
           priceWithMarkup:
             getFinalPrice("søknad", søknadTotal) * (1 + electricalMarkup / 100),
-          attachmentUrl: attachments["søknad"], // NEW
+          attachmentUrl: attachments["søknad"],
         },
         solcelleAnlegg: {
           priceWithMarkup:

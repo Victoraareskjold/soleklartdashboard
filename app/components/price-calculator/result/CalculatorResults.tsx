@@ -489,7 +489,7 @@ export default function CalculatorResults({
       console.error("Feil ved beregning av invertere:", err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [solarData?.kwp, solarData?.voltage]); // Vi lytter KUN på effekt og spenning
+  }, [solarData?.kwp, solarData?.voltage]);
 
   useEffect(() => {
     if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
