@@ -380,8 +380,13 @@ export default function CalculatorResults({
 
   // Auto-select inverter basert på valgt leverandør
   useEffect(() => {
+    const effectiveKwp =
+      solarData?.kwpMode === "manual"
+        ? solarData.manualKwp
+        : solarData?.autoKwp;
+
     if (
-      !solarData?.kwp ||
+      !effectiveKwp ||
       !installerGroupId ||
       !suppliersAndProducts ||
       allCategories.length === 0
@@ -389,14 +394,13 @@ export default function CalculatorResults({
       return;
 
     try {
-      const totalKwp = solarData.kwp || 0;
-      const desiredCapacity = totalKwp * 0.85;
+      const desiredCapacity = effectiveKwp * 0.85;
 
       const inverterCategory = allCategories.find(
         (c) => c.name.toLowerCase() === "inverter",
       );
 
-      const voltage = solarData.voltage || 230;
+      const voltage = solarData?.voltage || 230;
 
       // Finn riktig subkategori basert på spenning
       const inverterSubcategory = inverterCategory?.subcategories?.find(
@@ -489,7 +493,12 @@ export default function CalculatorResults({
       console.error("Feil ved beregning av invertere:", err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [solarData?.kwp, solarData?.voltage]);
+  }, [
+    solarData?.kwpMode,
+    solarData?.manualKwp,
+    solarData?.autoKwp,
+    solarData?.voltage,
+  ]);
 
   useEffect(() => {
     if (!suppliersAndProducts || suppliersAndProducts.length === 0) return;
@@ -650,6 +659,7 @@ export default function CalculatorResults({
 
   useEffect(() => {
     if (!setSolarData) return;
+
     const panelItem = calculatorState.items.find(
       (item) => item.id === "solcellepanel",
     );
@@ -666,6 +676,7 @@ export default function CalculatorResults({
 
   useEffect(() => {
     if (!setSolarData || !suppliersAndProducts) return;
+    if (solarData?.kwpMode === "manual") return;
 
     const panelItem = calculatorState.items.find(
       (i) => i.id === "solcellepanel",
@@ -684,9 +695,13 @@ export default function CalculatorResults({
     const panelWp = getPanelWp(product.name);
     const newKwp = (panelItem.quantity * panelWp) / 1000;
 
-    if (Math.abs((solarData?.kwp || 0) - newKwp) > 0.001) {
-      setSolarData((prev) => ({ ...prev, kwp: newKwp }));
-    }
+    setSolarData((prev) => ({
+      ...prev,
+      autoKwp: newKwp,
+      kwp: newKwp, // 👈 KRITISK for UI
+      kwpMode: "auto", // 👈 paneler er autoritative
+    }));
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculatorState.items, suppliersAndProducts]);
 

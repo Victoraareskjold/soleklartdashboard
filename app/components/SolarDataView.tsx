@@ -21,6 +21,9 @@ export interface SolarData {
   desiredKwh?: number;
   coveragePercentage?: number;
   kwp?: number;
+  autoKwp?: number;
+  manualKwp?: number;
+  kwpMode?: "auto" | "manual";
   voltage?: number;
   defaultPanelSupplierId?: string;
   defaultPanelProductId?: string;
