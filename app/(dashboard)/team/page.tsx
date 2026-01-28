@@ -68,24 +68,19 @@ export default function TeamPage() {
 
   return (
     <div>
-      {(teamRole === "admin" || teamRole === "member") && (
-        <>
-          <h1 className="text-lg mb-4">{teamData.name}</h1>
-          <div className="grid grid-cols-3 xl:grid-cols-4 gap-3 mb-8">
-            {teamData.members
-              ?.filter((m) => m.role === "admin" || m.role === "member")
-              .map((member) => (
-                <div
-                  key={member.user_id}
-                  className="bg-slate-100 p-2 rounded-md"
-                >
-                  <p>{member.name || "Ingen navn"}</p>
-                  <p className="text-xs opacity-60 capitalize">{member.role}</p>
-                </div>
-              ))}
-          </div>
-        </>
-      )}
+      <>
+        <h1 className="text-lg mb-4">{teamData.name}</h1>
+        <div className="grid grid-cols-3 xl:grid-cols-4 gap-3 mb-8">
+          {teamData.members
+            ?.filter((m) => m.role === "admin" || m.role === "member")
+            .map((member) => (
+              <div key={member.user_id} className="bg-slate-100 p-2 rounded-md">
+                <p>{member.name || "Ingen navn"}</p>
+                <p className="text-xs opacity-60 capitalize">{member.role}</p>
+              </div>
+            ))}
+        </div>
+      </>
 
       <h1 className="text-lg mb-4">
         {teamRole === "installer"
