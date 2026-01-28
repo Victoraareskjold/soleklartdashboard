@@ -463,7 +463,7 @@ export default function CalculationSheet({
         const price = getFinalPrice(item.id, item.price);
         return {
           id: item.id,
-          name: getFinalText(item.id, item.name),
+          name: item.name,
           supplier: item.supplier,
           product: item.product,
           category: item.category,
@@ -477,9 +477,9 @@ export default function CalculationSheet({
         const price = getFinalPrice(item.id, item.price);
         return {
           id: item.id,
-          name: getFinalText(item.id, item.name),
+          name: item.name,
           supplier: item.supplier,
-          product: item.product,
+          product: getFinalText(item.id, item.name),
           category: item.category,
           quantity: item.quantity,
           priceWithMarkup: price * (1 + markup / 100),
