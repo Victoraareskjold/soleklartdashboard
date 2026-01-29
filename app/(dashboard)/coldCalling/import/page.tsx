@@ -80,8 +80,24 @@ export default function ImportPage() {
     }
   }
 
-  const headers = ["Adresse", "Navn", "Rolle", "Firmanavn", "Mobil", "Telefon"];
-  const fields = ["address", "name", "role", "company", "mobile", "phone"];
+  const headers = [
+    "Adresse",
+    "Navn",
+    "Rolle",
+    "Firmanavn",
+    "Org.Nr.",
+    "Mobil",
+    "Telefon",
+  ];
+  const fields = [
+    "address",
+    "name",
+    "role",
+    "company",
+    "org_nr",
+    "mobile",
+    "phone",
+  ];
   const [sliceAmount, setSliceAmount] = useState(5);
 
   return (

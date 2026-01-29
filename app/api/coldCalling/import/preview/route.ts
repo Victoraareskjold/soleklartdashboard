@@ -10,6 +10,8 @@ type ExcelRow = {
   Etternavn?: string;
   Rolle?: string;
   Firmanavn?: string;
+  "Org.nr."?: string;
+  "Org.nr"?: string;
   Mobil?: string;
   "Mob.Nr."?: string;
   Telefon?: string;
@@ -36,12 +38,14 @@ export async function POST(req: NextRequest) {
 
     const nameParts = [row["Fornavn"], row["Etternavn"]].filter(Boolean);
     const name = nameParts.join(" ");
+    const orgNr = row["Org.nr."] || row["Org.nr"];
 
     return {
       address: address || null,
       name: name || null,
       role: row["Rolle"] || null,
       company: row["Firmanavn"] || null,
+      org_nr: orgNr || null,
       mobile: row["Mobil"] || row["Mob.Nr."] || null,
       phone: row["Telefon"] || row["Tlf.Nr."] || null,
     };

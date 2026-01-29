@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     if (!leads || !Array.isArray(leads) || leads.length === 0) {
       return NextResponse.json(
         { error: "Ingen leads å importere" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       person_info: lead.name || null,
       role: lead.role || null,
       company: lead.company || null,
+      org_nr: lead.org_nr || null,
       mobile: lead.mobile || null,
       phone: lead.phone || null,
       assigned_to: assignedTo,
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
       console.error("Supabase error:", error);
       return NextResponse.json(
         { error: "Feil ved lagring til database" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
