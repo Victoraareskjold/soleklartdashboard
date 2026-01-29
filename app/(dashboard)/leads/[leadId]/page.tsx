@@ -147,6 +147,7 @@ export default function LeadPage() {
   const [personInfo, setPersonInfo] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [company, setCompany] = useState("");
+  const [orgNr, setOrgNr] = useState("");
   const [address, setAddress] = useState("");
   const [ownConsumtion, setOwnConsumtion] = useState(0);
   const [status, setStatus] = useState(0);
@@ -246,6 +247,7 @@ export default function LeadPage() {
         setPersonInfo(data.person_info ?? "");
         setBirthDate(data.birth_date ?? "");
         setCompany(data.company ?? "");
+        setOrgNr(data.org_nr ?? "");
         setPhone(data.phone ?? "");
         setMobile(data.mobile ?? "");
         setAddress(data.address ?? "");
@@ -317,6 +319,7 @@ export default function LeadPage() {
         person_info: personInfo || null,
         role: role || null,
         company: company || null,
+        org_nr: orgNr || null,
         roof_type_id: roofTypeId || null,
         own_consumption: ownConsumtion || null,
         voltage: voltage || null,
@@ -564,6 +567,12 @@ export default function LeadPage() {
               value={company}
               onChange={setCompany}
               placeholder="Firma navn"
+            />
+            <Input
+              label="Org.Nr"
+              value={orgNr}
+              onChange={setOrgNr}
+              placeholder="Organisasjonsnummer"
             />
           </div>
           <div className="border-l pl-4 flex flex-col gap-3">

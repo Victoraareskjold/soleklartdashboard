@@ -54,6 +54,7 @@ export interface Lead {
   person_info?: string | null;
   birth_date?: string | null;
   company?: string | null;
+  org_nr?: string | null;
   address?: string | null;
   priority: string | null;
   own_consumption?: number | null;
