@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       ) {
         return NextResponse.json(
           { error: `Mangler parametere for lead ${id || "ukjent"}` },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         console.error("Supabase error:", error);
         return NextResponse.json(
           { error: `Feil ved lagring av lead ${id}` },
-          { status: 500 }
+          { status: 500 },
         );
       }
 

@@ -108,6 +108,7 @@ export default function LeadNotesSection({ leadId }: Props) {
     Record<string, { id: string; name: string }[]>
   >({});
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -190,6 +191,7 @@ export default function LeadNotesSection({ leadId }: Props) {
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
     if (!user?.id) return;
+    setLoading(true);
 
     const noteContent = editor.getHTML();
 
@@ -237,6 +239,7 @@ export default function LeadNotesSection({ leadId }: Props) {
 
     setNewNote("");
     setAttachments([]);
+    setLoading(false);
     editor.commands.clearContent();
     setMentionSuggestions([]);
   };
@@ -246,6 +249,7 @@ export default function LeadNotesSection({ leadId }: Props) {
     const user = sessionData?.session?.user;
     const text = newComments[noteId]?.trim();
     if (!text || !user?.id) return;
+    setLoading(true);
 
     if (noteId.startsWith("lead-note-")) {
       if (!lead || !lead.note || !lead.created_by) return;
@@ -309,6 +313,7 @@ export default function LeadNotesSection({ leadId }: Props) {
       ...commentMentionSuggestions,
       [noteId]: [],
     });
+    setLoading(false);
   };
 
   const updateMentionSuggestions = (
@@ -516,8 +521,9 @@ export default function LeadNotesSection({ leadId }: Props) {
         <button
           type="submit"
           className="bg-indigo-600 text-white px-3 py-1 rounded-md text-sm hover:bg-indigo-700"
+          disabled={loading}
         >
-          Legg til
+          {loading ? "Legger til.." : "Legg til"}
         </button>
       </form>
 

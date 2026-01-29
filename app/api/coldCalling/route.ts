@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     if (!installerGroupId || !teamId) {
       return NextResponse.json(
         { error: "Mangler parametere" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       console.error("Supabase error:", error);
       return NextResponse.json(
         { error: "Feil ved lagring til database" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
