@@ -804,22 +804,24 @@ export default function LeadPage() {
                         {estimateUrl}
                       </p>
 
-                      <div className="text-sm mb-2 flex flex-row gap-2 items-center">
-                        <strong>Status:</strong>
-                        <div className="flex flex-row gap-2 items-center">
-                          {e.signed ? (
-                            <>
-                              <div className="w-5 h-5 rounded-sm bg-green-500" />
-                              <p>Signert</p>
-                            </>
-                          ) : (
-                            <>
-                              <div className="w-5 h-5 rounded-sm bg-red-500" />
-                              <p>Uavklart</p>
-                            </>
-                          )}
+                      {e.finished && (
+                        <div className="text-sm mb-2 flex flex-row gap-2 items-center">
+                          <strong>Status:</strong>
+                          <div className="flex flex-row gap-2 items-center">
+                            {e.signed ? (
+                              <>
+                                <div className="w-5 h-5 rounded-sm bg-green-500" />
+                                <p>Signert</p>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-5 h-5 rounded-sm bg-red-500" />
+                                <p>Uavklart</p>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <p className="font-medium text-sm underline">
                         Total eks. mva:{" "}
