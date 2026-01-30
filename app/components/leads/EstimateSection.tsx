@@ -107,13 +107,13 @@ export default function EstimateSection({
       if (
         initialSolarData &&
         (newSolarData.totalPanels !== prevSolarData.totalPanels ||
-          newSolarData.selectedPanelType !== prevSolarData.selectedPanelType)
+          newSolarData.defaultPanelProductId !== prevSolarData.defaultPanelProductId)
       ) {
-        const initialPanelWp = getPanelWp(initialSolarData.selectedPanelType!);
+        const initialPanelWp = getPanelWp(initialSolarData.defaultPanelProductId!);
         const initialKwp =
           (initialSolarData.totalPanels! * initialPanelWp) / 1000;
 
-        const newPanelWp = getPanelWp(newSolarData.selectedPanelType!);
+        const newPanelWp = getPanelWp(newSolarData.defaultPanelProductId!);
         const newKwp = (newSolarData.totalPanels! * newPanelWp) / 1000;
 
         if (initialKwp > 0) {
