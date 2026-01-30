@@ -98,9 +98,15 @@ export default function TaskSection({ leadId }: Props) {
   };
 
   const addMonths = (date: Date, months: number): Date => {
-    const result = new Date(date);
-    result.setMonth(result.getMonth() + months);
-    return result;
+    const newDate = new Date(date);
+    const day = newDate.getDate();
+    newDate.setMonth(newDate.getMonth() + months);
+    // If the new month has fewer days, it might have rolled over.
+    if (newDate.getDate() !== day) {
+      // Set to the last day of the previous month (which is the correct target month)
+      newDate.setDate(0);
+    }
+    return newDate;
   };
 
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -260,8 +266,8 @@ export default function TaskSection({ leadId }: Props) {
     if (options.date) {
       const [day, month, year] = options.date.split(".");
       current.setFullYear(Number(year));
-      current.setMonth(Number(month) - 1);
       current.setDate(Number(day));
+      current.setMonth(Number(month) - 1);
     }
 
     // Oppdater tid (HH:mm)
