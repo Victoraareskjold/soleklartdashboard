@@ -98,6 +98,7 @@ export interface Estimate {
     angle: number;
   }>;
   selected_el_price?: number;
+  kwp?: number;
   yearly_cost?: number;
   yearly_cost2?: number;
   yearly_prod?: number;

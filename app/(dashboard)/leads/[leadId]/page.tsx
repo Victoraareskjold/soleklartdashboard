@@ -783,12 +783,14 @@ export default function LeadPage() {
                 );
 
                 // Bruk din getkWp funksjon med det spesifikke panelet
-                const kwp = currentPanel
-                  ? getkWp(
-                      currentPanel.product || e.selected_panel_type!,
-                      e.total_panels!,
-                    )
-                  : 0;
+                const kwp = e.kwp
+                  ? e.kwp
+                  : currentPanel
+                    ? getkWp(
+                        currentPanel.product || e.selected_panel_type!,
+                        e.total_panels!,
+                      )
+                    : 0;
 
                 return (
                   <li
@@ -797,7 +799,7 @@ export default function LeadPage() {
                   >
                     <Link target="_blank" href={estimateUrl}>
                       <p className="font-semibold">
-                        Tilbud – {kwp.toFixed(1)} kWp
+                        Tilbud - {kwp.toFixed(1)} kWp
                       </p>
 
                       <p className="underline text-xs text-blue-500 mb-3">
