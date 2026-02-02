@@ -385,7 +385,6 @@ export default function CalculatorResults({
         ? solarData.manualKwp
         : solarData?.autoKwp;
 
-    console.log("hei");
     if (
       !effectiveKwp ||
       !installerGroupId ||

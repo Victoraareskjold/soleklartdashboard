@@ -42,6 +42,7 @@ export interface Session {
   user_id: string;
   team_id: string;
   team_role: "admin" | "member" | "installer" | "viewer";
+  user_name: string | null;
   installer_group_id: string | null;
 }
 

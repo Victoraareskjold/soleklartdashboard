@@ -22,18 +22,19 @@ export async function GET(req: NextRequest) {
   // Finn brukeren i users tabellen basert på email
   const { data: user, error: userError } = await client
     .from("users")
-    .select("id")
+    .select("id, name")
     .eq("email", authUser.email)
     .single();
 
   if (userError || !user) {
     return NextResponse.json(
       { error: "User not found in database" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
   const userId = user.id;
+  const userName = user.name;
 
   // Hent team membership med installer_group info hvis relevant
   const { data: teamMember, error: teamError } = await client
@@ -45,13 +46,14 @@ export async function GET(req: NextRequest) {
   if (teamError || !teamMember) {
     return NextResponse.json(
       { error: "User is not part of a team" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
   // Bygg session basert på rolle
   const session = {
     user_id: userId,
+    user_name: userName,
     team_id: teamMember.team_id,
     team_role: teamMember.role,
     installer_group_id: teamMember.installer_group_id || null,

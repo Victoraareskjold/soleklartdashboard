@@ -1,6 +1,6 @@
 "use client";
 
-import React, {
+import {
   createContext,
   useContext,
   useEffect,
@@ -12,6 +12,7 @@ import { getRole } from "@/lib/api";
 
 interface RoleContextType {
   teamRole: string | null;
+  userName: string | null;
   installer_group_id: string | null;
   loading: boolean;
   refetch: () => void;
@@ -22,8 +23,9 @@ const RoleContext = createContext<RoleContextType | undefined>(undefined);
 export function RoleProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [teamRole, setTeamRole] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const [installer_group_id, set_installer_group_id] = useState<string | null>(
-    null
+    null,
   );
 
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
         const data = await getRole(user.id);
         if (data) {
           setTeamRole(data.team_role);
+          setUserName(data.user_name);
           set_installer_group_id(data.installer_group_id);
         }
       } catch (error) {
@@ -58,7 +61,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
 
   return (
     <RoleContext.Provider
-      value={{ teamRole, installer_group_id, loading, refetch }}
+      value={{ teamRole, userName, installer_group_id, loading, refetch }}
     >
       {children}
     </RoleContext.Provider>

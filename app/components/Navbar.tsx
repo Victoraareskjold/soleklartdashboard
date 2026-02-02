@@ -10,7 +10,7 @@ import { useRoles } from "@/context/RoleProvider";
 
 export default function Navbar() {
   const [isMentionsOpen, setIsMentionsOpen] = useState(false);
-  const { teamRole } = useRoles();
+  const { teamRole, userName } = useRoles();
 
   const openMentions = () => setIsMentionsOpen(true);
   const closeMentions = () => setIsMentionsOpen(false);
