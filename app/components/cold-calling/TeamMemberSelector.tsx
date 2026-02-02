@@ -20,6 +20,7 @@ type Props = {
   firstOption?: string;
   includeInstallers?: boolean;
   installerGroupId?: string | null;
+  disabled?: boolean;
 };
 
 export default function TeamMemberSelector({
@@ -30,6 +31,7 @@ export default function TeamMemberSelector({
   firstOption = "Lead-innhenter",
   includeInstallers = false,
   installerGroupId = null,
+  disabled = false,
 }: Props) {
   const { teamMembers, installers } = useMemo(() => {
     const members = team?.members || [];
@@ -69,6 +71,7 @@ export default function TeamMemberSelector({
       value={selectedMember}
       onChange={(e) => onSelectMember(e.target.value)}
       className="border p-2 rounded-md bg-gray-50"
+      disabled={disabled}
     >
       <option value="">{firstOption}</option>
       {includeInstallers && installers.length > 0 ? (

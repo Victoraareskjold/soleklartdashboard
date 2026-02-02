@@ -3,6 +3,7 @@ import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector
 import LeadsTable from "@/app/components/LeadsTable";
 import LoadingScreen from "@/app/components/LoadingScreen";
 import { useAuth } from "@/context/AuthProvider";
+import { useRoles } from "@/context/RoleProvider";
 import { useTeam } from "@/context/TeamContext";
 import { getTeam } from "@/lib/api";
 import { Team } from "@/lib/types";
@@ -11,6 +12,7 @@ import { useEffect, useState } from "react";
 export default function LeadsPage() {
   const { teamId } = useTeam();
   const { user } = useAuth();
+  const { userName } = useRoles();
 
   const [team, setTeam] = useState<Team>();
   const [leadOwner, setLeadOwner] = useState<string>("");
@@ -70,7 +72,12 @@ export default function LeadsPage() {
               team={team}
               selectedMember={leadOwner}
               onSelectMember={setLeadOwner}
-              defaultUser={""}
+              defaultUser={
+                userName === "Driv"
+                  ? "1fa66993-1595-413f-94b6-e35a3a1e4560"
+                  : ""
+              }
+              disabled={userName === "Driv"}
             />
           </div>
         </div>
