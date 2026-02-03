@@ -100,7 +100,7 @@ export default function LeadsTable({
           lead.note,
         ];
         return searchableFields.some(
-          (field) => field && field.toString().toLowerCase().includes(query)
+          (field) => field && field.toString().toLowerCase().includes(query),
         );
       });
     }
@@ -152,7 +152,7 @@ export default function LeadsTable({
               const nextMonth = new Date(
                 now.getFullYear(),
                 now.getMonth() + 1,
-                1
+                1,
               );
               return (
                 dueDate.getFullYear() === nextMonth.getFullYear() &&
@@ -172,10 +172,13 @@ export default function LeadsTable({
     setLeads(filteredLeads);
   }, [rawLeads, leadOwner, leadCollector, searchQuery, taskDueDateFilter]);
 
-  const grouped = LEAD_STATUSES.reduce((acc, status) => {
-    acc[status.value] = leads.filter((lead) => lead.status === status.value);
-    return acc;
-  }, {} as Record<number, FullLead[]>);
+  const grouped = LEAD_STATUSES.reduce(
+    (acc, status) => {
+      acc[status.value] = leads.filter((lead) => lead.status === status.value);
+      return acc;
+    },
+    {} as Record<number, FullLead[]>,
+  );
 
   const onDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -188,7 +191,7 @@ export default function LeadsTable({
 
     const originalRawLeads = [...rawLeads];
     const updatedRawLeads = rawLeads.map((lead) =>
-      lead.id === draggableId ? { ...lead, status: destStatus } : lead
+      lead.id === draggableId ? { ...lead, status: destStatus } : lead,
     );
     setRawLeads(updatedRawLeads);
 
@@ -206,7 +209,7 @@ export default function LeadsTable({
   const handleStatusChange = async (leadId: string, newStatus: number) => {
     const originalRawLeads = [...rawLeads];
     const updatedRawLeads = rawLeads.map((l) =>
-      l.id === leadId ? { ...l, status: newStatus } : l
+      l.id === leadId ? { ...l, status: newStatus } : l,
     );
     setRawLeads(updatedRawLeads);
 
@@ -225,7 +228,7 @@ export default function LeadsTable({
       if (!lead.estimates || lead.estimates.length === 0) return total;
 
       const latest = lead.estimates.reduce((a, b) =>
-        new Date(a.created_at || 0) > new Date(b.created_at || 0) ? a : b
+        new Date(a.created_at || 0) > new Date(b.created_at || 0) ? a : b,
       );
 
       if (!latest.price_data) return total;
