@@ -170,16 +170,7 @@ export default function LeadPage() {
     { label: "3-fase", value: 3 },
   ];
   const [mainFuse, setMainFuse] = useState(25);
-  const mainFuseOptions = [
-    { label: "25 A", value: 25 },
-    { label: "32 A", value: 32 },
-    { label: "40 A", value: 40 },
-    { label: "50 A", value: 50 },
-    { label: "63 A", value: 63 },
-    { label: "80 A", value: 80 },
-    { label: "100 A", value: 100 },
-    { label: "125 A+", value: 125 },
-  ];
+
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
   const [roofTypeId, setRoofTypeId] = useState("");
   const [roofSlope, setRoofSlope] = useState(0);
@@ -254,6 +245,7 @@ export default function LeadPage() {
         setOwnConsumtion(data.own_consumption || 0);
         setVoltage(data.voltage ?? 230);
         setPhases(data.phases ?? 0);
+        setMainFuse(data.main_fuse ?? 25);
         setRoofSlope(data.roof_slope ?? 0);
         setRoofAge(data.roof_age ?? 0);
         setRoofTypeId(data.roof_type_id ?? "");
@@ -324,6 +316,7 @@ export default function LeadPage() {
         own_consumption: ownConsumtion || null,
         voltage: voltage || null,
         phases: phases || null,
+        main_fuse: mainFuse || null,
         roof_slope: roofSlope || null,
         roof_age: roofAge || null,
         birth_date: birthDate || null,
@@ -621,8 +614,7 @@ export default function LeadPage() {
               label="Hovedsikring (A)"
               value={mainFuse}
               onChange={(val) => setMainFuse(Number(val))}
-              input="select"
-              options={mainFuseOptions}
+              type="number"
               placeholder="HovedSikring (A)"
             />
             <Input

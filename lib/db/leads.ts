@@ -4,7 +4,7 @@ import { Lead } from "../types";
 export async function getLeads(
   client: SupabaseClient,
   teamId: string,
-  installerGroupId: string
+  installerGroupId: string,
 ) {
   const { data, error } = await client
     .from("leads")
@@ -19,7 +19,7 @@ export async function getLeads(
 export async function updateLead(
   client: SupabaseClient,
   leadId: string,
-  updates: Partial<Lead>
+  updates: Partial<Lead>,
 ) {
   const { data, error } = await client
     .from("leads")
@@ -35,7 +35,7 @@ export async function createLead(
   client: SupabaseClient,
   teamId: string,
   name: string,
-  managerId?: string
+  managerId?: string,
 ) {
   const { data: group, error } = await client
     .from("installer_groups")

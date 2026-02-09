@@ -4,14 +4,14 @@ import { updateLead } from "@/lib/db/leads";
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const resolvedParams = await params;
     if (!resolvedParams?.id) {
       return NextResponse.json(
         { error: "Missing estimate id" },
-        { status: 400 }
+        { status: 400 },
       );
     }
     const token = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -34,14 +34,14 @@ export async function GET(
     console.error("GET /api/leads/[id] error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const resolvedParams = await params;
@@ -61,7 +61,7 @@ export async function PATCH(
     if (!body)
       return NextResponse.json(
         { error: "Missing update payload" },
-        { status: 400 }
+        { status: 400 },
       );
 
     const updatedLead = await updateLead(client, leadId, body);
@@ -70,7 +70,7 @@ export async function PATCH(
     console.error("PATCH /api/leads/[id] error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
