@@ -108,7 +108,7 @@ export interface Estimate {
   price_data?: PriceOverview;
 
   finished?: boolean;
-  signed?: boolean;
+  signed_at?: string;
 }
 
 export type CreateEstimateInput = Partial<Estimate> & { lead_id: string } & {
