@@ -549,7 +549,6 @@ export default function CalculationSheet({
       setPriceOverview(priceOverview);
       prevPriceOverviewString.current = priceOverviewString;
     }
-    console.log(priceOverview);
   }, [priceOverview, setPriceOverview]);
 
   return (

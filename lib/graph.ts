@@ -21,7 +21,7 @@ interface MicrosoftTokenResponse {
  */
 export async function getRefreshedEmailAccount(
   userId: string,
-  installerGroupId: string
+  installerGroupId: string,
 ): Promise<EmailAccount | null> {
   // 1. Get the stored account from the database
   const { data: account, error: accountError } = await supabase
@@ -35,7 +35,7 @@ export async function getRefreshedEmailAccount(
   if (accountError) {
     console.error(
       "Error fetching email account from DB:",
-      accountError.message
+      accountError.message,
     );
     return null;
   }
@@ -59,7 +59,6 @@ export async function getRefreshedEmailAccount(
   }
 
   // 3. If token is expired, refresh it using the refresh_token
-  console.log("Outlook access token expired. Refreshing...");
 
   const tokenUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/token";
 
@@ -91,7 +90,7 @@ export async function getRefreshedEmailAccount(
 
   // 4. Update the database with the new tokens and expiry time
   const newExpiresAt = new Date(
-    Date.now() + newTokens.expires_in * 1000
+    Date.now() + newTokens.expires_in * 1000,
   ).toISOString();
 
   const { data: updatedAccount, error: updateError } = await supabase
@@ -109,13 +108,12 @@ export async function getRefreshedEmailAccount(
   if (updateError) {
     console.error(
       "Error updating refreshed token in database:",
-      updateError.message
+      updateError.message,
     );
     // We have a new token, but failed to save it.
     // It's safer to return null to avoid inconsistent state.
     return null;
   }
 
-  console.log("Successfully refreshed and updated Outlook token.");
   return updatedAccount as EmailAccount;
 }

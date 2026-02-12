@@ -332,8 +332,6 @@ export default function TaskSection({ leadId }: Props) {
     taskDueDate: string,
   ) => {
     if (!selectedMemberId || !team) return;
-    console.log("DEBUG: taskDueDate mottatt fra API:", taskDueDate);
-    console.log("DEBUG: Type of taskDueDate:", typeof taskDueDate);
 
     // Sjekk at brukeren finnes i teamet
     const allMembers = team.members || [];
@@ -342,7 +340,6 @@ export default function TaskSection({ leadId }: Props) {
     );
 
     if (!assignedMember) {
-      console.log("Kunne ikke finne bruker i teamet");
       return;
     }
 
@@ -354,7 +351,6 @@ export default function TaskSection({ leadId }: Props) {
       .single();
 
     if (userError || !assignedUserData?.email) {
-      console.log("Kunne ikke finne brukerens e-post:", userError);
       return;
     }
 
@@ -461,13 +457,6 @@ export default function TaskSection({ leadId }: Props) {
       </div>
     </div>
   `;
-
-    console.log(
-      "Sender e-post til:",
-      assignedUserData.email,
-      "Emne:",
-      emailSubject,
-    );
 
     try {
       await fetch("/api/send-mail", {

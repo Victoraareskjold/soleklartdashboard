@@ -22,8 +22,6 @@ export async function GET(req: Request) {
     .eq("installer_group_id", installerGroupId)
     .eq("assigned_to", selectedMember);
 
-  console.log(data);
-
   if (error) {
     return NextResponse.json([], { status: 500 });
   }
@@ -38,6 +36,6 @@ export async function GET(req: Request) {
     Object.entries(counts).map(([status, count]) => ({
       status: Number(status),
       count,
-    }))
+    })),
   );
 }

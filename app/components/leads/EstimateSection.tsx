@@ -107,9 +107,12 @@ export default function EstimateSection({
       if (
         initialSolarData &&
         (newSolarData.totalPanels !== prevSolarData.totalPanels ||
-          newSolarData.defaultPanelProductId !== prevSolarData.defaultPanelProductId)
+          newSolarData.defaultPanelProductId !==
+            prevSolarData.defaultPanelProductId)
       ) {
-        const initialPanelWp = getPanelWp(initialSolarData.defaultPanelProductId!);
+        const initialPanelWp = getPanelWp(
+          initialSolarData.defaultPanelProductId!,
+        );
         const initialKwp =
           (initialSolarData.totalPanels! * initialPanelWp) / 1000;
 
@@ -158,8 +161,6 @@ export default function EstimateSection({
         }
         imageUrl = publicUrlData.publicUrl;
       }
-
-      console.log(priceOverview);
 
       const newEstimate = await createEstimate({
         lead_id: leadId,

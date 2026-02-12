@@ -425,7 +425,6 @@ export default function CalculatorResults({
         currentInverter?.supplierId || solarData?.defaultInverterSupplierId;
 
       if (!activeSupplierId) {
-        console.log("Ingen leverandør valgt for inverter ennå.");
         return;
       }
 
@@ -446,9 +445,6 @@ export default function CalculatorResults({
         .sort((a, b) => b.power - a.power); // Størst først
 
       if (inverterProducts.length === 0) {
-        console.log(
-          `Leverandør ${supplier.name} har ingen passende invertere for ${voltage}V`,
-        );
         return;
       }
 
