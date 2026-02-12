@@ -92,7 +92,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
           {isAddressField && handleCopyAddress && localValue && (
             <button
               onClick={() => handleCopyAddress(localValue)}
-              className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-0 left-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
               title="Copy address"
             >
               <Copy size={14} />

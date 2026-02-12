@@ -618,8 +618,8 @@ export default function TaskSection({ leadId }: Props) {
         )
         .map((task, i) => (
           <div className="mt-4 bg-white" key={i}>
-            <div className="bg-[#7787FF] p-2 text-white flex flex-row items-center justify-between">
-              <input value={task.title} readOnly />
+            <div className="bg-[#7787FF] p-2 text-white flex flex-row items-center justify-between gap-2">
+              <input className="w-full" value={task.title} readOnly />
               <button
                 onClick={() => handleDeleteTask(task.id)}
                 className="py-2 px-4 bg-red-200 hover:bg-red-500 text-red-500 hover:text-white duration-200 rounded-md font-medium items-center flex flex-row gap-1 text-sm"
@@ -630,7 +630,7 @@ export default function TaskSection({ leadId }: Props) {
             <div className="p-2">
               <div className="w-full p-2">
                 <textarea
-                  className="w-full"
+                  className="w-full min-h-18 h-full"
                   readOnly
                   value={task.description}
                 />
@@ -766,11 +766,11 @@ export default function TaskSection({ leadId }: Props) {
               {(taskComments[task.id] || []).map((comment, i) => (
                 <div
                   key={comment.id + i}
-                  className="w-full p-2 border-t rounded-md mt-4 h-24 border"
+                  className="w-full p-2 border-t rounded-md mt-4 h-full border"
                 >
                   <p>{formatDate(new Date(comment.created_at))}</p>
                   <textarea
-                    className="w-full"
+                    className="w-full h-full min-h-18"
                     readOnly
                     value={comment.description}
                   />
