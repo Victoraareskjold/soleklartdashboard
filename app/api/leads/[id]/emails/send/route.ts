@@ -230,20 +230,23 @@ export async function POST(
     // Insert email message into our DB
     const { data: dbEmail, error: insertError } = await client
       .from("email_messages")
-      .insert({
-        installer_group_id: installerGroupId,
-        lead_id: leadId,
-        message_id: finalMessageId,
-        conversation_id: finalConversationId,
-        subject: subject,
-        from_address: account.email,
-        to_addresses: [lead.email],
-        cc_addresses: cc,
-        body: body,
-        body_preview: body.substring(0, 255).replace(/<[^>]*>?/gm, ""),
-        received_at: new Date().toISOString(),
-        has_attachments: hasAttachments,
-      })
+      .upsert(
+        {
+          installer_group_id: installerGroupId,
+          lead_id: leadId,
+          message_id: finalMessageId,
+          conversation_id: finalConversationId,
+          subject: subject,
+          from_address: account.email,
+          to_addresses: [lead.email],
+          cc_addresses: cc,
+          body: body,
+          body_preview: body.substring(0, 255).replace(/<[^>]*>?/gm, ""),
+          received_at: new Date().toISOString(),
+          has_attachments: hasAttachments,
+        },
+        { onConflict: "message_id" }
+      )
       .select("id")
       .single();
 

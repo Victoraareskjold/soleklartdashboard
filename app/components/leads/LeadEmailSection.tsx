@@ -370,8 +370,10 @@ export default function LeadEmailSection({
 
       if (response.success) {
         toast.success(`Synkronisert ${response.count} e-poster`);
-        // Refresh the list
-        await fetchEmails();
+        // Refresh the list only if new emails were added/updated
+        if (response.count > 0) {
+          await fetchEmails();
+        }
       }
     } catch (error) {
       console.error("Error syncing emails:", error);
