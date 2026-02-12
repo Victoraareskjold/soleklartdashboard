@@ -445,12 +445,14 @@ export default function LeadEmailSection({
         .map((email) => email.trim())
         .filter(Boolean);
 
+      const emailBodyHtml = body.replace(/<p><\/p>/g, "<p>&nbsp;</p>");
+
       const response = await sendLeadEmail(
         leadId,
         user.id,
         installerGroupId,
         subject,
-        body,
+        emailBodyHtml,
         replyToMessageId || undefined,
         attachmentsPayload,
         ccArray,
