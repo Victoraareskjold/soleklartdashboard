@@ -14,46 +14,42 @@ export async function POST(req: NextRequest) {
 
     const results = [];
     for (const lead of leads) {
-      const {
-        id,
-        email,
-        note,
-        roof_type_id,
-        own_consumption,
-        voltage,
-        roof_slope,
-        roof_age,
-        status,
-      } = lead;
+      const { id, status, ...rest } = lead; // Extract id, status and other fields
 
-      if (
-        !id ||
-        /* !email ||
-        !roof_type_id ||
-        !own_consumption ||
-        !voltage ||
-        !roof_age || */
-        !status
-      ) {
+      if (!id) {
         return NextResponse.json(
           { error: `Mangler parametere for lead ${id || "ukjent"}` },
           { status: 400 },
         );
       }
 
+      const updatePayload: { [key: string]: unknown } = {
+        status: status, // Status is always required and passed
+        updated_at: new Date().toISOString(),
+      };
+
+      // Add other fields to the payload only if they are present in the lead object
+      if (rest.email !== undefined) updatePayload.email = rest.email;
+      if (rest.note !== undefined) updatePayload.note = rest.note;
+      if (rest.roof_type_id !== undefined)
+        updatePayload.roof_type_id = rest.roof_type_id;
+      if (rest.own_consumption !== undefined)
+        updatePayload.own_consumption = rest.own_consumption;
+      if (rest.voltage !== undefined) updatePayload.voltage = rest.voltage;
+      if (rest.roof_slope !== undefined)
+        updatePayload.roof_slope = rest.roof_slope;
+      if (rest.roof_age !== undefined) updatePayload.roof_age = rest.roof_age;
+      if (rest.person_info !== undefined)
+        updatePayload.person_info = rest.person_info;
+      if (rest.role !== undefined) updatePayload.role = rest.role;
+      if (rest.company !== undefined) updatePayload.company = rest.company;
+      if (rest.address !== undefined) updatePayload.address = rest.address;
+      if (rest.mobile !== undefined) updatePayload.mobile = rest.mobile;
+      if (rest.phone !== undefined) updatePayload.phone = rest.phone;
+
       const { data, error } = await supabase
         .from("leads")
-        .update({
-          email,
-          note,
-          roof_type_id,
-          own_consumption,
-          voltage,
-          roof_slope,
-          roof_age,
-          status,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", id)
         .select();
 

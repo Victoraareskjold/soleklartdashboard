@@ -10,7 +10,8 @@ import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
 import { getInstallerGroup, getRoofTypes, getTeam } from "@/lib/api";
 import { InstallerGroup, RoofType, Team } from "@/lib/types";
-import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import EditableField from "@/app/components/cold-calling/EditableField";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -42,6 +43,12 @@ export type FormDataFields = {
   voltage?: string | null;
   roof_age?: string | null;
   note?: string | null;
+  person_info?: string | null;
+  role?: string | null;
+  company?: string | null;
+  address?: string | null;
+  mobile?: string | null;
+  phone?: string | null;
 };
 
 export type FormData = {
@@ -151,6 +158,12 @@ export default function ColdCallingPage() {
                 roof_age: toStringOrNull(lead.roof_age),
                 note: toStringOrNull(lead.note),
                 status: toStringOrNull(lead.status),
+                person_info: toStringOrNull(lead.person_info),
+                role: toStringOrNull(lead.role),
+                company: toStringOrNull(lead.company),
+                address: toStringOrNull(lead.address),
+                mobile: toStringOrNull(lead.mobile),
+                phone: toStringOrNull(lead.phone),
               };
               return acc;
             },
@@ -186,6 +199,32 @@ export default function ColdCallingPage() {
         [fieldKey]: value,
       },
     }));
+  };
+
+  const handleSaveFieldChange = async (
+    leadId: string,
+    fieldKey: keyof ColdCallLead,
+    value: string,
+  ) => {
+    try {
+      const updateData = {
+        id: leadId,
+        [fieldKey]: value,
+      };
+
+      const res = await fetch("/api/coldCalling/upsert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([updateData]), // Send as an array
+      });
+
+      if (!res.ok) {
+        throw new Error("Feil ved oppdatering av lead felt");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt under lagring av felt");
+    }
   };
 
   const handleMove = async () => {
@@ -472,20 +511,31 @@ export default function ColdCallingPage() {
                           i % 2 == 0 ? "bg-[#82CCEB]" : "bg-[#BFE6F5]"
                         }`}
                       >
-                        <td
-                          className="border p-1 w-1/6 pr-4 relative cursor-pointer"
-                          onClick={() => handleCopyAddress(lead.address)}
-                        >
-                          {lead.address}
-                          <div className="absolute top-0 right-0 p-1">
-                            <Copy size={14} />
-                          </div>
-                        </td>
+                        <EditableField
+                          leadId={lead.id}
+                          fieldKey="address"
+                          initialValue={lead.address}
+                          onFormDataChange={handleFormDataChange}
+                          onSave={handleSaveFieldChange}
+                          isAddressField={true}
+                          handleCopyAddress={handleCopyAddress}
+                          className="pr-4 cursor-pointer"
+                        />
 
                         {fields.map((field) => (
-                          <td className="border p-1 w-1/6" key={field}>
-                            {lead[field]}
-                          </td>
+                          <EditableField
+                            key={field}
+                            leadId={lead.id}
+                            fieldKey={field}
+                            initialValue={lead[field]}
+                            onFormDataChange={handleFormDataChange}
+                            onSave={handleSaveFieldChange}
+                            inputType={
+                              field === "mobile" || field === "phone"
+                                ? "tel"
+                                : "text"
+                            }
+                          />
                         ))}
                       </tr>
                     </tbody>
