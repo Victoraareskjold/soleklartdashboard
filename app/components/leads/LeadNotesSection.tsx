@@ -529,7 +529,7 @@ export default function LeadNotesSection({ leadId }: Props) {
 
       {/* Liste over merknader */}
       <ul className="space-y-3">
-        {notes.map((note) => {
+        {notes.map((note, i) => {
           const comments = getCommentsForNote(note.id);
 
           return (
@@ -541,9 +541,11 @@ export default function LeadNotesSection({ leadId }: Props) {
               <div className="flex flex-row justify-between">
                 <div>
                   <p className="text-lg">Merknad av {note.user?.name}</p>
-                  <p className="text-sm text-gray-400">
-                    {new Date(note.created_at ?? "").toLocaleString()}
-                  </p>
+                  {i !== notes.length - 1 && (
+                    <p className="text-sm text-gray-400">
+                      {new Date(note.created_at ?? "").toLocaleString()}
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => handleDeleteNote(note.id)}
