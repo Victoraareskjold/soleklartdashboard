@@ -410,7 +410,7 @@ export default function ColdCallingPage() {
           </div>
           <div className="flex flex-row gap-2 my-2">
             <div className="flex flex-col">
-              <h1>Status</h1>
+              <h1>Cold caller</h1>
               <TeamMemberSelector
                 team={team}
                 selectedMember={selectedMember}
@@ -419,7 +419,7 @@ export default function ColdCallingPage() {
               />
             </div>
             <div className="flex flex-col">
-              <h1>Cold caller</h1>
+              <h1>Status</h1>
               <select
                 className="border p-2 rounded-md"
                 onChange={(e) => setStatus(Number(e.target.value))}
