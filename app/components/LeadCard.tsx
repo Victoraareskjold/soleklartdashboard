@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { Lead, LeadTask } from "@/lib/types";
 import Link from "next/link";
 import { LEAD_STATUSES } from "./LeadsTable";
@@ -8,17 +9,47 @@ interface LeadCardProps {
   onStatusChange?: (leadId: string, newStatus: number) => void;
 }
 
+const getTaskToDisplay = (tasks: LeadTask[]): LeadTask | null => {
+  if (!tasks || tasks.length === 0) return null;
+
+  // Sorter oppgaver etter forfallsdato (tidligste først)
+  const sortedTasks = [...tasks]
+    .filter((task) => task.due_date)
+    .sort(
+      (a, b) =>
+        new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime(),
+    );
+
+  if (sortedTasks.length === 0) return null;
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const earliestTask = sortedTasks[0];
+  const earliestDueDate = new Date(earliestTask.due_date!);
+  earliestDueDate.setHours(0, 0, 0, 0);
+
+  // Hvis tidligste oppgave har forfalt og det finnes flere oppgaver, vis den neste
+  if (earliestDueDate < now && sortedTasks.length > 1) {
+    // Finn første oppgave som ikke har forfalt
+    const nextTask = sortedTasks.find((task) => {
+      const dueDate = new Date(task.due_date!);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate >= now;
+    });
+
+    return nextTask || earliestTask; // Fallback til tidligste hvis alle har forfalt
+  }
+
+  return earliestTask;
+};
+
 export default function LeadCard({
   lead,
   tasks = [],
   onStatusChange,
 }: LeadCardProps) {
-  const nextTask = tasks
-    .filter((t) => t.created_at)
-    .sort(
-      (a, b) =>
-        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
-    )[0];
+  const nextTask = getTaskToDisplay(tasks);
 
   let dueText = "Ingen oppgave";
 
@@ -73,8 +104,8 @@ export default function LeadCard({
               {lead.phone && Number(lead.phone) !== 0
                 ? lead.phone
                 : lead.mobile && Number(lead.mobile) !== 0
-                ? lead.mobile
-                : "Ingen mobil eller telefon"}
+                  ? lead.mobile
+                  : "Ingen mobil eller telefon"}
             </p>
             <p className="text-gray-500 text-xs">
               {lead.email || "Ingen email"}
