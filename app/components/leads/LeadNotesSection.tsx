@@ -15,6 +15,7 @@ import { User } from "@supabase/supabase-js";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
+import { useRouter } from "next/navigation";
 
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -109,6 +110,7 @@ export default function LeadNotesSection({ leadId }: Props) {
   >({});
   const [attachments, setAttachments] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -242,6 +244,8 @@ export default function LeadNotesSection({ leadId }: Props) {
     setLoading(false);
     editor.commands.clearContent();
     setMentionSuggestions([]);
+    window.location.reload();
+    router.push(`?tab=Merknader`);
   };
 
   const handleAddComment = async (noteId: string) => {
@@ -314,6 +318,8 @@ export default function LeadNotesSection({ leadId }: Props) {
       [noteId]: [],
     });
     setLoading(false);
+    window.location.reload();
+    router.push(`?tab=Merknader`);
   };
 
   const updateMentionSuggestions = (
