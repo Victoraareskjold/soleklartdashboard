@@ -564,6 +564,14 @@ export default function CalculationSheet({
     }
   }, [priceOverview, setPriceOverview]);
 
+  const handleRemoveAttachment = (itemId: string) => {
+    setAttachments((prev) => {
+      const updated = { ...prev };
+      delete updated[itemId];
+      return updated;
+    });
+  };
+
   return (
     <div className="mt-8 border rounded-lg bg-white shadow p-4">
       <h3 className="text-lg font-medium mb-3">PRISOVERSIKT</h3>
@@ -628,14 +636,23 @@ export default function CalculationSheet({
                 {finished && (
                   <td className="p-2">
                     {attachmentUrl ? (
-                      <a
-                        href={attachmentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline text-xs"
-                      >
-                        {attachmentUrl}
-                      </a>
+                      <div className="flex items-center gap-1">
+                        <a
+                          href={attachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline text-xs"
+                        >
+                          {attachmentUrl}
+                        </a>
+                        <button
+                          onClick={() => handleRemoveAttachment(item.id)} // eller itemId for installasjon
+                          className="text-red-400 hover:text-red-600 font-bold text-sm"
+                          title="Fjern vedlegg"
+                        >
+                          ×
+                        </button>
+                      </div>
                     ) : (
                       <input
                         type="file"
@@ -704,14 +721,23 @@ export default function CalculationSheet({
                 {finished && ( // NEW
                   <td className="p-2">
                     {attachmentUrl ? (
-                      <a
-                        href={attachmentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline text-xs"
-                      >
-                        {attachmentUrl}
-                      </a>
+                      <div className="flex items-center gap-1">
+                        <a
+                          href={attachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline text-xs"
+                        >
+                          {attachmentUrl}
+                        </a>
+                        <button
+                          onClick={() => handleRemoveAttachment(item.id)} // eller itemId for installasjon
+                          className="text-red-400 hover:text-red-600 font-bold text-sm"
+                          title="Fjern vedlegg"
+                        >
+                          ×
+                        </button>
+                      </div>
                     ) : (
                       <input
                         type="file"
@@ -775,14 +801,23 @@ export default function CalculationSheet({
               {finished && ( // NEW
                 <td className="p-2">
                   {attachments["søknad"] ? (
-                    <a
-                      href={attachments["søknad"]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline text-xs"
-                    >
-                      {attachments["søknad"]}
-                    </a>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={attachments["søknad"]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline text-xs"
+                      >
+                        {attachments["søknad"]}
+                      </a>
+                      <button
+                        onClick={() => handleRemoveAttachment("søknad")} // eller itemId for installasjon
+                        className="text-red-400 hover:text-red-600 font-bold text-sm"
+                        title="Fjern vedlegg"
+                      >
+                        ×
+                      </button>
+                    </div>
                   ) : (
                     <input
                       type="file"
@@ -827,14 +862,25 @@ export default function CalculationSheet({
               {finished && (
                 <td className="p-2">
                   {attachments["solcelle_anlegg"] ? (
-                    <a
-                      href={attachments["solcelle_anlegg"]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline text-xs"
-                    >
-                      {attachments["solcelle_anlegg"]}
-                    </a>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={attachments["solcelle_anlegg"]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline text-xs"
+                      >
+                        {attachments["solcelle_anlegg"]}
+                      </a>
+                      <button
+                        onClick={() =>
+                          handleRemoveAttachment("solcelle_anlegg")
+                        } // eller itemId for installasjon
+                        className="text-red-400 hover:text-red-600 font-bold text-sm"
+                        title="Fjern vedlegg"
+                      >
+                        ×
+                      </button>
+                    </div>
                   ) : (
                     <input
                       type="file"
@@ -890,14 +936,23 @@ export default function CalculationSheet({
               {finished && (
                 <td className="p-2">
                   {attachments["batteri"] ? (
-                    <a
-                      href={attachments["batteri"]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline text-xs"
-                    >
-                      {attachments["batteri"]}
-                    </a>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={attachments["batteri"]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline text-xs"
+                      >
+                        {attachments["batteri"]}
+                      </a>
+                      <button
+                        onClick={() => handleRemoveAttachment("batteri")} // eller itemId for installasjon
+                        className="text-red-400 hover:text-red-600 font-bold text-sm"
+                        title="Fjern vedlegg"
+                      >
+                        ×
+                      </button>
+                    </div>
                   ) : (
                     <input
                       type="file"
@@ -980,14 +1035,23 @@ export default function CalculationSheet({
                 {finished && (
                   <td className="p-2">
                     {attachmentUrl ? (
-                      <a
-                        href={attachmentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline text-xs"
-                      >
-                        {attachmentUrl}
-                      </a>
+                      <div className="flex items-center gap-1">
+                        <a
+                          href={attachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline text-xs"
+                        >
+                          {attachmentUrl}
+                        </a>
+                        <button
+                          onClick={() => handleRemoveAttachment(overrideId)} // eller itemId for installasjon
+                          className="text-red-400 hover:text-red-600 font-bold text-sm"
+                          title="Fjern vedlegg"
+                        >
+                          ×
+                        </button>
+                      </div>
                     ) : (
                       <input
                         type="file"
