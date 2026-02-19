@@ -65,14 +65,27 @@ export default function CalculationSheet({
   const [attachments, setAttachments] = useState<Record<string, string>>({}); // NEW
 
   const handleFileUpload = async (itemId: string, file: File) => {
-    // NEW
     if (!file || !leadId) {
       toast.warn("Mangler fil eller lead ID for opplasting.");
       return;
     }
 
+    const sanitize = (str: string) =>
+      str
+        .replace(/æ/g, "ae")
+        .replace(/ø/g, "o")
+        .replace(/å/g, "aa")
+        .replace(/Æ/g, "Ae")
+        .replace(/Ø/g, "O")
+        .replace(/Å/g, "Aa")
+        .replace(/[^a-zA-Z0-9._\-]/g, "_");
+
+    const safeItemId = sanitize(itemId);
+    const safeFileName = sanitize(file.name);
+
     toast.info(`Laster opp ${file.name}...`);
-    const filePath = `${leadId}/attachments/${itemId}-${Date.now()}-${file.name}`;
+    const filePath = `${leadId}/attachments/${safeItemId}-${Date.now()}-${safeFileName}`;
+
     const { error: uploadError } = await supabase.storage
       .from("estimate-attachments")
       .upload(filePath, file);
@@ -95,7 +108,7 @@ export default function CalculationSheet({
     } else {
       toast.error("Kunne ikke hente offentlig URL for filen.");
     }
-  }; // NEW
+  };
 
   const categoryMapping: Record<string, string> = {
     solcellepanel: "solcellemateriell",
@@ -621,7 +634,7 @@ export default function CalculationSheet({
                         rel="noopener noreferrer"
                         className="text-blue-500 hover:underline text-xs"
                       >
-                        Vis fil
+                        {attachmentUrl}
                       </a>
                     ) : (
                       <input
@@ -697,7 +710,7 @@ export default function CalculationSheet({
                         rel="noopener noreferrer"
                         className="text-blue-500 hover:underline text-xs"
                       >
-                        Vis fil
+                        {attachmentUrl}
                       </a>
                     ) : (
                       <input
@@ -768,7 +781,7 @@ export default function CalculationSheet({
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline text-xs"
                     >
-                      Vis fil
+                      {attachments["søknad"]}
                     </a>
                   ) : (
                     <input
@@ -820,7 +833,7 @@ export default function CalculationSheet({
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline text-xs"
                     >
-                      Vis fil
+                      {attachments["solcelle_anlegg"]}
                     </a>
                   ) : (
                     <input
@@ -883,7 +896,7 @@ export default function CalculationSheet({
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline text-xs"
                     >
-                      Vis fil
+                      {attachments["batteri"]}
                     </a>
                   ) : (
                     <input
@@ -973,7 +986,7 @@ export default function CalculationSheet({
                         rel="noopener noreferrer"
                         className="text-blue-500 hover:underline text-xs"
                       >
-                        Vis fil
+                        {attachmentUrl}
                       </a>
                     ) : (
                       <input
