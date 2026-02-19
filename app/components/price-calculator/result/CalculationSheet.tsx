@@ -62,7 +62,8 @@ export default function CalculationSheet({
   const [textOverrides, setTextOverrides] = useState<Record<string, string>>(
     {},
   );
-  const [attachments, setAttachments] = useState<Record<string, string>>({}); // NEW
+  const [attachments, setAttachments] = useState<Record<string, string>>({});
+  const [simulationPdfUrl, setSimulationPdfUrl] = useState<string | null>(null);
 
   const handleFileUpload = async (itemId: string, file: File) => {
     if (!file || !leadId) {
@@ -539,6 +540,7 @@ export default function CalculationSheet({
       },
       total: grandTotal,
       "total inkl. alt": Number(grandTotal * 1.25),
+      simulationPdfUrl,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -549,7 +551,8 @@ export default function CalculationSheet({
     totalWithInstallation,
     grandTotal,
     calculatedEnovaSupport,
-    attachments, // NEW: Add attachments to dependency array
+    attachments,
+    simulationPdfUrl,
   ]);
 
   const prevPriceOverviewString = useRef<string | null>(null);
@@ -572,9 +575,90 @@ export default function CalculationSheet({
     });
   };
 
+  const handleSimulationPdfUpload = async (file: File) => {
+    if (!file || !leadId) {
+      toast.warn("Mangler fil eller lead ID for opplasting.");
+      return;
+    }
+
+    const sanitize = (str: string) =>
+      str
+        .replace(/æ/g, "ae")
+        .replace(/ø/g, "o")
+        .replace(/å/g, "aa")
+        .replace(/Æ/g, "Ae")
+        .replace(/Ø/g, "O")
+        .replace(/Å/g, "Aa")
+        .replace(/[^a-zA-Z0-9._\-]/g, "_");
+
+    const safeFileName = sanitize(file.name);
+    toast.info(`Laster opp ${file.name}...`);
+
+    const filePath = `${leadId}/simulation/${Date.now()}-${safeFileName}`;
+    const { error: uploadError } = await supabase.storage
+      .from("estimate-attachments")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast.error(`Opplasting feilet: ${uploadError.message}`);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("estimate-attachments")
+      .getPublicUrl(filePath);
+
+    if (!publicUrlData) {
+      toast.error("Kunne ikke hente offentlig URL.");
+      return;
+    }
+
+    const url = publicUrlData.publicUrl;
+
+    setSimulationPdfUrl(url);
+    toast.success(`${file.name} er lastet opp og lagret.`);
+  };
+
+  const handleRemoveSimulationPdf = async () => {
+    setSimulationPdfUrl(null);
+    toast.success("Simulerings-PDF fjernet.");
+  };
+
   return (
     <div className="mt-8 border rounded-lg bg-white shadow p-4">
       <h3 className="text-lg font-medium mb-3">PRISOVERSIKT</h3>
+      {finished && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Simulerings-PDF:</span>
+          {simulationPdfUrl ? (
+            <div className="flex items-center gap-1">
+              <a
+                href={simulationPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:underline text-sm"
+              >
+                {simulationPdfUrl}
+              </a>
+              <button
+                onClick={handleRemoveSimulationPdf}
+                className="text-red-400 hover:text-red-600 font-bold text-sm"
+                title="Fjern PDF"
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <input
+              type="file"
+              className="text-xs"
+              onChange={(e) =>
+                e.target.files && handleSimulationPdfUpload(e.target.files[0])
+              }
+            />
+          )}
+        </div>
+      )}
       <table className="w-full text-sm">
         <thead className="bg-gray-100">
           <tr>
