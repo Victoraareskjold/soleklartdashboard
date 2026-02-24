@@ -189,7 +189,7 @@ export default function ColdCallingPage() {
 
   const handleMove = async () => {
     // Hvis status >= 5, flytt alle leads til kontakter (status 6)
-    if (status >= 5) {
+    if (status >= 5 && status != 22) {
       const allLeads = coldCalls.map((lead) => {
         const data = formData[lead.id] || {};
 
@@ -436,7 +436,7 @@ export default function ColdCallingPage() {
             className="w-42 text-center rounded-sm px-4 py-2 bg-green-500 text-white"
             onClick={handleMove}
           >
-            {status >= 5 ? "Flytt til kontakter" : "Flytt"}
+            {status >= 5 && status !== 22 ? "Flytt til kontakter" : "Flytt"}
           </button>
         </div>
       </div>
