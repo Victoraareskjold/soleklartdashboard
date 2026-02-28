@@ -10,7 +10,14 @@ import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useTeam } from "@/context/TeamContext";
 import { getInstallerGroup, getRoofTypes, getTeam } from "@/lib/api";
 import { InstallerGroup, RoofType, Team } from "@/lib/types";
-import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Pencil,
+  X,
+  Check,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -48,26 +55,47 @@ export type FormData = {
   [leadId: string]: FormDataFields;
 };
 
+// The editable basic-info fields shown in the table row
+type BasicLeadEdit = {
+  address: string;
+  person_info: string;
+  role: string;
+  company: string;
+  mobile: string;
+  phone: string;
+};
+
 export default function ColdCallingPage() {
   const { teamId } = useTeam();
   const { installerGroupId } = useInstallerGroup();
   const { user } = useAuth();
 
   const [installerData, setInstallerData] = useState<InstallerGroup | null>();
-
   const [team, setTeam] = useState<Team>();
   const [selectedMember, setSelectedMember] = useState<string>("");
   const [coldCalls, setColdCalls] = useState<ColdCallLead[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-
   const [formData, setFormData] = useState<FormData>({});
   const [roofTypeOptions, setRoofTypeOptions] = useState<RoofType[]>([]);
-
   const [status, setStatus] = useState(0);
-
   const [leadSummary, setLeadSummary] = useState<
     { status: number; count: number }[]
   >([]);
+
+  // ── Inline editing state ──────────────────────────────────────────────────
+  // leadId of the row currently being edited, or null
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  // Scratch-pad for the values being edited
+  const [editDraft, setEditDraft] = useState<BasicLeadEdit>({
+    address: "",
+    person_info: "",
+    role: "",
+    company: "",
+    mobile: "",
+    phone: "",
+  });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!teamId || !installerGroupId) return;
@@ -78,7 +106,6 @@ export default function ColdCallingPage() {
     };
 
     fetchData();
-
     getTeam(teamId).then(setTeam);
     getRoofTypes()
       .then(setRoofTypeOptions)
@@ -103,9 +130,7 @@ export default function ColdCallingPage() {
         }
       });
 
-    return () => {
-      controller.abort();
-    };
+    return () => controller.abort();
   }, [user, teamId, installerGroupId, selectedMember]);
 
   useEffect(() => {
@@ -166,11 +191,9 @@ export default function ColdCallingPage() {
         }
       }
     };
-    fetchLeadsForUser();
 
-    return () => {
-      controller.abort();
-    };
+    fetchLeadsForUser();
+    return () => controller.abort();
   }, [installerGroupId, selectedMember, teamId, status]);
 
   const handleFormDataChange = (
@@ -187,17 +210,57 @@ export default function ColdCallingPage() {
     }));
   };
 
+  // ── Inline-edit helpers ───────────────────────────────────────────────────
+  const startEditing = (lead: ColdCallLead) => {
+    setEditingLeadId(lead.id);
+    setEditDraft({
+      address: lead.address ?? "",
+      person_info: lead.person_info ?? "",
+      role: lead.role ?? "",
+      company: lead.company ?? "",
+      mobile: lead.mobile ?? "",
+      phone: lead.phone ?? "",
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingLeadId(null);
+  };
+
+  const saveEditing = async (leadId: string) => {
+    setIsSavingEdit(true);
+    try {
+      const res = await fetch("/api/coldCalling/updateBasicInfo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: leadId, ...editDraft }),
+      });
+
+      if (!res.ok) throw new Error("Feil ved oppdatering");
+
+      // Optimistically update the local list
+      setColdCalls((prev) =>
+        prev.map((lead) =>
+          lead.id === leadId ? { ...lead, ...editDraft } : lead,
+        ),
+      );
+
+      toast.success("Lead oppdatert!");
+      setEditingLeadId(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt ved lagring");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   const handleMove = async () => {
-    // Hvis status >= 5, flytt alle leads til kontakter (status 6)
     if (status >= 5 && status != 22) {
       const allLeads = coldCalls.map((lead) => {
         const data = formData[lead.id] || {};
-
-        return {
-          id: lead.id,
-          ...data,
-          status: "6",
-        };
+        return { id: lead.id, ...data, status: "6" };
       });
 
       if (!allLeads.length) return;
@@ -212,7 +275,7 @@ export default function ColdCallingPage() {
         if (!res.ok) throw new Error("Feil ved oppdatering av leads");
 
         toast.success("Leads flyttet til kontakter!");
-        setColdCalls([]); // Fjern alle leads fra listen
+        setColdCalls([]);
       } catch (err) {
         console.error(err);
         toast.error("Noe gikk galt");
@@ -220,21 +283,14 @@ export default function ColdCallingPage() {
       return;
     }
 
-    // Original logikk for status < 5
     const completeLeads = coldCalls
       .map((lead) => {
         const data = formData[lead.id];
         if (!data) return null;
 
         const newStatus = data.status;
-
-        if (newStatus === null || newStatus === undefined) {
-          return null;
-        }
-
-        if (newStatus === String(lead.status)) {
-          return null;
-        }
+        if (newStatus === null || newStatus === undefined) return null;
+        if (newStatus === String(lead.status)) return null;
 
         const leadUpdateData: { [key: string]: unknown } = { ...data };
 
@@ -246,10 +302,7 @@ export default function ColdCallingPage() {
           }
         }
 
-        return {
-          id: lead.id,
-          ...leadUpdateData,
-        };
+        return { id: lead.id, ...leadUpdateData };
       })
       .filter((lead): lead is NonNullable<typeof lead> => lead !== null);
 
@@ -269,12 +322,9 @@ export default function ColdCallingPage() {
         prev.filter((lead) => {
           const data = formData[lead.id];
           if (!data) return true;
-
           const newStatus = data.status;
-
           if (newStatus === String(lead.status)) return true;
           if (newStatus === "" && status === 0) return true;
-
           return false;
         }),
       );
@@ -284,7 +334,15 @@ export default function ColdCallingPage() {
     }
   };
 
-  const headers = ["Adresse", "Navn", "Rolle", "Firmanavn", "Mobil", "Telefon"];
+  const headers = [
+    "Adresse",
+    "Navn",
+    "Rolle",
+    "Firmanavn",
+    "Mobil",
+    "Telefon",
+    "",
+  ];
   const fields: (keyof ColdCallLead)[] = [
     "person_info",
     "role",
@@ -332,7 +390,7 @@ export default function ColdCallingPage() {
 
       if (status === 0) {
         label = "Ingen status";
-        color = "#CCCCCC"; // grå for udefinert
+        color = "#CCCCCC";
       } else if (status > 5) {
         label = "Vil ha tilbud";
         color = "#69FF59";
@@ -343,7 +401,6 @@ export default function ColdCallingPage() {
         color = info.color;
       }
 
-      // Summer tellerne per label
       const existing = acc.find((a) => a.label === label);
       if (existing) {
         existing.count += count;
@@ -407,7 +464,6 @@ export default function ColdCallingPage() {
           <div className="w-64 h-48">
             <LeadStatusChart summary={leadSummary} />
           </div>
-
           <div className="flex flex-col gap-1">
             {leadSummaryWithColor.map((item) => (
               <div key={item.label} className="flex items-center gap-2">
@@ -448,7 +504,12 @@ export default function ColdCallingPage() {
               <thead>
                 <tr>
                   {headers.map((header, index) => (
-                    <th className="border p-2 w-1/6 bg-blue-500" key={index}>
+                    <th
+                      className={`border p-2 bg-blue-500 ${
+                        header === "" ? "w-10" : "w-1/6"
+                      }`}
+                      key={index}
+                    >
                       {header}
                     </th>
                   ))}
@@ -458,49 +519,182 @@ export default function ColdCallingPage() {
 
             {filteredColdCalls
               .slice(sliceAmount - 5, sliceAmount)
-              .map((lead, i) => (
-                <div key={i} className="mb-4">
-                  <table className="w-full mb-1">
-                    <tbody>
-                      <tr aria-hidden="true">
-                        <td colSpan={fields.length} className="h-4"></td>
-                      </tr>
+              .map((lead, i) => {
+                const isEditing = editingLeadId === lead.id;
+                const rowColor = i % 2 === 0 ? "bg-[#82CCEB]" : "bg-[#BFE6F5]";
 
-                      <tr
-                        className={`${
-                          i % 2 == 0 ? "bg-[#82CCEB]" : "bg-[#BFE6F5]"
-                        }`}
-                      >
-                        <td
-                          className="border p-1 w-1/6 pr-4 relative cursor-pointer"
-                          onClick={() => handleCopyAddress(lead.address)}
-                        >
-                          {lead.address}
-                          <div className="absolute top-0 right-0 p-1">
-                            <Copy size={14} />
-                          </div>
-                        </td>
+                return (
+                  <div key={i} className="mb-4">
+                    <table className="w-full mb-1">
+                      <tbody>
+                        <tr aria-hidden="true">
+                          <td colSpan={fields.length + 2} className="h-4"></td>
+                        </tr>
 
-                        {fields.map((field) => (
-                          <td className="border p-1 w-1/6" key={field}>
-                            {lead[field]}
+                        <tr className={rowColor}>
+                          {/* ── Address cell ── */}
+                          <td className="border p-1 w-1/6 pr-4 relative">
+                            {isEditing ? (
+                              <input
+                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
+                                value={editDraft.address}
+                                onChange={(e) =>
+                                  setEditDraft((d) => ({
+                                    ...d,
+                                    address: e.target.value,
+                                  }))
+                                }
+                              />
+                            ) : (
+                              <span
+                                className="cursor-pointer pr-4 block"
+                                onClick={() => handleCopyAddress(lead.address)}
+                              >
+                                {lead.address}
+                                <div className="absolute top-0 right-0 p-1">
+                                  <Copy size={14} />
+                                </div>
+                              </span>
+                            )}
                           </td>
-                        ))}
-                      </tr>
-                    </tbody>
-                  </table>
 
-                  <RenderInputFields
-                    lead={lead}
-                    index={i}
-                    formData={formData}
-                    onFormDataChange={handleFormDataChange}
-                    roofTypeOptions={roofTypeOptions}
-                  />
-                </div>
-              ))}
+                          {/* ── person_info ── */}
+                          <td className="border p-1 w-1/6">
+                            {isEditing ? (
+                              <input
+                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
+                                value={editDraft.person_info}
+                                onChange={(e) =>
+                                  setEditDraft((d) => ({
+                                    ...d,
+                                    person_info: e.target.value,
+                                  }))
+                                }
+                              />
+                            ) : (
+                              lead.person_info
+                            )}
+                          </td>
+
+                          {/* ── role ── */}
+                          <td className="border p-1 w-1/6">
+                            {isEditing ? (
+                              <input
+                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
+                                value={editDraft.role}
+                                onChange={(e) =>
+                                  setEditDraft((d) => ({
+                                    ...d,
+                                    role: e.target.value,
+                                  }))
+                                }
+                              />
+                            ) : (
+                              lead.role
+                            )}
+                          </td>
+
+                          {/* ── company ── */}
+                          <td className="border p-1 w-1/6">
+                            {isEditing ? (
+                              <input
+                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
+                                value={editDraft.company}
+                                onChange={(e) =>
+                                  setEditDraft((d) => ({
+                                    ...d,
+                                    company: e.target.value,
+                                  }))
+                                }
+                              />
+                            ) : (
+                              lead.company
+                            )}
+                          </td>
+
+                          {/* ── mobile ── */}
+                          <td className="border p-1 w-1/6">
+                            {isEditing ? (
+                              <input
+                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
+                                value={editDraft.mobile}
+                                onChange={(e) =>
+                                  setEditDraft((d) => ({
+                                    ...d,
+                                    mobile: e.target.value,
+                                  }))
+                                }
+                              />
+                            ) : (
+                              lead.mobile
+                            )}
+                          </td>
+
+                          {/* ── phone ── */}
+                          <td className="border p-1 w-1/6">
+                            {isEditing ? (
+                              <input
+                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
+                                value={editDraft.phone}
+                                onChange={(e) =>
+                                  setEditDraft((d) => ({
+                                    ...d,
+                                    phone: e.target.value,
+                                  }))
+                                }
+                              />
+                            ) : (
+                              lead.phone
+                            )}
+                          </td>
+
+                          {/* ── Edit / Save / Cancel controls ── */}
+                          <td className="border p-1 w-10 text-center">
+                            {isEditing ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  title="Lagre"
+                                  disabled={isSavingEdit}
+                                  onClick={() => saveEditing(lead.id)}
+                                  className="text-green-600 hover:text-green-800 disabled:opacity-50"
+                                >
+                                  <Check size={16} />
+                                </button>
+                                <button
+                                  title="Avbryt"
+                                  onClick={cancelEditing}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                title="Rediger"
+                                onClick={() => startEditing(lead)}
+                                className="text-gray-500 hover:text-gray-800"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <RenderInputFields
+                      lead={lead}
+                      index={i}
+                      formData={formData}
+                      onFormDataChange={handleFormDataChange}
+                      roofTypeOptions={roofTypeOptions}
+                    />
+                  </div>
+                );
+              })}
           </>
         )}
+
         <div className="flex flex-row items-center gap-8 justify-center p-2">
           <button
             className="flex flex-row items-center gap-2"
