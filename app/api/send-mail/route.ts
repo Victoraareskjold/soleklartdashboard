@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
     if (!to || !subject || !html) {
       return new NextResponse("Missing fields", { status: 400 });
     }
+    console.log(to);
 
     const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
 

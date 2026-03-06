@@ -236,7 +236,7 @@ export default function LeadNotesSection({ leadId }: Props) {
 
     setAllNotes([note, ...allNotes]);
     if (lead) {
-      sendMentionEmail(noteContent, lead, user, taggableUsers);
+      await sendMentionEmail(noteContent, lead, user, taggableUsers);
     }
 
     setNewNote("");
@@ -308,7 +308,7 @@ export default function LeadNotesSection({ leadId }: Props) {
         noteId,
       );
       if (lead) {
-        sendMentionEmail(text, lead, user, taggableUsers);
+        await sendMentionEmail(text, lead, user, taggableUsers);
       }
       setAllNotes([...allNotes, comment]);
       setNewComments({ ...newComments, [noteId]: "" });
