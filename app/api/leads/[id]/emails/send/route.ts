@@ -11,7 +11,7 @@ interface Attachment {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const customInternetMessageId = `<${randomUUID()}@soleklart.app>`;
 
@@ -36,7 +36,7 @@ export async function POST(
     if (!userId || !installerGroupId || !body) {
       return NextResponse.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -50,7 +50,7 @@ export async function POST(
     if (leadError || !lead?.email) {
       return NextResponse.json(
         { error: "Lead not found or has no email" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -63,7 +63,7 @@ export async function POST(
           error:
             "No valid Outlook connection found for user. Please reconnect on the profile page.",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -94,12 +94,12 @@ export async function POST(
         {
           method: "POST",
           headers: { Authorization: `Bearer ${account.access_token}` },
-        }
+        },
       );
       if (!createReplyRes.ok) {
         console.error(
           "Graph API create reply-all draft error:",
-          await createReplyRes.json()
+          await createReplyRes.json(),
         );
         throw new Error("Failed to create reply-all draft in Outlook.");
       }
@@ -109,7 +109,7 @@ export async function POST(
       if (!subject) {
         return NextResponse.json(
           { error: "Subject is required for new emails" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       const draftPayload = {
@@ -121,7 +121,6 @@ export async function POST(
         ccRecipients:
           cc?.map((email: string) => ({ emailAddress: { address: email } })) ||
           [],
-        attachments: hasAttachments ? graphAttachments : undefined,
         internetMessageId: customInternetMessageId,
       };
 
@@ -134,12 +133,12 @@ export async function POST(
             "Content-Type": "application/json",
           },
           body: JSON.stringify(draftPayload),
-        }
+        },
       );
       if (!createDraftRes.ok) {
         console.error(
           "Graph API create draft error:",
-          await createDraftRes.json()
+          await createDraftRes.json(),
         );
         throw new Error("Failed to create draft in Outlook.");
       }
@@ -156,7 +155,6 @@ export async function POST(
         ccRecipients:
           cc?.map((email: string) => ({ emailAddress: { address: email } })) ||
           [],
-        attachments: hasAttachments ? graphAttachments : undefined,
         internetMessageId: customInternetMessageId,
       };
 
@@ -172,6 +170,26 @@ export async function POST(
       if (!updateRes.ok) {
         console.error("Graph API update draft error:", await updateRes.json());
         throw new Error("Failed to update reply draft in Outlook.");
+      }
+    }
+
+    if (hasAttachments) {
+      for (const att of graphAttachments) {
+        const attRes = await fetch(
+          `https://graph.microsoft.com/v1.0/me/messages/${draftId}/attachments`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${account.access_token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(att),
+          },
+        );
+        if (!attRes.ok) {
+          console.error("Attachment error", await attRes.json());
+          throw new Error("Failed to attach attachment to draft.");
+        }
       }
     }
 
@@ -194,7 +212,7 @@ export async function POST(
       // Poll for up to 8 seconds
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const searchUrl = `https://graph.microsoft.com/v1.0/me/messages?$filter=internetMessageId eq '${encodeURIComponent(
-        customInternetMessageId
+        customInternetMessageId,
       )}'&$select=id,conversationId`;
 
       const searchRes = await fetch(searchUrl, {
@@ -212,7 +230,7 @@ export async function POST(
 
     if (!sentMessageGraphData) {
       console.error(
-        `CRITICAL: Could not find sent email with internetMessageId: ${customInternetMessageId} after sending. The email was sent, but will not appear in the UI until the next successful sync. Attachments could not be saved.`
+        `CRITICAL: Could not find sent email with internetMessageId: ${customInternetMessageId} after sending. The email was sent, but will not appear in the UI until the next successful sync. Attachments could not be saved.`,
       );
       // The email was sent, but we can't confirm it or store attachments.
       // The sync process will eventually pick up the email itself.
@@ -245,7 +263,7 @@ export async function POST(
           received_at: new Date().toISOString(),
           has_attachments: hasAttachments,
         },
-        { onConflict: "message_id" }
+        { onConflict: "message_id" },
       )
       .select("id")
       .single();
@@ -283,15 +301,15 @@ export async function POST(
           } catch (uploadError) {
             console.error(
               `Attachment upload/linking failed for ${att.name}:`,
-              uploadError
+              uploadError,
             );
             return null;
           }
-        })
+        }),
       );
 
       const validAttachments = uploadedAttachments.filter(
-        (att) => att !== null
+        (att) => att !== null,
       );
       if (validAttachments.length > 0) {
         const { error: attInsertError } = await client
@@ -300,7 +318,7 @@ export async function POST(
         if (attInsertError) {
           console.error(
             "Error storing email attachment metadata:",
-            attInsertError
+            attInsertError,
           );
         }
       }
@@ -317,7 +335,7 @@ export async function POST(
         error: "Failed to send email",
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
