@@ -562,7 +562,7 @@ export default function LeadNotesSection({ leadId }: Props) {
               </div>
 
               <div
-                className="text-sm text-slate-600 mb-4 mt-2"
+                className="text-md text-slate-600 mb-4 mt-2"
                 dangerouslySetInnerHTML={{ __html: note.content }}
               />
 
