@@ -624,6 +624,9 @@ export default function CalculationSheet({
     toast.success("Simulerings-PDF fjernet.");
   };
 
+  const getFileName = (url: string) =>
+    url.split("/").pop()?.replace(/^\d+-/, "") ?? "";
+
   return (
     <div className="mt-8 border rounded-lg bg-white shadow p-4">
       <h3 className="text-lg font-medium mb-3">PRISOVERSIKT</h3>
@@ -638,7 +641,7 @@ export default function CalculationSheet({
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:underline text-sm"
               >
-                {simulationPdfUrl}
+                {simulationPdfUrl ? getFileName(simulationPdfUrl) : ""}{" "}
               </a>
               <button
                 onClick={handleRemoveSimulationPdf}
