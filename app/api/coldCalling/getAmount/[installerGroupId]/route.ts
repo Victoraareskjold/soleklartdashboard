@@ -15,7 +15,8 @@ export async function GET(
       .from("leads")
       .select("*", { count: "exact", head: true })
       .eq("installer_group_id", installerGroupId)
-      .in("status", [1, 2, 3, 4, 5, 22]);
+      //.in("status", [1, 2, 3, 4, 5, 22]);
+      .eq("status", 5);
 
     // Contact
     const { count: contactAmount, error: contactError } = await supabase
