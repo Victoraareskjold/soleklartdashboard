@@ -28,6 +28,9 @@ export interface TeamMember {
 export interface InstallerGroup extends Base {
   team_id: string;
   name: string;
+  address: string;
+  site: string;
+  org_nr: string;
 }
 
 export interface InstallerGroupMember {

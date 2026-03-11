@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { EmailContent, Estimate, User } from "@/lib/types";
+import { EmailContent, Estimate, InstallerGroup, User } from "@/lib/types";
 import {
   sendLeadEmail,
   syncLeadEmails,
@@ -126,7 +126,9 @@ export default function LeadEmailSection({
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
 
-  const [installerName, setInstallerName] = useState("");
+  const [installerData, setInstallerData] = useState<InstallerGroup | null>(
+    null,
+  );
   const [userData, setUserData] = useState<User>();
 
   const editor = useEditor({
@@ -159,18 +161,27 @@ export default function LeadEmailSection({
       handleSync();
 
       // 3. Hent metadata
-      getInstallerGroup(installerGroupId).then((res) =>
-        setInstallerName(res.name),
-      );
+      getInstallerGroup(installerGroupId).then((res) => {
+        setInstallerData(res);
+      });
       getUser().then(setUserData);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId, installerGroupId]);
 
-  const signature = `<br/>${userData?.name}<br />Nr. ${userData?.phone}`;
+  //const signature = `<br/>${userData?.name}<br />Nr. ${userData?.phone}`;
+  const signature = `<br/><br/><br/>Med vennlig hilsen<br/>${userData?.name}<br/><br/>--<br/><br/><strong>Teknisk konsulent | Sol og energisystemer</strong><br/>Mob.: 458 71 718<br/>Adresse: ${installerData?.address}<br/><br/>Nettside: www.${installerData?.site}.no<br/><br/>${installerData?.name}<br/>Org.nr: ${installerData?.org_nr}`;
 
   useEffect(() => {
-    if (newEstimate && leadName && domain && installerName) {
+    if (showCompose && editor && !replyToMessageId) {
+      const content = signature;
+      setBody(content);
+      editor.commands.setContent(content);
+    }
+  }, [showCompose, editor, signature, replyToMessageId]);
+
+  useEffect(() => {
+    if (newEstimate && leadName && domain && installerData?.name) {
       const template = mailTemplates.newEstimate;
 
       const estimateLink = newEstimate.finished
@@ -179,13 +190,13 @@ export default function LeadEmailSection({
 
       const emailSubject = template.subject.replace(
         "{installerName}",
-        installerName,
+        installerData?.name,
       );
 
       const emailBody = template.body
         .replaceAll("{leadName}", leadName)
         .replaceAll("{estimateLink}", estimateLink)
-        .replaceAll("{installerName}", installerName);
+        .replaceAll("{installerName}", installerData?.name);
 
       setSubject(emailSubject);
       setBody(emailBody);
@@ -193,7 +204,7 @@ export default function LeadEmailSection({
       setShowCompose(true);
       setSelectedTemplate("newEstimate");
     }
-  }, [newEstimate, leadName, domain, editor, installerName, signature]);
+  }, [newEstimate, leadName, domain, editor, installerData?.name, signature]);
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const templateKey = e.target.value;
@@ -214,10 +225,13 @@ export default function LeadEmailSection({
     let emailBody = template.body;
     let emailSubject = template.subject;
     if (leadName) {
-      emailSubject = emailSubject.replace(/{installerName}/g, installerName);
+      emailSubject = emailSubject.replace(
+        /{installerName}/g,
+        installerData?.name ?? "",
+      );
       emailBody = emailBody
         .replaceAll(/{leadName}/g, leadName)
-        .replaceAll(/{installerName}/g, installerName);
+        .replaceAll(/{installerName}/g, installerData?.name ?? "");
     }
 
     if (emailBody.includes("{estimateLink}")) {

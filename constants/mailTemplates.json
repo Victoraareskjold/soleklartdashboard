@@ -2,17 +2,17 @@
   "newEstimate": {
     "name": "Prisestimat",
     "subject": "Estimat basert på tidligere dialog - {installerName}",
-    "body": "Hei {leadName},<br /><br />Takk for din interesse! <br /><br />Som avtalt sender vi i {installerName} over et solcelleanlegg <strong>estimat</strong> basert på tidligere dialog og informasjonen vi har fått så langt. Dette er et første estimat med vår anbefalte løsning, og er fullt fleksibelt.<br /><br />Estimatet åpnes via linken: <br/><a href={estimateLink}>{estimateLink}</a><br /><br />Gi gjerne en kort tilbakemelding, så tar vi neste steg videre derfra.<br /><br /> Vennlig hilsen,"
+    "body": "Hei {leadName},<br /><br />Takk for din interesse! <br /><br />Som avtalt sender vi i {installerName} over et solcelleanlegg <strong>estimat</strong> basert på tidligere dialog og informasjonen vi har fått så langt. Dette er et første estimat med vår anbefalte løsning, og er fullt fleksibelt.<br /><br />Estimatet åpnes via linken: <br/><a href={estimateLink}>{estimateLink}</a><br /><br />Gi gjerne en kort tilbakemelding, så tar vi neste steg videre derfra."
   },
   "followUp1": {
     "name": "Oppfølgning 1",
     "subject": "Angående estimatet",
-    "body": "Hei {leadName},<br /><br />Ville høre om dere har sett estimatet vi sendte for solcelleløsningen?<br /><br />Vennlig hilsen,"
+    "body": "Hei {leadName},<br /><br />Ville høre om dere har sett estimatet vi sendte for solcelleløsningen?"
   },
   "followUp2": {
     "name": "Oppfølging 2",
     "subject": "Avslutning for nå",
-    "body": "Hei {leadName},<br />Siden jeg ikke har hørt noe, antar jeg at dere ikke er klare til å gå videre nå. Ta gjerne kontakt dersom dere ønsker å se videre på dette senere.<br /><br />Skulle det dukke opp en løsning fremover som jeg tror kan passe dere bedre enn det vi har sett på til nå, gir jeg beskjed.<br /><br />Vennlig hilsen,"
+    "body": "Hei {leadName},<br />Siden jeg ikke har hørt noe, antar jeg at dere ikke er klare til å gå videre nå. Ta gjerne kontakt dersom dere ønsker å se videre på dette senere.<br /><br />Skulle det dukke opp en løsning fremover som jeg tror kan passe dere bedre enn det vi har sett på til nå, gir jeg beskjed."
   },
   "quickQuestion": {
     "name": "Beskjed ved bedre alternativer",
