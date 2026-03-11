@@ -3,7 +3,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getLeadNotes = async (
   client: SupabaseClient,
-  leadId: string
+  leadId: string,
 ): Promise<Note[]> => {
   const { data, error } = await client
     .from("lead_notes")
@@ -20,7 +20,7 @@ export const createLeadNote = async (
   userId: string,
   content: string,
   source: "note" | "comment",
-  noteId?: string
+  noteId?: string,
 ): Promise<Note> => {
   const { data: note, error } = await client
     .from("lead_notes")
@@ -33,8 +33,10 @@ export const createLeadNote = async (
     })
     .select("*, user:user_id(name)")
     .single();
+
   if (error || !note) throw error;
 
+  // Extract @[Name] mentions from content
   const mentionRegex = /@\[([^\]]+)\]/g;
   let match;
   const mentions: string[] = [];
@@ -49,6 +51,7 @@ export const createLeadNote = async (
     const tagInserts = (users ?? []).map((u) => ({
       note_id: note.id,
       user_id: u.id,
+      source,
     }));
 
     if (tagInserts.length > 0) {
@@ -59,10 +62,54 @@ export const createLeadNote = async (
   return note;
 };
 
+/**
+ * Returns all users who are participants in a note thread.
+ * Participants = anyone mentioned in the parent note OR any of its comments.
+ * Also includes the original note author.
+ */
+export const getNoteThreadParticipants = async (
+  client: SupabaseClient,
+  parentNoteId: string,
+): Promise<{ id: string; name: string; email: string }[]> => {
+  // Get all note IDs in the thread: the parent + all its comments
+  const { data: threadNotes } = await client
+    .from("lead_notes")
+    .select("id, user_id")
+    .or(`id.eq.${parentNoteId},note_id.eq.${parentNoteId}`);
+
+  if (!threadNotes || threadNotes.length === 0) return [];
+
+  const threadNoteIds = threadNotes.map((n) => n.id);
+
+  // Get all tagged users across the entire thread
+  const { data: tags } = await client
+    .from("lead_note_tags")
+    .select("user_id")
+    .in("note_id", threadNoteIds);
+
+  // Collect all participant user IDs (tagged users + note authors)
+  const participantIds = new Set<string>();
+  (tags ?? []).forEach((t) => participantIds.add(t.user_id));
+  threadNotes.forEach((n) => participantIds.add(n.user_id));
+
+  if (participantIds.size === 0) return [];
+
+  const { data: users } = await client
+    .from("users")
+    .select("id, name, email")
+    .in("id", Array.from(participantIds));
+
+  return (users ?? []).filter((u) => u.email) as {
+    id: string;
+    name: string;
+    email: string;
+  }[];
+};
+
 export const getTaggableUsers = async (
   client: SupabaseClient,
   leadId: string,
-  installerGroupId?: string | null
+  installerGroupId?: string | null,
 ) => {
   const { data: lead } = await client
     .from("leads")
@@ -78,20 +125,13 @@ export const getTaggableUsers = async (
     .eq("team_id", lead.team_id);
 
   const map: Record<string, { id: string; name: string; email: string }> = {};
-
   (teamMembers ?? []).forEach((m) => {
-    // 🔒 Installer-gruppe-filter
     if (m.installer_group_id && m.installer_group_id !== installerGroupId) {
       return;
     }
-
     const user = Array.isArray(m.user) ? m.user[0] : m.user;
     if (m.user_id && user?.name && user.email) {
-      map[m.user_id] = {
-        id: m.user_id,
-        name: user.name,
-        email: user.email,
-      };
+      map[m.user_id] = { id: m.user_id, name: user.name, email: user.email };
     }
   });
 
@@ -100,13 +140,12 @@ export const getTaggableUsers = async (
 
 export const getUserMentions = async (
   client: SupabaseClient,
-  userId: string
+  userId: string,
 ) => {
   const { data } = await client
     .from("lead_note_tags")
     .select("note:note_id(id, content, created_at, lead_id), source")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
-
   return data?.map((d) => d.note) ?? [];
 };

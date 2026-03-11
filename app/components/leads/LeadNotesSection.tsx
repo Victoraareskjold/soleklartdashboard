@@ -11,14 +11,14 @@ import {
 } from "@/lib/api";
 import { Lead, LeadNoteAttachment, Note } from "@/lib/types";
 import { toast } from "react-toastify";
-import { User } from "@supabase/supabase-js";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { useRouter } from "next/navigation";
 
+// ─── MenuBar ─────────────────────────────────────────────────────────────────
+
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeMarks, setActiveMarks] = useState({
     bold: false,
     italic: false,
@@ -27,7 +27,6 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
   useEffect(() => {
     if (!editor) return;
-
     const update = () => {
       setActiveMarks({
         bold: editor.isActive("bold"),
@@ -35,10 +34,8 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
         strike: editor.isActive("strike"),
       });
     };
-
     editor.on("selectionUpdate", update);
     editor.on("transaction", update);
-
     return () => {
       editor.off("selectionUpdate", update);
       editor.off("transaction", update);
@@ -61,33 +58,33 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
       <button
         type="button"
         onClick={() => toggle(() => editor.chain().focus().toggleBold().run())}
-        className={`${base} ${editor.isActive("bold") ? active : inactive}`}
+        className={`${base} ${activeMarks.bold ? active : inactive}`}
       >
         <strong>Bold</strong>
       </button>
-
       <button
         type="button"
         onClick={() =>
           toggle(() => editor.chain().focus().toggleItalic().run())
         }
-        className={`${base} ${editor.isActive("italic") ? active : inactive}`}
+        className={`${base} ${activeMarks.italic ? active : inactive}`}
       >
         <em>Italic</em>
       </button>
-
       <button
         type="button"
         onClick={() =>
           toggle(() => editor.chain().focus().toggleStrike().run())
         }
-        className={`${base} ${editor.isActive("strike") ? active : inactive}`}
+        className={`${base} ${activeMarks.strike ? active : inactive}`}
       >
         <span className="line-through">Strike</span>
       </button>
     </div>
   );
 };
+
+// ─── LeadNotesSection ────────────────────────────────────────────────────────
 
 interface Props {
   leadId: string;
@@ -136,7 +133,6 @@ export default function LeadNotesSection({ leadId }: Props) {
 
   useEffect(() => {
     if (!leadId) return;
-
     const fetchData = async () => {
       const [leadData, notesData, users] = await Promise.all([
         getLead(leadId),
@@ -148,7 +144,7 @@ export default function LeadNotesSection({ leadId }: Props) {
 
       const combinedNotes = [...(notesData ?? [])];
 
-      if (leadData && leadData.note && leadData.assigned_to) {
+      if (leadData?.note && leadData.assigned_to) {
         const leadSourcer = users.find((u) => u.id === leadData.assigned_to);
         const leadNote: Note = {
           id: `lead-note-${leadData.id}`,
@@ -170,22 +166,18 @@ export default function LeadNotesSection({ leadId }: Props) {
           new Date(b.created_at ?? 0).getTime() -
           new Date(a.created_at ?? 0).getTime(),
       );
-
       setAllNotes(combinedNotes);
     };
-
     fetchData();
   }, [leadId, installerGroupId]);
 
-  // Filtrer ut bare hovednotater (ikke kommentarer)
   const notes = allNotes.filter((note) => note.source === "note");
-
-  // Hent alle kommentarer for en spesifikk note
-  const getCommentsForNote = (noteId: string) => {
-    return allNotes.filter(
+  const getCommentsForNote = (noteId: string) =>
+    allNotes.filter(
       (item) => item.source === "comment" && item.note_id === noteId,
     );
-  };
+
+  // ── Add note ───────────────────────────────────────────────────────────────
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,50 +187,38 @@ export default function LeadNotesSection({ leadId }: Props) {
     if (!user?.id) return;
     setLoading(true);
 
-    const noteContent = editor.getHTML();
-
-    const sanitizeFileName = (name: string) => {
-      return name
+    const sanitizeFileName = (name: string) =>
+      name
         .replace(/[åÅ]/g, "a")
         .replace(/[æÆ]/g, "ae")
         .replace(/[øØ]/g, "o")
-        .replace(/[^a-zA-Z0-9.-]/g, "_"); // Erstatter alt annet enn bokstaver, tall, punktum og bindestrek med underscore
-    };
+        .replace(/[^a-zA-Z0-9.-]/g, "_");
 
     const attachmentsPayload = await Promise.all(
       attachments.map(async (file) => {
-        const cleanedName = sanitizeFileName(file.name); // Rens navnet her!
+        const cleanedName = sanitizeFileName(file.name);
         const contentBytes = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.readAsDataURL(file);
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(",")[1]);
-          };
+          reader.onload = () =>
+            resolve((reader.result as string).split(",")[1]);
           reader.onerror = (error) => reject(error);
         });
-        return {
-          name: cleanedName,
-          contentType: file.type,
-          contentBytes,
-        };
+        return { name: cleanedName, contentType: file.type, contentBytes };
       }),
     );
 
+    // Email notifications for @mentions are handled server-side in the API route
     const note = await createLeadNote(
       leadId,
       user.id,
-      noteContent,
+      editor.getHTML(),
       "note",
       undefined,
       attachmentsPayload,
     );
 
     setAllNotes([note, ...allNotes]);
-    if (lead) {
-      await sendMentionEmail(noteContent, lead, user, taggableUsers);
-    }
-
     setNewNote("");
     setAttachments([]);
     setLoading(false);
@@ -248,6 +228,8 @@ export default function LeadNotesSection({ leadId }: Props) {
     router.push(`?tab=Merknader`);
   };
 
+  // ── Add comment ────────────────────────────────────────────────────────────
+
   const handleAddComment = async (noteId: string) => {
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
@@ -256,8 +238,7 @@ export default function LeadNotesSection({ leadId }: Props) {
     setLoading(true);
 
     if (noteId.startsWith("lead-note-")) {
-      if (!lead || !lead.note || !lead.created_by) return;
-
+      if (!lead?.note || !lead.created_by) return;
       try {
         // Convert the temporary lead note into a permanent one
         const permanentNote = await createLeadNote(
@@ -266,8 +247,7 @@ export default function LeadNotesSection({ leadId }: Props) {
           lead.note,
           "note",
         );
-
-        // Add the new comment to the permanent note
+        // Add the comment — server will notify all thread participants
         const newComment = await createLeadNote(
           leadId,
           user.id,
@@ -275,11 +255,8 @@ export default function LeadNotesSection({ leadId }: Props) {
           "comment",
           permanentNote.id,
         );
-
-        // Clear the original note from the lead to avoid duplication
         await updateLead(leadId, { note: null });
 
-        // Update state to reflect the changes
         setAllNotes((prevNotes) => {
           const withoutTemporary = prevNotes.filter((n) => n.id !== noteId);
           const updatedNotes = [...withoutTemporary, permanentNote, newComment];
@@ -299,7 +276,7 @@ export default function LeadNotesSection({ leadId }: Props) {
         toast.error("En feil oppstod ved kommentering.");
       }
     } else {
-      // Standard procedure for regular notes
+      // Server automatically notifies all thread participants on comment
       const comment = await createLeadNote(
         leadId,
         user.id,
@@ -307,12 +284,10 @@ export default function LeadNotesSection({ leadId }: Props) {
         "comment",
         noteId,
       );
-      if (lead) {
-        await sendMentionEmail(text, lead, user, taggableUsers);
-      }
       setAllNotes([...allNotes, comment]);
       setNewComments({ ...newComments, [noteId]: "" });
     }
+
     setCommentMentionSuggestions({
       ...commentMentionSuggestions,
       [noteId]: [],
@@ -321,6 +296,8 @@ export default function LeadNotesSection({ leadId }: Props) {
     window.location.reload();
     router.push(`?tab=Merknader`);
   };
+
+  // ── Mention helpers ────────────────────────────────────────────────────────
 
   const updateMentionSuggestions = (
     text: string,
@@ -351,7 +328,7 @@ export default function LeadNotesSection({ leadId }: Props) {
 
   const insertMention = (text: string, name: string) => {
     const atIndex = text.lastIndexOf("@");
-    return atIndex >= 0 ? text.slice(0, atIndex) + `@[${name}]` + " " : text;
+    return atIndex >= 0 ? text.slice(0, atIndex) + `@[${name}] ` : text;
   };
 
   const handleSelectMention = (name: string) => {
@@ -359,17 +336,12 @@ export default function LeadNotesSection({ leadId }: Props) {
     const text = editor.getText();
     const atIndex = text.lastIndexOf("@");
     if (atIndex < 0) return;
-
-    const from = atIndex;
-    const to = editor.state.selection.to;
-
     editor
       .chain()
       .focus()
-      .deleteRange({ from, to })
+      .deleteRange({ from: atIndex, to: editor.state.selection.to })
       .insertContent(`@[${name}] `)
       .run();
-
     setMentionSuggestions([]);
   };
 
@@ -382,90 +354,16 @@ export default function LeadNotesSection({ leadId }: Props) {
     });
   };
 
-  const sendMentionEmail = async (
-    content: string,
-    lead: Lead,
-    currentUser: User,
-    users: { id: string; name: string; email: string }[],
-  ) => {
-    const mentions = content.match(/@\[([^\]]+)\]/g);
-    if (!mentions) return;
-
-    const { data: authorData } = await supabase
-      .from("users")
-      .select("name")
-      .eq("id", currentUser.id)
-      .single();
-    const authorName = authorData?.name ?? "En bruker";
-
-    const mentionedUserNames = mentions.map((m) =>
-      m.substring(2, m.length - 1),
-    );
-
-    for (const name of mentionedUserNames) {
-      const user = users.find((u) => u.name === name);
-      if (user && user.email) {
-        const emailSubject = `Du ble nevnt i en merknad på lead: ${lead.person_info}`;
-        const emailHtml = `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 5px; overflow: hidden;">
-            <div style="background-color: #4f46e5; color: white; padding: 20px; text-align: center;">
-              <h1>Soleklart Dashboard</h1>
-            </div>
-            <div style="padding: 20px;">
-              <h2 style="color: #4f46e5;">Du ble nevnt</h2>
-              <p><strong>${authorName}</strong> nevnte deg i en merknad på leadet <strong>${
-                lead.person_info
-              }</strong>.</p>
-              <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 3px solid #4f46e5;">
-                <p style="margin: 0;">${content.replace(
-                  /@\[([^\]]+)\]/g,
-                  "<strong>@$1</strong>",
-                )}</p>
-              </div>
-              <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
-              <div>
-                <h3 style="color: #4f46e"}>Lead Detaljer:</h3>
-                <p><strong>Navn:</strong> ${lead.person_info}</p>
-                <p><strong>Adresse:</strong> ${lead.address}</p>
-              </div>
-              <div style="text-align: center; margin-top: 30px;">
-                <a href="${window.location.origin}/leads/${
-                  lead.id
-                }?tab=Merknader" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">Vis Lead</a>
-              </div>
-            </div>
-            <div style="background-color: #f2f2f2; text-align: center; padding: 15px; font-size: 12px; color: #666;">
-              <p>Dette er en automatisk varsling fra Soleklart Dashboard.</p>
-            </div>
-          </div>
-        `;
-
-        await fetch("/api/send-mail", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: user.email,
-            subject: emailSubject,
-            html: emailHtml,
-          }),
-        });
-      }
-    }
-  };
+  // ── Delete note ────────────────────────────────────────────────────────────
 
   const handleDeleteNote = async (noteId: string) => {
     if (!noteId) return;
-
-    const confirmDelete = window.confirm("Er du sikker på at du vil slette?");
-    if (!confirmDelete) return;
-
+    if (!window.confirm("Er du sikker på at du vil slette?")) return;
     try {
       const res = await fetch(`/api/leadNotes/notes/${noteId}`, {
         method: "DELETE",
       });
-
       if (!res.ok) throw new Error("Kunne ikke slette merknad");
-
       setAllNotes((prev) => prev.filter((t) => t.id !== noteId));
       toast.success("Merknad slettet!");
     } catch (err) {
@@ -474,11 +372,13 @@ export default function LeadNotesSection({ leadId }: Props) {
     }
   };
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <section className="mt-8 border-t pt-4">
       <h2 className="text-lg font-semibold mb-2">Merknader</h2>
 
-      {/* Legg til ny merknad */}
+      {/* New note form */}
       <form onSubmit={handleAddNote} className="mb-3 flex flex-col gap-2">
         <div className="relative">
           <div className="border border-gray-300 bg-white rounded-md">
@@ -499,11 +399,8 @@ export default function LeadNotesSection({ leadId }: Props) {
             </ul>
           )}
         </div>
+
         <div>
-          <label
-            htmlFor="email-attachments"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          ></label>
           <input
             type="file"
             id="email-attachments"
@@ -515,15 +412,14 @@ export default function LeadNotesSection({ leadId }: Props) {
             className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
           />
           {attachments.length > 0 && (
-            <div className="mt-2 text-sm text-gray-600">
-              <ul className="list-disc list-inside">
-                {attachments.map((file, i) => (
-                  <li key={i}>{file.name}</li>
-                ))}
-              </ul>
-            </div>
+            <ul className="mt-2 text-sm text-gray-600 list-disc list-inside">
+              {attachments.map((file, i) => (
+                <li key={i}>{file.name}</li>
+              ))}
+            </ul>
           )}
         </div>
+
         <button
           type="submit"
           className="bg-indigo-600 text-white px-3 py-1 rounded-md text-sm hover:bg-indigo-700"
@@ -533,11 +429,10 @@ export default function LeadNotesSection({ leadId }: Props) {
         </button>
       </form>
 
-      {/* Liste over merknader */}
+      {/* Notes list */}
       <ul className="space-y-3">
         {notes.map((note, i) => {
           const comments = getCommentsForNote(note.id);
-
           return (
             <li
               key={note.id}
@@ -588,7 +483,7 @@ export default function LeadNotesSection({ leadId }: Props) {
                 </div>
               )}
 
-              {/* Kommentarer */}
+              {/* Comments */}
               <div className="ml-3 border-l pl-2 space-y-1">
                 {comments.map((comment) => (
                   <p key={comment.id} className="text-xs text-gray-700">
@@ -597,7 +492,6 @@ export default function LeadNotesSection({ leadId }: Props) {
                   </p>
                 ))}
 
-                {/* Legg til kommentar */}
                 <div className="relative flex flex-row gap-2 mt-2">
                   <input
                     value={newComments[note.id] ?? ""}
