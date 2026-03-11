@@ -157,6 +157,11 @@ export default function LeadPage() {
   const [assignedTo, setAssignedTo] = useState("");
   const [createdBy, setCreatedBy] = useState("");
 
+  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(
+    null,
+  );
+  const [showdetailedView, setShowDetailedView] = useState(false);
+
   const [domain, setDomain] = useState("");
 
   // Customer info
@@ -872,6 +877,15 @@ export default function LeadPage() {
                         ? new Date(e.created_at).toLocaleString("nb-NO")
                         : "N/A"}
                     </p>
+                    <button
+                      className="text-center py-1 mt-2 w-full text-sm"
+                      onClick={() => {
+                        setSelectedEstimate(e);
+                        setShowDetailedView(true);
+                      }}
+                    >
+                      Se detaljert visning
+                    </button>
                   </li>
                 );
               })}
@@ -946,6 +960,33 @@ export default function LeadPage() {
               className="h-5/6 w-5/6 relative z-100 m-auto rounded-xl"
             />
           </>
+        </section>
+      )}
+      {showdetailedView && selectedEstimate && (
+        <section className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black opacity-40"
+            onClick={() => setShowDetailedView(false)}
+          />
+
+          <div className="relative bg-white w-4/5 h-4/5 rounded-lg shadow-lg p-4 overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">
+                Detaljert estimat – {selectedEstimate.id}
+              </h2>
+
+              <button
+                className="px-3 py-1 bg-gray-200 rounded"
+                onClick={() => setShowDetailedView(false)}
+              >
+                Lukk
+              </button>
+            </div>
+
+            <pre className="text-xs bg-slate-100 p-4 rounded overflow-auto">
+              {JSON.stringify(selectedEstimate.price_data, null, 2)}
+            </pre>
+          </div>
         </section>
       )}
     </div>
