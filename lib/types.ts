@@ -109,6 +109,7 @@ export interface Estimate {
   desired_kwh?: number;
   coverage_percentage?: number;
   price_data?: PriceOverview;
+  updated_price: number | null;
 
   finished?: boolean;
   signed_at?: string;

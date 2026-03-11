@@ -11,6 +11,7 @@ import {
   updateLead,
   getLeadNotes,
   getStoredLeadEmails,
+  updateEstimate,
 } from "@/lib/api";
 
 import { useParams, useSearchParams } from "next/navigation";
@@ -452,8 +453,38 @@ export default function LeadPage() {
       : Number(estimate.price_data?.["total inkl. alt"] ?? 0);
   };
 
+  const handleEstimatePriceChange = async (id: string, value: number) => {
+    setEstimates((prev) =>
+      prev?.map((e) =>
+        e.id === id
+          ? {
+              ...e,
+              updated_price: value,
+            }
+          : e,
+      ),
+    );
+
+    try {
+      await updateEstimate(id, {
+        updated_price: value,
+        updated_at: new Date(),
+      });
+    } catch (err) {
+      console.error("Failed to update estimate price", err);
+    }
+  };
+
   const latest = getLatestEstimate();
   const total = getTotalForCustomer(latest);
+
+  const formatNumber = (num: number) =>
+    num.toLocaleString("nb-NO", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+
+  const parseNumber = (val: string) => Number(val.replace(/\s/g, ""));
 
   if (!user) return <LoadingScreen />;
 
@@ -793,11 +824,9 @@ export default function LeadPage() {
                       <p className="font-semibold">
                         Tilbud - {kwp.toFixed(1)} kWp
                       </p>
-
                       <p className="underline text-xs text-blue-500 mb-3">
                         {estimateUrl}
                       </p>
-
                       {e.finished && (
                         <div className="text-sm mb-2 flex flex-row gap-2 items-center">
                           <strong>Status:</strong>
@@ -816,25 +845,33 @@ export default function LeadPage() {
                           </div>
                         </div>
                       )}
-
-                      <p className="font-medium text-sm underline">
-                        Total eks. mva:{" "}
-                        {Number(e.price_data?.total ?? 0).toLocaleString(
-                          "nb-NO",
-                          {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                          },
-                        )}{" "}
-                        kr
-                      </p>
-
-                      <p className="text-sm mt-2">
-                        {e.created_at
-                          ? new Date(e.created_at).toLocaleString("nb-NO")
-                          : "N/A"}
-                      </p>
                     </Link>
+                    <p className="font-medium text-sm underline w-42">
+                      Total eks. mva:{" "}
+                    </p>
+                    <div className="flex flex-row gap-1 items-center mt-1 z-500">
+                      <input
+                        className="w-full bg-slate-100 p-1 rounded-md border-slate-300 border-1"
+                        value={formatNumber(
+                          e.updated_price ?? Number(e.price_data?.total ?? 0),
+                        )}
+                        onChange={(event) => {
+                          const raw = event.target.value;
+                          const num = parseNumber(raw);
+
+                          if (!isNaN(num)) {
+                            handleEstimatePriceChange(e.id, num);
+                          }
+                        }}
+                        type="text"
+                      />
+                      <p>kr </p>
+                    </div>
+                    <p className="text-sm mt-2">
+                      {e.created_at
+                        ? new Date(e.created_at).toLocaleString("nb-NO")
+                        : "N/A"}
+                    </p>
                   </li>
                 );
               })}
