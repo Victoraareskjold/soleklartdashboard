@@ -124,6 +124,9 @@ export default function LeadCard({
             {dueText === "Oppgave forfalt" && (
               <img src="/icons/danger.png" alt="danger icon" />
             )}
+            {dueText === "Ingen oppgave" && (
+              <img src="/icons/danger.png" alt="danger icon" />
+            )}
           </div>
           <p className="text-nowrap">
             {lead.company || lead.role ? "🏭 Næring" : "🏠 Privat"}
