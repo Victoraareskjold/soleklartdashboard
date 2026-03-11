@@ -18,7 +18,8 @@ import { MountVolumeReductionType, TeamCommissionType } from "@/lib/types";
 import { toast } from "react-toastify";
 import { ElectricalInstallationItem } from "../supplier/Table";
 import { SolarData } from "../../SolarDataView";
-import { supabase } from "@/lib/supabase"; // NEW
+import { supabase } from "@/lib/supabase";
+import { ThreeWayCells } from "../ThreeWayCells";
 
 interface CalculationSheetProps {
   calculatorState: CalculatorState;
@@ -27,8 +28,8 @@ interface CalculationSheetProps {
   solarData?: SolarData;
   setPriceOverview?: (priceOverview: PriceOverview | null) => void;
   leadCompany?: string | null;
-  finished: boolean; // NEW
-  leadId: string; // NEW
+  finished: boolean;
+  leadId: string;
 }
 
 export default function CalculationSheet({
@@ -38,8 +39,8 @@ export default function CalculationSheet({
   solarData,
   setPriceOverview,
   leadCompany,
-  finished, // NEW
-  leadId, // NEW
+  finished,
+  leadId,
 }: CalculationSheetProps) {
   const { installerGroupId } = useInstallerGroup();
   const { teamId } = useTeam();
@@ -59,11 +60,66 @@ export default function CalculationSheet({
   const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>(
     {},
   );
+  const [markupOverrides, setMarkupOverrides] = useState<
+    Record<string, number>
+  >({});
   const [textOverrides, setTextOverrides] = useState<Record<string, string>>(
     {},
   );
   const [attachments, setAttachments] = useState<Record<string, string>>({});
   const [simulationPdfUrl, setSimulationPdfUrl] = useState<string | null>(null);
+
+  // ── Three-way calculation helpers ────────────────────────────────────────────
+  // cost × (1 + markup/100) = total
+  // Editing cost   → update priceOverrides, total auto-derives
+  // Editing markup → update markupOverrides, total auto-derives
+  // Editing total  → back-calculate cost = total / (1 + markup/100), update priceOverrides
+
+  const getFinalPrice = (itemId: string, calculatedCost: number) =>
+    priceOverrides[itemId] ?? calculatedCost;
+
+  const getFinalMarkup = (itemId: string, defaultMarkup: number) =>
+    markupOverrides[itemId] ?? defaultMarkup;
+
+  const getFinalText = (itemId: string, defaultText: string) =>
+    textOverrides[itemId] ?? defaultText;
+
+  const handleCostChange = (itemId: string, value: string) => {
+    const cost = Number(value);
+    setPriceOverrides((prev) => ({
+      ...prev,
+      [itemId]: isNaN(cost) ? 0 : cost,
+    }));
+  };
+
+  const handleMarkupChange = (
+    itemId: string,
+    value: string,
+    currentCost: number,
+  ) => {
+    const markup = Number(value);
+    setMarkupOverrides((prev) => ({
+      ...prev,
+      [itemId]: isNaN(markup) ? 0 : markup,
+    }));
+    // cost stays the same; total will re-derive automatically
+    void currentCost; // explicitly unused — cost not changed when markup changes
+  };
+
+  const handleTotalChange = (
+    itemId: string,
+    totalValue: string,
+    defaultMarkup: number,
+  ) => {
+    const total = Number(totalValue);
+    const markup = getFinalMarkup(itemId, defaultMarkup);
+    const impliedCost = markup === -100 ? 0 : total / (1 + markup / 100);
+    setPriceOverrides((prev) => ({
+      ...prev,
+      [itemId]: isNaN(impliedCost) ? 0 : impliedCost,
+    }));
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const handleFileUpload = async (itemId: string, file: File) => {
     if (!file || !leadId) {
@@ -202,21 +258,16 @@ export default function CalculationSheet({
         price: product.price_ex_vat * item.quantity,
       };
 
-      if (category !== "feste") {
-        return [supplierItem];
-      }
+      if (category !== "feste") return [supplierItem];
 
       const mountMatch = mountItems.find(
         (m) =>
           m.product.id === product.id &&
           m.roof_type?.name === solarData?.selectedRoofType,
       );
-
-      // Fallback: Hvis vi ikke finner match på taktype, prøv å finne bare produktet
       const fallbackMatch = !mountMatch
         ? mountItems.find((m) => m.product.id === product.id)
         : null;
-
       const finalMountData = mountMatch || fallbackMatch;
 
       const mountingItem = finalMountData
@@ -233,7 +284,6 @@ export default function CalculationSheet({
             mountProductName: finalMountData.product.name,
           }
         : {
-            // Hard fallback hvis produktet ikke finnes i mountItems i det hele tatt
             id: item.id + "_mount_empty",
             name: "Montering (pris ikke satt)",
             product: product.name,
@@ -241,7 +291,7 @@ export default function CalculationSheet({
             category: "feste-mount",
             quantity: item.quantity,
             source: "mounting",
-            price: 0, // Lar brukeren overstyre prisen manuelt i tabellen
+            price: 0,
             roofTypeName: "Ingen match",
           };
 
@@ -249,36 +299,27 @@ export default function CalculationSheet({
     })
     .filter((i) => i.quantity > 0 && i.supplier !== "Ukjent");
 
-  const getFinalPrice = (itemId: string, calculatedPrice: number) => {
-    return priceOverrides[itemId] ?? calculatedPrice;
-  };
-  const getFinalText = (itemId: string, defaultText: string) => {
-    return textOverrides[itemId] ?? defaultText;
-  };
-
   const supplierItems = items.filter((i) => i.source === "supplier");
 
-  // Sort supplierItems based on the key order of categoryMapping
   const categoryOrder = Object.keys(categoryMapping);
   supplierItems.sort((a, b) => {
     const indexA = categoryOrder.indexOf(a.category);
     const indexB = categoryOrder.indexOf(b.category);
-
     if (indexA !== indexB) {
       if (indexA === -1) return 1;
       if (indexB === -1) return -1;
       return indexA - indexB;
     }
-
     return a.name.localeCompare(b.name);
   });
 
   const mountingItems = items.filter((i) => i.source === "mounting");
 
   const totalSupplierMarkup = supplierItems.reduce((sum, item) => {
-    const finalPrice = getFinalPrice(item.id, item.price);
-    const markup = getCategoryMarkup(item.category || "");
-    return sum + finalPrice * (markup / 100);
+    const defaultMarkup = getCategoryMarkup(item.category || "");
+    const finalCost = getFinalPrice(item.id, item.price);
+    const finalMarkup = getFinalMarkup(item.id, defaultMarkup);
+    return sum + finalCost * (finalMarkup / 100);
   }, 0);
 
   const totalMountingCost = mountingItems.reduce(
@@ -296,32 +337,38 @@ export default function CalculationSheet({
   const updatedMountingCost = totalMountingCost - reductionAmount;
   const mountingMarkupPercent = getCategoryMarkup("feste-mount");
   const totalMountingMarkup =
-    updatedMountingCost * (mountingMarkupPercent / 100);
+    mountingItems.reduce((sum, item) => {
+      const defaultMarkup = getCategoryMarkup(item.category || "");
+      const finalCost = getFinalPrice(item.id, item.price);
+      const finalMarkup = getFinalMarkup(item.id, defaultMarkup);
+      return sum + finalCost * (finalMarkup / 100);
+    }, 0) -
+    reductionAmount *
+      (getFinalMarkup("feste-mount-global", mountingMarkupPercent) / 100);
+
+  void updatedMountingCost; // derived via individual rows
 
   const total = items.reduce((sum, item) => {
-    const finalPrice = getFinalPrice(item.id, item.price);
-    return sum + finalPrice;
+    return sum + getFinalPrice(item.id, item.price);
   }, 0);
 
   const søknadItems = eletricalData.filter(
     (item) => item.category?.name?.toLowerCase() === "søknad",
   );
+  const søknadTotal = søknadItems.reduce(
+    (sum, item) => sum + (item.price_per || 0),
+    0,
+  );
 
-  const søknadTotal = søknadItems.reduce((sum, item) => {
-    const base = item.price_per || 0;
-    return sum + base;
-  }, 0);
-
-  const electricalMarkup = getCategoryMarkup("elektrisk installasjon");
+  const electricalMarkupDefault = getCategoryMarkup("elektrisk installasjon");
 
   const solcelleAnleggItems = eletricalData.filter(
     (item) => item.category?.name?.toLowerCase() === "solcelleanlegg",
   );
-
-  const solcelleAnleggBaseTotal = solcelleAnleggItems.reduce((sum, item) => {
-    const base = item.price_per || 0;
-    return sum + base;
-  }, 0);
+  const solcelleAnleggBaseTotal = solcelleAnleggItems.reduce(
+    (sum, item) => sum + (item.price_per || 0),
+    0,
+  );
 
   const inverterCount = supplierItems
     .filter((i) => i.category?.includes("inverter"))
@@ -330,6 +377,7 @@ export default function CalculationSheet({
   const batteryCount = supplierItems
     .filter((i) => i.category?.toLowerCase() === "batteri")
     .reduce((sum, i) => sum + i.quantity, 0);
+
   const batteryOptions = eletricalData.filter(
     (item) => item.category?.name.toLowerCase() === "batteri",
   );
@@ -337,7 +385,7 @@ export default function CalculationSheet({
     null,
   );
   const selectedBattery = batteryOptions.find(
-    (battery) => battery.id === selectedBatteryId,
+    (b) => b.id === selectedBatteryId,
   );
   const batteryBasePrice = selectedBattery?.price_per || 0;
 
@@ -350,16 +398,12 @@ export default function CalculationSheet({
 
   useEffect(() => {
     if (!solarData?.checkedRoofData) return;
-
     const isSteepRoof = solarData.checkedRoofData.some((r) => r.angle > 35);
-
     const brattTakItem = additionalCostOptions.find((ac) =>
       ac.name?.toLowerCase().includes("bratt-tak"),
     );
     if (!brattTakItem) return;
-
     const hasBrattTak = additionalCosts.some((ac) => ac.id === brattTakItem.id);
-
     if (isSteepRoof && !hasBrattTak) {
       setAdditionalCosts((prev) => [
         ...prev,
@@ -372,71 +416,74 @@ export default function CalculationSheet({
     }
   }, [solarData?.checkedRoofData, additionalCosts, additionalCostOptions]);
 
-  const handleAddAdditionalCost = () => {
+  const handleAddAdditionalCost = () =>
     setAdditionalCosts((prev) => [...prev, { id: "", quantity: 1 }]);
-  };
 
-  const handleRemoveAdditionalCost = (index: number) => {
+  const handleRemoveAdditionalCost = (index: number) =>
     setAdditionalCosts((prev) => prev.filter((_, i) => i !== index));
-  };
 
   const handleUpdateAdditionalCost = (
     index: number,
     field: "id" | "quantity",
     value: string | number,
-  ) => {
+  ) =>
     setAdditionalCosts((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     );
-  };
+
+  // Per-row electrical markup helpers
+  const søknadMarkup = getFinalMarkup("søknad_markup", electricalMarkupDefault);
+  const solcelleMarkup = getFinalMarkup(
+    "solcelle_markup",
+    electricalMarkupDefault,
+  );
+  const batteriMarkup = getFinalMarkup(
+    "batteri_markup",
+    electricalMarkupDefault,
+  );
+
+  const søknadFinalCost = getFinalPrice("søknad", søknadTotal);
+  const solcelleAnleggFinalCost = getFinalPrice(
+    "solcelle_anlegg",
+    solcelleAnleggBaseTotal * inverterCount,
+  );
+  const batteryFinalCost = getFinalPrice(
+    "batteri",
+    batteryBasePrice * batteryCount,
+  );
 
   const additionalCostsMarkup = additionalCosts.reduce((sum, ac, index) => {
     const selectedItem = additionalCostOptions.find((i) => i.id === ac.id);
     const base = selectedItem?.price_per || 0;
     const overrideId = `additional_${index}`;
-    return (
-      sum +
-      getFinalPrice(overrideId, base * ac.quantity) * (electricalMarkup / 100)
+    const markup = getFinalMarkup(
+      `additional_markup_${index}`,
+      electricalMarkupDefault,
     );
+    return sum + getFinalPrice(overrideId, base * ac.quantity) * (markup / 100);
   }, 0);
 
-  const søknadFinal = getFinalPrice("søknad", søknadTotal);
-  const solcelleAnleggFinal = getFinalPrice(
-    "solcelle_anlegg",
-    solcelleAnleggBaseTotal * inverterCount,
-  );
-  const batteryFinal = getFinalPrice(
-    "batteri",
-    batteryBasePrice * batteryCount,
-  );
-
   const totalInstallationMarkup =
-    søknadFinal * (electricalMarkup / 100) +
-    solcelleAnleggFinal * (electricalMarkup / 100) +
-    batteryFinal * (electricalMarkup / 100) +
+    søknadFinalCost * (søknadMarkup / 100) +
+    solcelleAnleggFinalCost * (solcelleMarkup / 100) +
+    batteryFinalCost * (batteriMarkup / 100) +
     additionalCostsMarkup;
-
-  const updatePriceOverride = (itemId: string, value: string) => {
-    const price = Number(value);
-    setPriceOverrides((prev) => ({
-      ...prev,
-      [itemId]: isNaN(price) ? 0 : price,
-    }));
-  };
 
   const totalWithInstallation =
     total +
-    søknadFinal * (1 + electricalMarkup / 100) +
-    solcelleAnleggFinal * (1 + electricalMarkup / 100) +
-    batteryFinal * (1 + electricalMarkup / 100) +
+    søknadFinalCost * (1 + søknadMarkup / 100) +
+    solcelleAnleggFinalCost * (1 + solcelleMarkup / 100) +
+    batteryFinalCost * (1 + batteriMarkup / 100) +
     additionalCosts.reduce((sum, ac, index) => {
       const selectedItem = additionalCostOptions.find((i) => i.id === ac.id);
       const base = selectedItem?.price_per || 0;
       const overrideId = `additional_${index}`;
+      const markup = getFinalMarkup(
+        `additional_markup_${index}`,
+        electricalMarkupDefault,
+      );
       return (
-        sum +
-        getFinalPrice(overrideId, base * ac.quantity) *
-          (1 + electricalMarkup / 100)
+        sum + getFinalPrice(overrideId, base * ac.quantity) * (1 + markup / 100)
       );
     }, 0);
 
@@ -463,18 +510,14 @@ export default function CalculationSheet({
       : commissionPercentage;
 
   const calculatedEnovaSupport = calculateEnovaSupport();
-  /* const finalEnovaSupportAmount = getFinalPrice(
-    "enova_support",
-    calculatedEnovaSupport
-  ); */
-
   const grandTotal = subTotalForCommission + finalCommissionAmount;
 
   const priceOverview = useMemo(() => {
     return {
       suppliers: supplierItems.map((item) => {
-        const markup = getCategoryMarkup(item.category || "");
-        const price = getFinalPrice(item.id, item.price);
+        const defaultMarkup = getCategoryMarkup(item.category || "");
+        const markup = getFinalMarkup(item.id, defaultMarkup);
+        const cost = getFinalPrice(item.id, item.price);
         return {
           id: item.id,
           name: item.name,
@@ -482,13 +525,14 @@ export default function CalculationSheet({
           product: getFinalText(item.id, item.product),
           category: item.category,
           quantity: item.quantity,
-          priceWithMarkup: price * (1 + markup / 100),
+          priceWithMarkup: cost * (1 + markup / 100),
           attachmentUrl: attachments[item.id],
         };
       }),
       mounting: mountingItems.map((item) => {
-        const markup = getCategoryMarkup(item.category || "");
-        const price = getFinalPrice(item.id, item.price);
+        const defaultMarkup = getCategoryMarkup(item.category || "");
+        const markup = getFinalMarkup(item.id, defaultMarkup);
+        const cost = getFinalPrice(item.id, item.price);
         return {
           id: item.id,
           name: item.name,
@@ -496,31 +540,23 @@ export default function CalculationSheet({
           product: getFinalText(item.id, item.product),
           category: item.category,
           quantity: item.quantity,
-          priceWithMarkup: price * (1 + markup / 100),
+          priceWithMarkup: cost * (1 + markup / 100),
           attachmentUrl: attachments[item.id],
         };
       }),
       installation: {
         søknad: {
-          priceWithMarkup:
-            getFinalPrice("søknad", søknadTotal) * (1 + electricalMarkup / 100),
+          priceWithMarkup: søknadFinalCost * (1 + søknadMarkup / 100),
           attachmentUrl: attachments["søknad"],
         },
         solcelleAnlegg: {
-          priceWithMarkup:
-            getFinalPrice(
-              "solcelle_anlegg",
-              solcelleAnleggBaseTotal * inverterCount,
-            ) *
-            (1 + electricalMarkup / 100),
-          attachmentUrl: attachments["solcelle_anlegg"], // NEW
+          priceWithMarkup: solcelleAnleggFinalCost * (1 + solcelleMarkup / 100),
+          attachmentUrl: attachments["solcelle_anlegg"],
         },
         battery: {
           selectedBatteryId,
-          priceWithMarkup:
-            getFinalPrice("batteri", batteryBasePrice * batteryCount) *
-            (1 + electricalMarkup / 100),
-          attachmentUrl: attachments["batteri"], // NEW
+          priceWithMarkup: batteryFinalCost * (1 + batteriMarkup / 100),
+          attachmentUrl: attachments["batteri"],
         },
         additionalCosts: additionalCosts.map((ac, index) => {
           const selectedItem = additionalCostOptions.find(
@@ -528,13 +564,17 @@ export default function CalculationSheet({
           );
           const base = selectedItem?.price_per || 0;
           const overrideId = `additional_${index}`;
-          const finalPrice = getFinalPrice(overrideId, base * ac.quantity);
+          const markup = getFinalMarkup(
+            `additional_markup_${index}`,
+            electricalMarkupDefault,
+          );
+          const finalCost = getFinalPrice(overrideId, base * ac.quantity);
           return {
             id: ac.id,
             name: selectedItem?.name || "",
             quantity: ac.quantity,
-            priceWithMarkup: finalPrice * (1 + electricalMarkup / 100),
-            attachmentUrl: attachments[overrideId], // NEW
+            priceWithMarkup: finalCost * (1 + markup / 100),
+            attachmentUrl: attachments[overrideId],
           };
         }),
       },
@@ -553,13 +593,13 @@ export default function CalculationSheet({
     calculatedEnovaSupport,
     attachments,
     simulationPdfUrl,
+    priceOverrides,
+    markupOverrides,
   ]);
 
   const prevPriceOverviewString = useRef<string | null>(null);
-
   useEffect(() => {
     if (!setPriceOverview) return;
-
     const priceOverviewString = JSON.stringify(priceOverview);
     if (priceOverviewString !== prevPriceOverviewString.current) {
       setPriceOverview(priceOverview);
@@ -580,7 +620,6 @@ export default function CalculationSheet({
       toast.warn("Mangler fil eller lead ID for opplasting.");
       return;
     }
-
     const sanitize = (str: string) =>
       str
         .replace(/æ/g, "ae")
@@ -593,29 +632,22 @@ export default function CalculationSheet({
 
     const safeFileName = sanitize(file.name);
     toast.info(`Laster opp ${file.name}...`);
-
     const filePath = `${leadId}/simulation/${Date.now()}-${safeFileName}`;
     const { error: uploadError } = await supabase.storage
       .from("estimate-attachments")
       .upload(filePath, file);
-
     if (uploadError) {
       toast.error(`Opplasting feilet: ${uploadError.message}`);
       return;
     }
-
     const { data: publicUrlData } = supabase.storage
       .from("estimate-attachments")
       .getPublicUrl(filePath);
-
     if (!publicUrlData) {
       toast.error("Kunne ikke hente offentlig URL.");
       return;
     }
-
-    const url = publicUrlData.publicUrl;
-
-    setSimulationPdfUrl(url);
+    setSimulationPdfUrl(publicUrlData.publicUrl);
     toast.success(`${file.name} er lastet opp og lagret.`);
   };
 
@@ -631,7 +663,7 @@ export default function CalculationSheet({
     <div className="mt-8 border rounded-lg bg-white shadow p-4">
       <h3 className="text-lg font-medium mb-3">PRISOVERSIKT</h3>
       {finished && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-3">
           <span className="text-sm text-gray-600">Simulerings-PDF:</span>
           {simulationPdfUrl ? (
             <div className="flex items-center gap-1">
@@ -641,7 +673,7 @@ export default function CalculationSheet({
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:underline text-sm"
               >
-                {simulationPdfUrl ? getFileName(simulationPdfUrl) : ""}{" "}
+                {getFileName(simulationPdfUrl)}
               </a>
               <button
                 onClick={handleRemoveSimulationPdf}
@@ -667,25 +699,22 @@ export default function CalculationSheet({
           <tr>
             <th className="p-2 text-left">Navn</th>
             <th className="p-2 text-left">Antall</th>
-            <th className="p-2 text-left">Kostnad eks. mva</th>
-            <th className="p-2 text-right">Påslag i %</th>
+            <th className="p-2 text-right">Kostnad eks. mva</th>
+            <th className="p-2 text-right">Påslag %</th>
             <th className="p-2 text-right">Total eks. mva</th>
             {finished && <th className="p-2 text-left">Vedlegg</th>}
           </tr>
         </thead>
         <tbody>
+          {/* ── LEVERANDØRER ── */}
           <tr>
             <td colSpan={finished ? 6 : 5}>
               <h2 className="p-1 font-bold">LEVERANDØRER</h2>
             </td>
           </tr>
           {supplierItems.map((item) => {
-            const markup = getCategoryMarkup(item.category || "");
-            const displayValue =
-              item.category === "feste"
-                ? `${item.name} - ${item.product}`
-                : `${item.name} - ${item.product}`;
-            const attachmentUrl = attachments[item.id];
+            const defaultMarkup = getCategoryMarkup(item.category || "");
+            const displayValue = `${item.name} - ${item.product}`;
             return (
               <tr key={item.id}>
                 <td className="p-2 flex flex-row items-center gap-1">
@@ -703,55 +732,21 @@ export default function CalculationSheet({
                   <p>{item.supplier}</p>
                 </td>
                 <td className="p-2 text-right">{item.quantity} stk.</td>
-                <td className="p-2 text-right">
-                  <input
-                    value={getFinalPrice(item.id, item.price).toFixed(0)}
-                    onChange={(e) =>
-                      updatePriceOverride(item.id, e.target.value)
-                    }
-                    className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
-                  />
-                </td>
-                <td className="p-2 text-right">{markup} %</td>
-                <td className="p-2 text-right">
-                  {(
-                    getFinalPrice(item.id, item.price) *
-                    (1 + markup / 100)
-                  ).toFixed(0)}{" "}
-                  kr
-                </td>
-                {finished && (
-                  <td className="p-2">
-                    {attachmentUrl ? (
-                      <div className="flex items-center gap-1">
-                        <a
-                          href={attachmentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline text-xs"
-                        >
-                          {attachmentUrl}
-                        </a>
-                        <button
-                          onClick={() => handleRemoveAttachment(item.id)} // eller itemId for installasjon
-                          className="text-red-400 hover:text-red-600 font-bold text-sm"
-                          title="Fjern vedlegg"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : (
-                      <input
-                        type="file"
-                        className="text-xs w-28"
-                        onChange={(e) =>
-                          e.target.files &&
-                          handleFileUpload(item.id, e.target.files[0])
-                        }
-                      />
-                    )}
-                  </td>
-                )}
+                <ThreeWayCells
+                  itemId={item.id}
+                  defaultCost={item.price}
+                  defaultMarkup={defaultMarkup}
+                  priceOverrides={priceOverrides}
+                  markupOverrides={markupOverrides}
+                  onCostChange={handleCostChange}
+                  onMarkupChange={handleMarkupChange}
+                  onTotalChange={handleTotalChange}
+                  finished={finished}
+                  showAttachment={true}
+                  attachments={attachments}
+                  onRemoveAttachment={handleRemoveAttachment}
+                  onFileUpload={handleFileUpload}
+                />
               </tr>
             );
           })}
@@ -764,15 +759,15 @@ export default function CalculationSheet({
             </td>
           </tr>
 
+          {/* ── MONTERING ── */}
           <tr>
             <td colSpan={finished ? 6 : 5}>
               <h2 className="p-1 font-bold">MONTERING</h2>
             </td>
           </tr>
           {mountingItems.map((item) => {
-            const markup = getCategoryMarkup(item.category || "");
+            const defaultMarkup = getCategoryMarkup(item.category || "");
             const defaultText = `Paneler og fester for ${solarData?.selectedRoofType ?? ""}`;
-            const attachmentUrl = attachments[item.id]; // NEW
             return (
               <tr key={item.id}>
                 <td className="p-2">
@@ -788,55 +783,21 @@ export default function CalculationSheet({
                   />
                 </td>
                 <td className="p-2 text-right">{item.quantity} stk.</td>
-                <td className="p-2 text-right">
-                  <input
-                    value={getFinalPrice(item.id, item.price).toFixed(0)}
-                    onChange={(e) =>
-                      updatePriceOverride(item.id, e.target.value)
-                    }
-                    className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
-                  />
-                </td>
-                <td className="p-2 text-right">{markup} %</td>
-                <td className="p-2 text-right">
-                  {(
-                    (getFinalPrice(item.id, item.price) - reductionAmount) *
-                    (1 + markup / 100)
-                  ).toFixed(0)}{" "}
-                  kr
-                </td>
-                {finished && ( // NEW
-                  <td className="p-2">
-                    {attachmentUrl ? (
-                      <div className="flex items-center gap-1">
-                        <a
-                          href={attachmentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline text-xs"
-                        >
-                          {attachmentUrl}
-                        </a>
-                        <button
-                          onClick={() => handleRemoveAttachment(item.id)} // eller itemId for installasjon
-                          className="text-red-400 hover:text-red-600 font-bold text-sm"
-                          title="Fjern vedlegg"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : (
-                      <input
-                        type="file"
-                        className="text-xs w-28"
-                        onChange={(e) =>
-                          e.target.files &&
-                          handleFileUpload(item.id, e.target.files[0])
-                        }
-                      />
-                    )}
-                  </td>
-                )}
+                <ThreeWayCells
+                  itemId={item.id}
+                  defaultCost={item.price}
+                  defaultMarkup={defaultMarkup}
+                  showAttachment={true}
+                  priceOverrides={priceOverrides}
+                  markupOverrides={markupOverrides}
+                  onCostChange={handleCostChange}
+                  onMarkupChange={handleMarkupChange}
+                  onTotalChange={handleTotalChange}
+                  finished={finished}
+                  attachments={attachments}
+                  onRemoveAttachment={handleRemoveAttachment}
+                  onFileUpload={handleFileUpload}
+                />
               </tr>
             );
           })}
@@ -859,6 +820,7 @@ export default function CalculationSheet({
             </td>
           </tr>
 
+          {/* ── INSTALLASJON ── */}
           <tr>
             <td colSpan={finished ? 6 : 5}>
               <h2 className="p-1 font-bold">INSTALLASJON</h2>
@@ -868,118 +830,42 @@ export default function CalculationSheet({
             <tr>
               <td className="p-2">Søknad</td>
               <td className="p-2 text-right">1 stk.</td>
-              <td className="p-2 text-right">
-                <input
-                  className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
-                  value={getFinalPrice("søknad", søknadTotal).toFixed(0)}
-                  onChange={(e) =>
-                    updatePriceOverride("søknad", e.target.value)
-                  }
-                />
-              </td>
-              <td className="p-2 text-right">{electricalMarkup} %</td>
-              <td className="p-2 text-right">
-                {(
-                  getFinalPrice("søknad", søknadTotal) *
-                  (1 + electricalMarkup / 100)
-                ).toFixed(0)}{" "}
-                kr
-              </td>
-              {finished && ( // NEW
-                <td className="p-2">
-                  {attachments["søknad"] ? (
-                    <div className="flex items-center gap-1">
-                      <a
-                        href={attachments["søknad"]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline text-xs"
-                      >
-                        {attachments["søknad"]}
-                      </a>
-                      <button
-                        onClick={() => handleRemoveAttachment("søknad")} // eller itemId for installasjon
-                        className="text-red-400 hover:text-red-600 font-bold text-sm"
-                        title="Fjern vedlegg"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <input
-                      type="file"
-                      className="text-xs w-28"
-                      onChange={(e) =>
-                        e.target.files &&
-                        handleFileUpload("søknad", e.target.files[0])
-                      }
-                    />
-                  )}
-                </td>
-              )}
+              <ThreeWayCells
+                itemId="søknad"
+                defaultCost={søknadTotal}
+                defaultMarkup={electricalMarkupDefault}
+                showAttachment={true}
+                priceOverrides={priceOverrides}
+                markupOverrides={markupOverrides}
+                onCostChange={handleCostChange}
+                onMarkupChange={handleMarkupChange}
+                onTotalChange={handleTotalChange}
+                finished={finished}
+                attachments={attachments}
+                onRemoveAttachment={handleRemoveAttachment}
+                onFileUpload={handleFileUpload}
+              />
             </tr>
           )}
           {inverterCount > 0 && (
             <tr>
-              <td className="p-2 ">Solcelleanlegg - arbeid per inverter</td>
+              <td className="p-2">Solcelleanlegg - arbeid per inverter</td>
               <td className="p-2 text-right">{inverterCount} stk.</td>
-              <td className="p-2 text-right">
-                <input
-                  className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
-                  value={getFinalPrice(
-                    "solcelle_anlegg",
-                    solcelleAnleggBaseTotal * inverterCount,
-                  ).toFixed(0)}
-                  onChange={(e) =>
-                    updatePriceOverride("solcelle_anlegg", e.target.value)
-                  }
-                />
-              </td>
-              <td className="p-2 text-right">{electricalMarkup} %</td>
-              <td className="p-2 text-right">
-                {(
-                  getFinalPrice(
-                    "solcelle_anlegg",
-                    solcelleAnleggBaseTotal * inverterCount,
-                  ) *
-                  (1 + electricalMarkup / 100)
-                ).toFixed(0)}{" "}
-                kr
-              </td>
-              {finished && (
-                <td className="p-2">
-                  {attachments["solcelle_anlegg"] ? (
-                    <div className="flex items-center gap-1">
-                      <a
-                        href={attachments["solcelle_anlegg"]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline text-xs"
-                      >
-                        {attachments["solcelle_anlegg"]}
-                      </a>
-                      <button
-                        onClick={() =>
-                          handleRemoveAttachment("solcelle_anlegg")
-                        } // eller itemId for installasjon
-                        className="text-red-400 hover:text-red-600 font-bold text-sm"
-                        title="Fjern vedlegg"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <input
-                      type="file"
-                      className="text-xs w-28"
-                      onChange={(e) =>
-                        e.target.files &&
-                        handleFileUpload("solcelle_anlegg", e.target.files[0])
-                      }
-                    />
-                  )}
-                </td>
-              )}
+              <ThreeWayCells
+                itemId="solcelle_anlegg"
+                defaultCost={solcelleAnleggBaseTotal * inverterCount}
+                defaultMarkup={electricalMarkupDefault}
+                showAttachment={true}
+                priceOverrides={priceOverrides}
+                markupOverrides={markupOverrides}
+                onCostChange={handleCostChange}
+                onMarkupChange={handleMarkupChange}
+                onTotalChange={handleTotalChange}
+                finished={finished}
+                attachments={attachments}
+                onRemoveAttachment={handleRemoveAttachment}
+                onFileUpload={handleFileUpload}
+              />
             </tr>
           )}
           {batteryCount > 0 && (
@@ -1000,58 +886,21 @@ export default function CalculationSheet({
                 </select>
               </td>
               <td className="p-2 text-right">{batteryCount} stk.</td>
-              <td className="p-2 text-right">
-                <input
-                  className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
-                  value={getFinalPrice(
-                    "batteri",
-                    batteryBasePrice * batteryCount,
-                  ).toFixed(0)}
-                  onChange={(e) =>
-                    updatePriceOverride("batteri", e.target.value)
-                  }
-                />
-              </td>
-              <td className="p-2 text-right">{electricalMarkup} %</td>
-              <td className="p-2 text-right">
-                {(
-                  getFinalPrice("batteri", batteryBasePrice * batteryCount) *
-                  (1 + electricalMarkup / 100)
-                ).toFixed(0)}{" "}
-                kr
-              </td>
-              {finished && (
-                <td className="p-2">
-                  {attachments["batteri"] ? (
-                    <div className="flex items-center gap-1">
-                      <a
-                        href={attachments["batteri"]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline text-xs"
-                      >
-                        {attachments["batteri"]}
-                      </a>
-                      <button
-                        onClick={() => handleRemoveAttachment("batteri")} // eller itemId for installasjon
-                        className="text-red-400 hover:text-red-600 font-bold text-sm"
-                        title="Fjern vedlegg"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <input
-                      type="file"
-                      className="text-xs w-28"
-                      onChange={(e) =>
-                        e.target.files &&
-                        handleFileUpload("batteri", e.target.files[0])
-                      }
-                    />
-                  )}
-                </td>
-              )}
+              <ThreeWayCells
+                itemId="batteri"
+                defaultCost={batteryBasePrice * batteryCount}
+                defaultMarkup={electricalMarkupDefault}
+                showAttachment={true}
+                priceOverrides={priceOverrides}
+                markupOverrides={markupOverrides}
+                onCostChange={handleCostChange}
+                onMarkupChange={handleMarkupChange}
+                onTotalChange={handleTotalChange}
+                finished={finished}
+                attachments={attachments}
+                onRemoveAttachment={handleRemoveAttachment}
+                onFileUpload={handleFileUpload}
+              />
             </tr>
           )}
           {additionalCosts.map((ac, index) => {
@@ -1059,14 +908,7 @@ export default function CalculationSheet({
               (i) => i.id === ac.id,
             );
             const base = selectedItem?.price_per || 0;
-            const defaultPrice = base * ac.quantity;
             const overrideId = `additional_${index}`;
-            const attachmentUrl = attachments[overrideId];
-
-            const totalWithMarkup =
-              getFinalPrice(overrideId, defaultPrice) *
-              (1 + electricalMarkup / 100);
-
             return (
               <tr key={index}>
                 <td>
@@ -1103,54 +945,24 @@ export default function CalculationSheet({
                         Number(e.target.value),
                       )
                     }
-                    className="w-14 border rounded p-1 text-left"
+                    className="w-18 border rounded p-1 text-left"
                   />
                 </td>
-                <td className="p-2 text-right">
-                  <input
-                    className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
-                    value={getFinalPrice(overrideId, defaultPrice).toFixed(0)}
-                    onChange={(e) =>
-                      updatePriceOverride(overrideId, e.target.value)
-                    }
-                  />
-                </td>
-                <td className="p-2 text-right">{electricalMarkup} %</td>
-                <td className="p-2 text-right">
-                  {totalWithMarkup.toFixed(0)} kr
-                </td>
-                {finished && (
-                  <td className="p-2">
-                    {attachmentUrl ? (
-                      <div className="flex items-center gap-1">
-                        <a
-                          href={attachmentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline text-xs"
-                        >
-                          {attachmentUrl}
-                        </a>
-                        <button
-                          onClick={() => handleRemoveAttachment(overrideId)} // eller itemId for installasjon
-                          className="text-red-400 hover:text-red-600 font-bold text-sm"
-                          title="Fjern vedlegg"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : (
-                      <input
-                        type="file"
-                        className="text-xs w-28"
-                        onChange={(e) =>
-                          e.target.files &&
-                          handleFileUpload(overrideId, e.target.files[0])
-                        }
-                      />
-                    )}
-                  </td>
-                )}
+                <ThreeWayCells
+                  itemId={overrideId}
+                  defaultCost={base * ac.quantity}
+                  defaultMarkup={electricalMarkupDefault}
+                  showAttachment={true}
+                  priceOverrides={priceOverrides}
+                  markupOverrides={markupOverrides}
+                  onCostChange={handleCostChange}
+                  onMarkupChange={handleMarkupChange}
+                  onTotalChange={handleTotalChange}
+                  finished={finished}
+                  attachments={attachments}
+                  onRemoveAttachment={handleRemoveAttachment}
+                  onFileUpload={handleFileUpload}
+                />
               </tr>
             );
           })}
@@ -1160,11 +972,10 @@ export default function CalculationSheet({
                 onClick={handleAddAdditionalCost}
                 className="text-red-500 p-2"
               >
-                Legg til tileggskostnader
+                Legg til tilleggskostnader
               </button>
             </td>
           </tr>
-
           <tr className="text-gray-600">
             <td colSpan={finished ? 5 : 4} className="p-2">
               Total installasjon påslag
@@ -1174,6 +985,7 @@ export default function CalculationSheet({
             </td>
           </tr>
 
+          {/* ── PROVISJON ── */}
           <tr>
             <td colSpan={finished ? 6 : 5}>
               <h2 className="p-1 font-bold">Soleklart Salgsprovisjon</h2>
@@ -1189,46 +1001,46 @@ export default function CalculationSheet({
               <td className="p-2 text-right"></td>
               <td className="p-2 text-right">
                 <input
-                  className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
+                  className="text-right w-32 bg-gray-100 p-1 border border-gray-200"
                   value={finalCommissionAmount.toFixed(0)}
                   onChange={(e) =>
-                    updatePriceOverride("team_commission", e.target.value)
+                    handleCostChange("team_commission", e.target.value)
                   }
                 />
+                {" kr"}
               </td>
               {finished && <td className="p-2"></td>}
             </tr>
           )}
+
           <tr>
             <td className="p-2" colSpan={finished ? 6 : 5}></td>
           </tr>
+
+          {/* ── TOTALER ── */}
           {leadCompany ? (
-            <>
-              <tr>
-                <td className="p-2">Total kostnad eks. mva</td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
-                {finished && <td className="p-2"></td>}
-              </tr>
-            </>
+            <tr>
+              <td className="p-2 font-semibold">Total kostnad eks. mva</td>
+              <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
+              <td className="p-2 text-right font-semibold">
+                {grandTotal.toFixed(0)} kr
+              </td>
+              {finished && <td className="p-2"></td>}
+            </tr>
           ) : (
             <>
               <tr>
-                <td className="p-2">Total kostnad eks. mva</td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right">{grandTotal.toFixed(0)} kr</td>
+                <td className="p-2 font-semibold">Total kostnad eks. mva</td>
+                <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
+                <td className="p-2 text-right font-semibold">
+                  {grandTotal.toFixed(0)} kr
+                </td>
                 {finished && <td className="p-2"></td>}
               </tr>
               <tr>
-                <td className="p-2">Total kostnad inkl. mva</td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right">
+                <td className="p-2 font-semibold">Total kostnad inkl. mva</td>
+                <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
+                <td className="p-2 text-right font-semibold">
                   {(grandTotal * 1.25).toFixed(0)} kr
                 </td>
                 {finished && <td className="p-2"></td>}
@@ -1238,9 +1050,7 @@ export default function CalculationSheet({
               </tr>
               <tr>
                 <td className="p-2">Enova støtte</td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
+                <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
                 <td className="p-2 text-right">
                   {calculatedEnovaSupport.toFixed(0)} kr
                 </td>
@@ -1251,11 +1061,9 @@ export default function CalculationSheet({
               </tr>
               <tr>
                 <td className="p-2">
-                  Total kostnad inkl. mva og Enova-støtte(privat)
+                  Total kostnad inkl. mva og Enova-støtte (privat)
                 </td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
-                <td className="p-2 text-right"></td>
+                <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
                 <td className="p-2 text-right">
                   {(grandTotal * 1.25 - calculatedEnovaSupport).toFixed(0)} kr
                 </td>
