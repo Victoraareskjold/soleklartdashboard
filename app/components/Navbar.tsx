@@ -3,17 +3,43 @@
 import { NAVBAR_ROUTES } from "@/constants/routes";
 import InstallerGroupSelector from "./InstallerGroupSelector";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MentionsCenter from "./MentionsCenter";
 import { BellIcon } from "lucide-react";
 import { useRoles } from "@/context/RoleProvider";
+import { useInstallerGroup } from "@/context/InstallerGroupContext";
 
 export default function Navbar() {
+  const { teamRole } = useRoles();
+  const { installerGroupId } = useInstallerGroup();
+
   const [isMentionsOpen, setIsMentionsOpen] = useState(false);
-  const { teamRole, userName } = useRoles();
+
+  const [coldCallingAmount, setColdCallingAmount] = useState(0);
+  const [contactAmount, setContactAmount] = useState(0);
 
   const openMentions = () => setIsMentionsOpen(true);
   const closeMentions = () => setIsMentionsOpen(false);
+
+  useEffect(() => {
+    if (!installerGroupId) return;
+
+    const fetchLeadCounts = async () => {
+      try {
+        const res = await fetch(
+          `/api/coldCalling/getAmount/${installerGroupId}`,
+        );
+        const data = await res.json();
+
+        setColdCallingAmount(data.coldCallingAmount);
+        setContactAmount(data.contactAmount);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchLeadCounts();
+  }, [installerGroupId]);
 
   if (!teamRole) return null;
 
@@ -35,11 +61,17 @@ export default function Navbar() {
         {/* 2. Map gjennom de filtrerte rutene */}
         {filteredRoutes.map((route) => (
           <Link
-            className="bg-slate-100 rounded p-2 text-slate-700 font-medium text-sm hover:bg-slate-200 transition-colors"
+            className="bg-slate-100 rounded p-2 text-slate-700 font-medium text-sm hover:bg-slate-200 transition-colors flex flex-row items-center justify-between"
             href={route.href}
             key={route.href}
           >
             {route.name}
+            {teamRole === "admin" && route.name === "Cold Calling" && (
+              <p>{coldCallingAmount}</p>
+            )}
+            {teamRole === "admin" && route.name === "Kontakter" && (
+              <p>{contactAmount}</p>
+            )}
           </Link>
         ))}
 
