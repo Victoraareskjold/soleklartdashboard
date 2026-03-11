@@ -984,7 +984,11 @@ export default function LeadPage() {
             </div>
 
             <pre className="text-xs bg-slate-100 p-4 rounded overflow-auto">
+              kwp: {JSON.stringify(selectedEstimate.kwp, null, 2)}
+              <br />
               {JSON.stringify(selectedEstimate.price_data, null, 2)}
+              <br />
+              {JSON.stringify(selectedEstimate.checked_roof_data, null, 2)}
             </pre>
           </div>
         </section>
