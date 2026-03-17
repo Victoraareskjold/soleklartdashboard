@@ -173,9 +173,13 @@ export default function LeadNotesSection({ leadId }: Props) {
 
   const notes = allNotes.filter((note) => note.source === "note");
   const getCommentsForNote = (noteId: string) =>
-    allNotes.filter(
-      (item) => item.source === "comment" && item.note_id === noteId,
-    );
+    allNotes
+      .filter((item) => item.source === "comment" && item.note_id === noteId)
+      .sort(
+        (a, b) =>
+          new Date(a.created_at ?? 0).getTime() -
+          new Date(b.created_at ?? 0).getTime(),
+      );
 
   // ── Add note ───────────────────────────────────────────────────────────────
 
@@ -486,7 +490,7 @@ export default function LeadNotesSection({ leadId }: Props) {
               {/* Comments */}
               <div className="ml-3 border-l pl-2 space-y-1">
                 {comments.map((comment) => (
-                  <p key={comment.id} className="text-xs text-gray-700">
+                  <p key={comment.id} className="text-md text-gray-700">
                     <span className="font-medium">{comment.user?.name}:</span>{" "}
                     {comment.content}
                   </p>
