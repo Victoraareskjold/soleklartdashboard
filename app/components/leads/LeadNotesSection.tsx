@@ -524,6 +524,7 @@ export default function LeadNotesSection({ leadId }: Props) {
                     type="button"
                     onClick={() => handleAddComment(note.id)}
                     className="bg-gray-200 px-2 py-1 text-xs rounded-md hover:bg-gray-300"
+                    disabled={loading}
                   >
                     Send
                   </button>
