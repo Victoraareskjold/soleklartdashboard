@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseClient } from "@/utils/supabase/client";
-import { updateEstimate } from "@/lib/db/estimates";
+import {
+  createSupabaseAdminClient,
+  createSupabaseClient,
+} from "@/utils/supabase/client";
+import { deleteEstimate, updateEstimate } from "@/lib/db/estimates";
 
 export async function GET(
   req: Request,
@@ -67,6 +70,30 @@ export async function PATCH(
     return NextResponse.json(updatedLead);
   } catch (err) {
     console.error("PATCH /api/leads/[id] error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const resolvedParams = await params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
+    const id = resolvedParams.id;
+
+    const client = createSupabaseAdminClient();
+
+    const deleteLead = await deleteEstimate(client, id);
+    return NextResponse.json(deleteLead);
+  } catch (err) {
+    console.error("DELETE /api/leads/[id] error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

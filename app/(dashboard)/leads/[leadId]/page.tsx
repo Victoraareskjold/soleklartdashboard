@@ -36,6 +36,7 @@ import LoadingScreen from "@/app/components/LoadingScreen";
 import TaskSection from "@/app/components/leads/TaskSection";
 import { getPanelWp } from "@/utils/getPanelWp";
 import AcitivitySection from "@/app/components/leads/AcitivitySection";
+import { toast } from "react-toastify";
 
 interface InputProps {
   label: string;
@@ -471,6 +472,22 @@ export default function LeadPage() {
     }
   };
 
+  const handleDeleteEstimate = async (estimateId: string) => {
+    if (!estimateId) return;
+    if (!window.confirm("Er du sikker på at du vil slette?")) return;
+    try {
+      const res = await fetch(`/api/estimates/${estimateId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Kunne ikke slette estimat");
+      setEstimates((prev) => prev?.filter((t) => t.id !== estimateId));
+      toast.success("Estimat slettet!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt ved sletting");
+    }
+  };
+
   if (!user) return <LoadingScreen />;
 
   return (
@@ -850,15 +867,24 @@ export default function LeadPage() {
                         ? new Date(e.created_at).toLocaleString("nb-NO")
                         : "N/A"}
                     </p>
-                    <button
-                      className="text-center py-1 mt-2 w-full text-sm"
-                      onClick={() => {
-                        setSelectedEstimate(e);
-                        setShowDetailedView(true);
-                      }}
-                    >
-                      Se detaljert visning
-                    </button>
+                    <div className="flex flex-row items-center justify-between gap-3 mt-1">
+                      <button
+                        className="text-center py-1.5 mt-2 w-full text-sm bg-blue-500/20 text-blue-900 rounded-md font-medium"
+                        onClick={() => {
+                          setSelectedEstimate(e);
+                          setShowDetailedView(true);
+                        }}
+                      >
+                        Se detaljert visning
+                      </button>
+                      <button
+                        className="text-center py-1.5 mt-2 w-full text-sm bg-red-500/20 text-red-900 rounded-md font-medium disabled:opacity-50"
+                        onClick={() => handleDeleteEstimate(e.id)}
+                        disabled={e.signed_at !== null}
+                      >
+                        Slett
+                      </button>
+                    </div>
                   </li>
                 );
               })}

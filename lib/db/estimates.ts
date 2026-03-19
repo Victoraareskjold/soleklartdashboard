@@ -4,7 +4,7 @@ import { Estimate } from "../types";
 export async function getEstimate(
   client: SupabaseClient,
   teamId: string,
-  installerGroupId: string
+  installerGroupId: string,
 ) {
   const { data, error } = await client
     .from("leads")
@@ -19,7 +19,7 @@ export async function getEstimate(
 export async function updateEstimate(
   client: SupabaseClient,
   estimateId: string,
-  updates: Partial<Estimate>
+  updates: Partial<Estimate>,
 ) {
   const { data, error } = await client
     .from("estimates")
@@ -35,7 +35,7 @@ export async function createEstimate(
   client: SupabaseClient,
   teamId: string,
   name: string,
-  managerId?: string
+  managerId?: string,
 ) {
   const { data: group, error } = await client
     .from("installer_groups")
@@ -44,4 +44,17 @@ export async function createEstimate(
     .single();
   if (error) throw error;
   return group;
+}
+
+export async function deleteEstimate(
+  client: SupabaseClient,
+  estimateId: string,
+) {
+  const { data, error } = await client
+    .from("estimates")
+    .delete()
+    .eq("id", estimateId);
+
+  if (error) throw error;
+  return data;
 }
