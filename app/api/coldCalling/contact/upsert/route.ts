@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, userId } = body;
+    const { id, userId, note } = body;
 
     if (!id || !userId) {
       return NextResponse.json(
@@ -85,6 +85,7 @@ export async function PATCH(req: NextRequest) {
       .update({
         status: 7,
         created_by: userId,
+        note: note || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)

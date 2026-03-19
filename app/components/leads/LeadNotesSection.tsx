@@ -144,18 +144,20 @@ export default function LeadNotesSection({ leadId }: Props) {
 
       const combinedNotes = [...(notesData ?? [])];
 
-      if (leadData?.note && leadData.assigned_to) {
-        const leadSourcer = users.find((u) => u.id === leadData.assigned_to);
+      const noteAuthor = leadData.assigned_to ?? "Nettsideskjema";
+
+      if (leadData?.note && noteAuthor) {
+        const leadSourcer = users.find((u) => u.id === noteAuthor);
         const leadNote: Note = {
           id: `lead-note-${leadData.id}`,
           lead_id: leadData.id,
-          user_id: leadData.assigned_to,
+          user_id: noteAuthor,
           content: leadData.note,
           created_at: leadData.created_at ?? new Date(0).toISOString(),
           source: "note",
           user: leadSourcer ?? {
-            id: leadData.assigned_to,
-            name: "Ukjent lead-innhenter",
+            id: noteAuthor,
+            name: "Nettsideskjema",
           },
         };
         combinedNotes.push(leadNote);
