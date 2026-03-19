@@ -225,6 +225,10 @@ export default function LeadsTable({
 
   const calculateTotalForStatus = (statusLeads: FullLead[]): number => {
     return statusLeads.reduce((total, lead) => {
+      if (lead.updated_price !== null && lead.updated_price !== undefined) {
+        return total + Number(lead.updated_price);
+      }
+
       if (!lead.estimates || lead.estimates.length === 0) return total;
 
       const latest = lead.estimates.reduce((a, b) =>
