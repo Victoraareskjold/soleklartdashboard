@@ -158,6 +158,11 @@ export default function LeadPage() {
   const [updatedPrice, setUpdatedPrice] = useState<number | null>(null);
   const [domain, setDomain] = useState("");
 
+  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(
+    null,
+  );
+  const [showdetailedView, setShowDetailedView] = useState(false);
+
   // Customer info
   const [voltage, setVoltage] = useState(230);
   const voltageOptions = [
@@ -827,25 +832,33 @@ export default function LeadPage() {
                           </div>
                         </div>
                       )}
-
-                      <p className="font-medium text-sm underline">
-                        Total eks. mva:{" "}
-                        {Number(e.price_data?.total ?? 0).toLocaleString(
-                          "nb-NO",
-                          {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                          },
-                        )}{" "}
-                        kr
-                      </p>
-
-                      <p className="text-sm mt-2">
-                        {e.created_at
-                          ? new Date(e.created_at).toLocaleString("nb-NO")
-                          : "N/A"}
-                      </p>
                     </Link>
+                    <p className="font-medium text-sm underline">
+                      Total eks. mva:{" "}
+                      {Number(e.price_data?.total ?? 0).toLocaleString(
+                        "nb-NO",
+                        {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        },
+                      )}{" "}
+                      kr
+                    </p>
+
+                    <p className="text-sm mt-2">
+                      {e.created_at
+                        ? new Date(e.created_at).toLocaleString("nb-NO")
+                        : "N/A"}
+                    </p>
+                    <button
+                      className="text-center py-1 mt-2 w-full text-sm"
+                      onClick={() => {
+                        setSelectedEstimate(e);
+                        setShowDetailedView(true);
+                      }}
+                    >
+                      Se detaljert visning
+                    </button>
                   </li>
                 );
               })}
@@ -940,6 +953,242 @@ export default function LeadPage() {
               className="h-5/6 w-5/6 relative z-100 m-auto rounded-xl"
             />
           </>
+        </section>
+      )}
+      {showdetailedView && selectedEstimate && (
+        <section className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black opacity-40"
+            onClick={() => setShowDetailedView(false)}
+          />
+
+          <div className="relative bg-white w-4/5 h-4/5 rounded-lg shadow-lg p-4 overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">
+                Detaljert estimat – {selectedEstimate.id}
+              </h2>
+
+              <button
+                className="px-3 py-1 bg-gray-200 rounded"
+                onClick={() => setShowDetailedView(false)}
+              >
+                Lukk
+              </button>
+            </div>
+
+            <div className="text-sm space-y-6">
+              {/* Roof data */}
+              {selectedEstimate.checked_roof_data && (
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-2 border-b pb-1">
+                    Takflater
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(Array.isArray(selectedEstimate.checked_roof_data)
+                      ? selectedEstimate.checked_roof_data
+                      : []
+                    ).map(
+                      (
+                        roof: {
+                          roof_id: string;
+                          angle: number;
+                          direction: string;
+                          max_panels: number;
+                          adjusted_panel_count: number;
+                        },
+                        i: number,
+                      ) => (
+                        <div
+                          key={i}
+                          className="bg-slate-50 rounded-lg p-3 border"
+                        >
+                          <p className="font-medium text-gray-800 mb-2">
+                            Tak {roof.roof_id}
+                          </p>
+                          <div className="space-y-1 text-gray-600">
+                            <div className="flex justify-between">
+                              <span>Vinkel</span>
+                              <span className="font-medium">
+                                {roof.angle.toFixed(1)}°
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Retning</span>
+                              <span className="font-medium">
+                                {roof.direction}°
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Max paneler</span>
+                              <span className="font-medium">
+                                {roof.max_panels}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Justerte paneler</span>
+                              <span className="font-medium text-blue-600">
+                                {roof.adjusted_panel_count}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Suppliers */}
+              {selectedEstimate.price_data?.suppliers && (
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-2 border-b pb-1">
+                    Produkter
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedEstimate.price_data.suppliers.map(
+                      (s: {
+                        id: string;
+                        name: string;
+                        product: string;
+                        quantity: number;
+                        supplier: string;
+                        priceWithMarkup: number;
+                      }) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between bg-slate-50 rounded-lg p-3 border"
+                        >
+                          <div>
+                            <p className="font-medium text-gray-800">
+                              {s.name}
+                            </p>
+                            <p className="text-gray-500 text-xs">{s.product}</p>
+                            <p className="text-gray-400 text-xs">
+                              {s.supplier} · Ant: {s.quantity}
+                            </p>
+                          </div>
+                          <span className="font-semibold text-gray-800 whitespace-nowrap ml-4">
+                            {s.priceWithMarkup.toLocaleString("nb-NO", {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0,
+                            })}{" "}
+                            kr
+                          </span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Mounting */}
+              {selectedEstimate.price_data?.mounting && (
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-2 border-b pb-1">
+                    Montering
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedEstimate.price_data.mounting.map(
+                      (m: {
+                        id: string;
+                        name: string;
+                        product: string;
+                        quantity: number;
+                        supplier: string;
+                        priceWithMarkup: number;
+                      }) => (
+                        <div
+                          key={m.id}
+                          className="flex items-center justify-between bg-slate-50 rounded-lg p-3 border"
+                        >
+                          <div>
+                            <p className="font-medium text-gray-800">
+                              {m.name}
+                            </p>
+                            <p className="text-gray-500 text-xs">{m.product}</p>
+                            <p className="text-gray-400 text-xs">
+                              {m.supplier} · Ant: {m.quantity}
+                            </p>
+                          </div>
+                          <span className="font-semibold text-gray-800 whitespace-nowrap ml-4">
+                            {m.priceWithMarkup.toLocaleString("nb-NO", {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0,
+                            })}{" "}
+                            kr
+                          </span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Installation */}
+              {selectedEstimate.price_data?.installation && (
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-2 border-b pb-1">
+                    Installasjon
+                  </h3>
+                  <div className="space-y-2">
+                    {Object.entries(selectedEstimate.price_data.installation)
+                      .filter(
+                        ([key]) =>
+                          key !== "additionalCosts" && key !== "battery",
+                      )
+                      .map(([key, val]: [string, unknown]) => {
+                        const v = val as { priceWithMarkup: number };
+                        return (
+                          <div
+                            key={key}
+                            className="flex justify-between bg-slate-50 rounded-lg p-3 border"
+                          >
+                            <span className="capitalize text-gray-700">
+                              {key}
+                            </span>
+                            <span className="font-semibold">
+                              {v.priceWithMarkup.toLocaleString("nb-NO", {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              })}{" "}
+                              kr
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* Totals */}
+              <div className="bg-gray-800 text-white rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-gray-300">
+                  <span>Total eks. mva</span>
+                  <span className="font-semibold">
+                    {Number(
+                      selectedEstimate.price_data?.total ?? 0,
+                    ).toLocaleString("nb-NO", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}{" "}
+                    kr
+                  </span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t border-gray-600 pt-2">
+                  <span>Total inkl. mva</span>
+                  <span>
+                    {Number(
+                      selectedEstimate.price_data?.["total inkl. alt"] ?? 0,
+                    ).toLocaleString("nb-NO", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}{" "}
+                    kr
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
       )}
     </div>
