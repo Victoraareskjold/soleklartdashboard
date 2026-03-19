@@ -11,7 +11,6 @@ import {
   updateLead,
   getLeadNotes,
   getStoredLeadEmails,
-  updateEstimate,
 } from "@/lib/api";
 
 import { useParams, useSearchParams } from "next/navigation";
@@ -156,11 +155,6 @@ export default function LeadPage() {
   const [role, setRole] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [createdBy, setCreatedBy] = useState("");
-
-  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(
-    null,
-  );
-  const [showdetailedView, setShowDetailedView] = useState(false);
 
   const [domain, setDomain] = useState("");
 
@@ -458,38 +452,8 @@ export default function LeadPage() {
       : Number(estimate.price_data?.["total inkl. alt"] ?? 0);
   };
 
-  const handleEstimatePriceChange = async (id: string, value: number) => {
-    setEstimates((prev) =>
-      prev?.map((e) =>
-        e.id === id
-          ? {
-              ...e,
-              updated_price: value,
-            }
-          : e,
-      ),
-    );
-
-    try {
-      await updateEstimate(id, {
-        updated_price: value,
-        updated_at: new Date(),
-      });
-    } catch (err) {
-      console.error("Failed to update estimate price", err);
-    }
-  };
-
   const latest = getLatestEstimate();
   const total = getTotalForCustomer(latest);
-
-  const formatNumber = (num: number) =>
-    num.toLocaleString("nb-NO", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-
-  const parseNumber = (val: string) => Number(val.replace(/\s/g, ""));
 
   if (!user) return <LoadingScreen />;
 
@@ -829,9 +793,11 @@ export default function LeadPage() {
                       <p className="font-semibold">
                         Tilbud - {kwp.toFixed(1)} kWp
                       </p>
+
                       <p className="underline text-xs text-blue-500 mb-3">
                         {estimateUrl}
                       </p>
+
                       {e.finished && (
                         <div className="text-sm mb-2 flex flex-row gap-2 items-center">
                           <strong>Status:</strong>
@@ -850,42 +816,25 @@ export default function LeadPage() {
                           </div>
                         </div>
                       )}
-                    </Link>
-                    <p className="font-medium text-sm underline w-42">
-                      Total eks. mva:{" "}
-                    </p>
-                    <div className="flex flex-row gap-1 items-center mt-1 z-500">
-                      <input
-                        className="w-full bg-slate-100 p-1 rounded-md border-slate-300 border-1"
-                        value={formatNumber(
-                          e.updated_price ?? Number(e.price_data?.total ?? 0),
-                        )}
-                        onChange={(event) => {
-                          const raw = event.target.value;
-                          const num = parseNumber(raw);
 
-                          if (!isNaN(num)) {
-                            handleEstimatePriceChange(e.id, num);
-                          }
-                        }}
-                        type="text"
-                      />
-                      <p>kr </p>
-                    </div>
-                    <p className="text-sm mt-2">
-                      {e.created_at
-                        ? new Date(e.created_at).toLocaleString("nb-NO")
-                        : "N/A"}
-                    </p>
-                    <button
-                      className="text-center py-1 mt-2 w-full text-sm"
-                      onClick={() => {
-                        setSelectedEstimate(e);
-                        setShowDetailedView(true);
-                      }}
-                    >
-                      Se detaljert visning
-                    </button>
+                      <p className="font-medium text-sm underline">
+                        Total eks. mva:{" "}
+                        {Number(e.price_data?.total ?? 0).toLocaleString(
+                          "nb-NO",
+                          {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          },
+                        )}{" "}
+                        kr
+                      </p>
+
+                      <p className="text-sm mt-2">
+                        {e.created_at
+                          ? new Date(e.created_at).toLocaleString("nb-NO")
+                          : "N/A"}
+                      </p>
+                    </Link>
                   </li>
                 );
               })}
@@ -960,37 +909,6 @@ export default function LeadPage() {
               className="h-5/6 w-5/6 relative z-100 m-auto rounded-xl"
             />
           </>
-        </section>
-      )}
-      {showdetailedView && selectedEstimate && (
-        <section className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black opacity-40"
-            onClick={() => setShowDetailedView(false)}
-          />
-
-          <div className="relative bg-white w-4/5 h-4/5 rounded-lg shadow-lg p-4 overflow-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">
-                Detaljert estimat – {selectedEstimate.id}
-              </h2>
-
-              <button
-                className="px-3 py-1 bg-gray-200 rounded"
-                onClick={() => setShowDetailedView(false)}
-              >
-                Lukk
-              </button>
-            </div>
-
-            <pre className="text-xs bg-slate-100 p-4 rounded overflow-auto">
-              kwp: {JSON.stringify(selectedEstimate.kwp, null, 2)}
-              <br />
-              {JSON.stringify(selectedEstimate.price_data, null, 2)}
-              <br />
-              {JSON.stringify(selectedEstimate.checked_roof_data, null, 2)}
-            </pre>
-          </div>
         </section>
       )}
     </div>

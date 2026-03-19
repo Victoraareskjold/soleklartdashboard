@@ -78,6 +78,7 @@ export interface Lead {
   mobile?: string | null;
   role?: string | null;
   note?: string | null;
+  updated_price: number | null;
 }
 
 import { SolarData } from "@/app/components/SolarDataView";
@@ -109,7 +110,6 @@ export interface Estimate {
   desired_kwh?: number;
   coverage_percentage?: number;
   price_data?: PriceOverview;
-  updated_price: number | null;
 
   finished?: boolean;
   signed_at?: string;
