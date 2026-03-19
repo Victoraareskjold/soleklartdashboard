@@ -155,7 +155,7 @@ export default function LeadPage() {
   const [role, setRole] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [createdBy, setCreatedBy] = useState("");
-
+  const [updatedPrice, setUpdatedPrice] = useState<number | null>(null);
   const [domain, setDomain] = useState("");
 
   // Customer info
@@ -255,6 +255,7 @@ export default function LeadPage() {
         setAssignedTo(data.assigned_to ?? "");
         setCreatedBy(data.created_by ?? "");
         setBirthDate(data.birth_date ?? "");
+        setUpdatedPrice(data.updated_price ?? null);
       }),
       getEstimatesByLeadId(leadIdStr).then((data) => {
         setEstimates(data ?? []);
@@ -454,6 +455,16 @@ export default function LeadPage() {
 
   const latest = getLatestEstimate();
   const total = getTotalForCustomer(latest);
+
+  const handleLeadUpdatedPriceChange = async (value: number) => {
+    setUpdatedPrice(value);
+
+    try {
+      await updateLead(leadIdStr!, { updated_price: value });
+    } catch (err) {
+      console.error("Failed to update estimate price", err);
+    }
+  };
 
   if (!user) return <LoadingScreen />;
 
@@ -881,18 +892,38 @@ export default function LeadPage() {
         </div>
 
         <div className="border-t-1 border-b-1 border-slate-700 py-4 my-4">
-          <h1>Fakturering</h1>
-          <div className="flex gap-2">
-            <ul className="w-full">
-              {total !== null ? (
-                <p className="font-medium">
-                  {company?.trim() ? "Eks. mva: " : "Inkl. mva: "}
-                  {total.toLocaleString("nb-NO")} kr
+          <h1 className="font-medium mb-2">Fakturering</h1>
+          <div className="w-full">
+            <label className="text-xs font-medium text-gray-700">
+              {company?.trim() ? "Pris eks. mva (kr)" : "Pris inkl. mva (kr)"}
+            </label>
+            <input
+              type="number"
+              className="w-full text-sm mt-1"
+              value={updatedPrice ?? total ?? ""}
+              placeholder={
+                total !== null ? total.toLocaleString("nb-NO") : "Ingen estimat"
+              }
+              onChange={(e) => {
+                const val =
+                  e.target.value === "" ? null : Number(e.target.value);
+                setUpdatedPrice(val);
+              }}
+              onBlur={(e) => {
+                const val =
+                  e.target.value === "" ? null : Number(e.target.value);
+                if (val !== null) {
+                  handleLeadUpdatedPriceChange(val);
+                }
+              }}
+            />
+            {updatedPrice !== null &&
+              total !== null &&
+              updatedPrice !== total && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Estimat: {total.toLocaleString("nb-NO")} kr
                 </p>
-              ) : (
-                <p className="text-sm text-gray-500">Ingen estimat</p>
               )}
-            </ul>
           </div>
         </div>
       </section>
