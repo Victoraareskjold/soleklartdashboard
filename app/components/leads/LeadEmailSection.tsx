@@ -173,12 +173,12 @@ export default function LeadEmailSection({
   const signature = `<br/><br/><br/>Med vennlig hilsen<br/>${userData?.name}<br/><br/>--<br/><br/><strong>Teknisk konsulent | Sol og energisystemer</strong><br/>Mob.: 458 71 718<br/>Adresse: ${installerData?.address}<br/><br/>Nettside: www.${installerData?.site}.no<br/><br/>${installerData?.name}<br/>Org.nr: ${installerData?.org_nr}`;
 
   useEffect(() => {
-    if (showCompose && editor && !replyToMessageId) {
+    if (showCompose && editor && !replyToMessageId && editor.isEmpty) {
       const content = signature;
       setBody(content);
       editor.commands.setContent(content);
     }
-  }, [showCompose, editor, signature, replyToMessageId]);
+  }, [showCompose, editor, replyToMessageId, signature]);
 
   useEffect(() => {
     if (newEstimate && leadName && domain && installerData?.name) {
