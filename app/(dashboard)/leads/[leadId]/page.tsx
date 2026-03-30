@@ -13,7 +13,7 @@ import {
   getStoredLeadEmails,
 } from "@/lib/api";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import LeadNotesSection from "@/app/components/leads/LeadNotesSection";
 import LeadEmailSection from "@/app/components/leads/LeadEmailSection";
@@ -91,6 +91,8 @@ export default function LeadPage() {
   const { teamId } = useTeam();
   const { user } = useAuth();
   const { installerGroupId } = useInstallerGroup();
+
+  const router = useRouter();
 
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
@@ -488,6 +490,22 @@ export default function LeadPage() {
     }
   };
 
+  const handleDeleteLead = async (leadId: string) => {
+    if (!leadId) return;
+    if (!window.confirm("Er du sikker på at du vil slette?")) return;
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Kunne ikke slette lead");
+      toast.success("Lead slettet!");
+      router.push("/leads");
+    } catch (err) {
+      console.error(err);
+      toast.error("Noe gikk galt ved sletting");
+    }
+  };
+
   if (!user) return <LoadingScreen />;
 
   return (
@@ -733,6 +751,12 @@ export default function LeadPage() {
               />
             </div>
           </div>
+          <button
+            className="text-center py-1.5 mt-2 w-full text-sm bg-red-500/20 text-red-900 rounded-md font-medium disabled:opacity-50"
+            onClick={() => handleDeleteLead(leadIdStr!)}
+          >
+            Slett lead
+          </button>
         </div>
         {/*  */}
       </section>
