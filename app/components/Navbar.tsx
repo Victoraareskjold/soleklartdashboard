@@ -5,7 +5,8 @@ import InstallerGroupSelector from "./InstallerGroupSelector";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import MentionsCenter from "./MentionsCenter";
-import { BellIcon } from "lucide-react";
+import GlobalSearch from "./GlobalSearch";
+import { BellIcon, SearchIcon } from "lucide-react";
 import { useRoles } from "@/context/RoleProvider";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 
@@ -14,12 +15,26 @@ export default function Navbar() {
   const { installerGroupId } = useInstallerGroup();
 
   const [isMentionsOpen, setIsMentionsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const [coldCallingAmount, setColdCallingAmount] = useState(0);
   const [contactAmount, setContactAmount] = useState(0);
 
   const openMentions = () => setIsMentionsOpen(true);
   const closeMentions = () => setIsMentionsOpen(false);
+
+  // Cmd+K / Ctrl+K opens search (admin only)
+  useEffect(() => {
+    if (teamRole !== "admin") return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [teamRole]);
 
   useEffect(() => {
     if (!installerGroupId) return;
@@ -58,7 +73,6 @@ export default function Navbar() {
       </div>
 
       <div className="flex flex-col gap-2">
-        {/* 2. Map gjennom de filtrerte rutene */}
         {filteredRoutes.map((route) => (
           <Link
             className="bg-slate-100 rounded p-2 text-slate-700 font-medium text-sm hover:bg-slate-200 transition-colors flex flex-row items-center justify-between"
@@ -75,15 +89,32 @@ export default function Navbar() {
           </Link>
         ))}
 
-        <button
-          className="bg-slate-100 p-2 h-10 flex items-center justify-center w-10 rounded-full text-slate-700 font-medium text-sm"
-          onClick={openMentions}
-        >
-          <BellIcon size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="bg-slate-100 p-2 h-10 flex items-center justify-center w-10 rounded-full text-slate-700 font-medium text-sm"
+            onClick={openMentions}
+          >
+            <BellIcon size={20} />
+          </button>
+
+          {teamRole === "admin" && (
+            <button
+              className="bg-slate-100 p-2 h-10 flex items-center justify-center flex-1 rounded-lg text-slate-500 text-xs gap-2 hover:bg-slate-200 transition-colors"
+              onClick={() => setIsSearchOpen(true)}
+              title="Søk (⌘K)"
+            >
+              <SearchIcon size={15} />
+              <span>Søk</span>
+              <kbd className="ml-auto text-slate-400 text-[10px] border border-slate-300 rounded px-1">
+                ⌘K
+              </kbd>
+            </button>
+          )}
+        </div>
       </div>
 
       {isMentionsOpen && <MentionsCenter onClose={closeMentions} />}
+      {isSearchOpen && <GlobalSearch onClose={() => setIsSearchOpen(false)} />}
     </nav>
   );
 }
