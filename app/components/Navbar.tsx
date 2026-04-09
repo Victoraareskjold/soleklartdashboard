@@ -43,13 +43,13 @@ export default function Navbar() {
 
   if (!teamRole) return null;
 
-  // 1. Definer hvilke ruter som skal filtreres bort for installers
-  const filteredRoutes =
-    teamRole === "installer"
-      ? NAVBAR_ROUTES.filter(
-          (route) => route.name.toLowerCase() !== "cold calling",
-        )
-      : NAVBAR_ROUTES;
+  // Filter routes: installers can't see cold calling, non-admins can't see admin
+  const filteredRoutes = NAVBAR_ROUTES.filter((route) => {
+    if (route.adminOnly && teamRole !== "admin") return false;
+    if (teamRole === "installer" && route.name.toLowerCase() === "cold calling")
+      return false;
+    return true;
+  });
 
   return (
     <nav className="flex flex-col w-64 gap-4 p-2 border-r-2 border-slate-200 fixed h-screen bg-white z-50">
