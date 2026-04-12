@@ -221,7 +221,12 @@ export async function GET(req: Request) {
     const allTeamMembers = teamMembersData || [];
 
     // Cold callers = everyone who is NOT an installer (member + admin both cold call)
-    const coldCallerMembers = allTeamMembers.filter((m) => m.role !== "installer");
+    const coldCallerMembers = allTeamMembers.filter(
+      (m) =>
+        m.role !== "installer" &&
+        m.user_id !== "29055a66-f819-411b-b334-18def16f36b6" &&
+        m.user_id !== "1fa66993-1595-413f-94b6-e35a3a1e4560",
+    );
     const coldCallerUserIds = coldCallerMembers.map((m) => m.user_id);
 
     // Resolve names from users table (the only source of truth for names)
@@ -247,15 +252,11 @@ export async function GET(req: Request) {
     });
 
     // ── Pipeline funnel (current snapshot, all leads) ─────────────────────────
-    const statusAgg: Record<
-      number,
-      { count: number; totalValue: number }
-    > = {};
+    const statusAgg: Record<number, { count: number; totalValue: number }> = {};
     leads.forEach((lead) => {
       const status = lead.status;
       if (!status) return;
-      if (!statusAgg[status])
-        statusAgg[status] = { count: 0, totalValue: 0 };
+      if (!statusAgg[status]) statusAgg[status] = { count: 0, totalValue: 0 };
       statusAgg[status].count++;
       statusAgg[status].totalValue += lead.updated_price || 0;
     });
@@ -273,7 +274,13 @@ export async function GET(req: Request) {
     // Start from the full cold-caller member list so everyone shows up (even with 0 leads)
     const coldCallerAgg: Record<
       string,
-      { name: string; total: number; reachedPipeline: number; signed: number; signedValue: number }
+      {
+        name: string;
+        total: number;
+        reachedPipeline: number;
+        signed: number;
+        signedValue: number;
+      }
     > = {};
 
     coldCallerMembers.forEach((m) => {
@@ -303,7 +310,9 @@ export async function GET(req: Request) {
       .map((c) => ({
         ...c,
         conversionRate:
-          c.total > 0 ? Math.round((c.reachedPipeline / c.total) * 1000) / 10 : 0,
+          c.total > 0
+            ? Math.round((c.reachedPipeline / c.total) * 1000) / 10
+            : 0,
       }))
       .sort((a, b) => b.reachedPipeline - a.reachedPipeline);
 
