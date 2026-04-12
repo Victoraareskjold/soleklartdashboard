@@ -79,6 +79,8 @@ export interface Lead {
   role?: string | null;
   note?: string | null;
   updated_price: number | null;
+  lead_source?: string | null;
+  assigned_user?: { name: string } | null;
 }
 
 import { SolarData } from "@/app/components/SolarDataView";

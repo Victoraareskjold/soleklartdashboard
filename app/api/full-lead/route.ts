@@ -26,6 +26,7 @@ export async function GET(req: Request) {
       .select(
         `
     *,
+    assigned_user:users!leads_assigned_to_fkey(name),
     lead_tasks (
       id,
       title,

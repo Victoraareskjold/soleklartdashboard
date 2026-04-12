@@ -94,6 +94,7 @@ export default function CreateLead() {
         address,
         status: 7,
         priority: "iron",
+        lead_source: "cold_call",
       });
       toast.success(
         <div>

@@ -67,7 +67,34 @@ export async function PATCH(
         { status: 400 },
       );
 
+    // Record status transition before updating, if status is changing
+    let fromStatus: number | null = null;
+    let statusIsChanging = false;
+    if (body.status !== undefined) {
+      const { data: current } = await client
+        .from("leads")
+        .select("status")
+        .eq("id", leadId)
+        .single();
+      fromStatus = current?.status ?? null;
+      statusIsChanging = fromStatus !== body.status;
+    }
+
     const updatedLead = await updateLead(client, leadId, body);
+
+    // Write history row after successful update
+    if (statusIsChanging) {
+      const {
+        data: { user },
+      } = await client.auth.getUser();
+      await client.from("lead_status_history").insert({
+        lead_id: leadId,
+        from_status: fromStatus,
+        to_status: body.status,
+        changed_by: user?.id ?? null,
+      });
+    }
+
     return NextResponse.json(updatedLead);
   } catch (err) {
     console.error("PATCH /api/leads/[id] error:", err);

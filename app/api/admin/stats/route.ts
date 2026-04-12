@@ -94,6 +94,29 @@ const PIPELINE_STATUSES = new Set([
   5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21,
 ]);
 const SIGNED_STATUSES = new Set([18, 19, 20, 21]);
+// Pipeline + closing only (excludes cold calling stage 5) — used for installer group stats
+const INSTALLER_PIPELINE_STATUSES = new Set([
+  7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21,
+]);
+
+// Inbound traffic sources — add new entries here to support more channels
+const INBOUND_SOURCES: { key: string; label: string }[] = [
+  { key: "google", label: "Google" },
+  { key: "facebook", label: "Facebook" },
+  { key: "organic", label: "Organic" },
+];
+
+/**
+ * Detects if a lead is inbound (came via a web form) and which channel it's from.
+ * Returns null for cold-call leads (no "Tracking:" section in note).
+ * Priority: fbclid → gclid → organic
+ */
+function parseInboundSource(note: string | null): string | null {
+  if (!note || !note.includes("Tracking:")) return null;
+  if (/fbclid:\s*\S/.test(note)) return "facebook";
+  if (/gclid:\s*\S/.test(note)) return "google";
+  return "organic";
+}
 
 type GroupBy = "day" | "week" | "month";
 
@@ -154,6 +177,8 @@ export async function GET(req: Request) {
       assigned_to: string | null;
       created_by: string | null;
       installer_group_id: string | null;
+      note: string | null;
+      lead_source: string | null;
     }[] = [];
 
     let offset = 0;
@@ -161,7 +186,7 @@ export async function GET(req: Request) {
       const { data, error } = await client
         .from("leads")
         .select(
-          "id, status, created_at, updated_at, updated_price, assigned_to, created_by, installer_group_id",
+          "id, status, created_at, updated_at, updated_price, assigned_to, created_by, installer_group_id, note, lead_source",
         )
         .eq("team_id", teamId)
         .range(offset, offset + PAGE_SIZE - 1);
@@ -181,6 +206,14 @@ export async function GET(req: Request) {
     const periodLeads = leads.filter((l) => {
       if (!l.created_at) return false;
       const d = new Date(l.created_at);
+      return d >= fromDate && d <= toDate;
+    });
+
+    // Cold caller activity filter: leads touched (updated) in the period,
+    // regardless of when they were created. A caller may work leads
+    // created before the selected window.
+    const callerPeriodLeads = leads.filter((l) => {
+      const d = new Date(l.updated_at ?? l.created_at ?? "");
       return d >= fromDate && d <= toDate;
     });
 
@@ -271,50 +304,125 @@ export async function GET(req: Request) {
     }));
 
     // ── Cold-caller stats ─────────────────────────────────────────────────────
-    // Start from the full cold-caller member list so everyone shows up (even with 0 leads)
+    // Tracks calling activity per person:
+    // - assigned: total leads assigned (their "numbers")
+    // - called: leads they've actually worked (not still sitting at status 2 "Ring opp")
+    // - converted: reached pipeline (status 5 "Vil ha tilbud" or beyond)
+    // - notInterested: status 3 or 16
+    // - noAnswer: status 4 or 22
     const coldCallerAgg: Record<
       string,
       {
         name: string;
-        total: number;
-        reachedPipeline: number;
-        signed: number;
-        signedValue: number;
+        assigned: number;
+        called: number;
+        converted: number;
+        notInterested: number;
+        noAnswer: number;
       }
     > = {};
 
     coldCallerMembers.forEach((m) => {
       coldCallerAgg[m.user_id] = {
         name: memberMap[m.user_id] || "Ukjent",
-        total: 0,
-        reachedPipeline: 0,
-        signed: 0,
-        signedValue: 0,
+        assigned: 0,
+        called: 0,
+        converted: 0,
+        notInterested: 0,
+        noAnswer: 0,
       };
     });
 
-    leads.forEach((lead) => {
+    callerPeriodLeads.forEach((lead) => {
       const userId = lead.assigned_to;
       if (!userId || !coldCallerAgg[userId]) return;
-      coldCallerAgg[userId].total++;
-      if (lead.status && PIPELINE_STATUSES.has(lead.status)) {
-        coldCallerAgg[userId].reachedPipeline++;
+      coldCallerAgg[userId].assigned++;
+
+      const s = lead.status;
+      if (!s) return;
+
+      // Worked through = not still waiting to be called (status 2)
+      if (s !== 2) {
+        coldCallerAgg[userId].called++;
       }
-      if (lead.status && SIGNED_STATUSES.has(lead.status)) {
-        coldCallerAgg[userId].signed++;
-        coldCallerAgg[userId].signedValue += lead.updated_price || 0;
+
+      // Results
+      if (PIPELINE_STATUSES.has(s)) {
+        coldCallerAgg[userId].converted++;
+      } else if (s === 3 || s === 16) {
+        coldCallerAgg[userId].notInterested++;
+      } else if (s === 4 || s === 22) {
+        coldCallerAgg[userId].noAnswer++;
       }
     });
 
     const coldCallerStats = Object.values(coldCallerAgg)
+      .filter((c) => c.assigned > 0)
       .map((c) => ({
         ...c,
         conversionRate:
-          c.total > 0
-            ? Math.round((c.reachedPipeline / c.total) * 1000) / 10
+          c.assigned > 0
+            ? Math.round((c.converted / c.assigned) * 1000) / 10
             : 0,
       }))
-      .sort((a, b) => b.reachedPipeline - a.reachedPipeline);
+      .sort((a, b) => b.converted - a.converted || b.assigned - a.assigned);
+
+    // ── Inbound / warm lead stats (by traffic source) ────────────────────────
+    const inboundAgg: Record<
+      string,
+      {
+        label: string;
+        assigned: number;
+        called: number;
+        converted: number;
+        notInterested: number;
+        noAnswer: number;
+      }
+    > = {};
+    INBOUND_SOURCES.forEach((src) => {
+      inboundAgg[src.key] = {
+        label: src.label,
+        assigned: 0,
+        called: 0,
+        converted: 0,
+        notInterested: 0,
+        noAnswer: 0,
+      };
+    });
+
+    periodLeads.forEach((lead) => {
+      // Prefer stored lead_source; fall back to note-parsing for old records
+      const source =
+        lead.lead_source && lead.lead_source !== "cold_call"
+          ? lead.lead_source
+          : parseInboundSource(lead.note);
+      if (!source || !inboundAgg[source]) return;
+      inboundAgg[source].assigned++;
+
+      const s = lead.status;
+      if (!s) return;
+      if (s !== 2) inboundAgg[source].called++;
+
+      if (PIPELINE_STATUSES.has(s)) {
+        inboundAgg[source].converted++;
+      } else if (s === 3 || s === 16) {
+        inboundAgg[source].notInterested++;
+      } else if (s === 4 || s === 22) {
+        inboundAgg[source].noAnswer++;
+      }
+    });
+
+    const inboundStats = INBOUND_SOURCES.map((src) => ({
+      source: src.key,
+      ...inboundAgg[src.key],
+      conversionRate:
+        inboundAgg[src.key].assigned > 0
+          ? Math.round(
+              (inboundAgg[src.key].converted / inboundAgg[src.key].assigned) *
+                1000,
+            ) / 10
+          : 0,
+    }));
 
     // ── Installer group stats ─────────────────────────────────────────────────
     const installerGroupAgg: Record<
@@ -325,6 +433,7 @@ export async function GET(req: Request) {
     leads.forEach((lead) => {
       const gid = lead.installer_group_id;
       if (!gid) return;
+      if (!lead.status || !INSTALLER_PIPELINE_STATUSES.has(lead.status)) return;
       if (!installerGroupAgg[gid]) {
         installerGroupAgg[gid] = {
           name: groupNameMap[gid] || "Ukjent gruppe",
@@ -384,9 +493,109 @@ export async function GET(req: Request) {
       (l) => l.status && !new Set([1, 3, 16]).has(l.status),
     ).length;
 
+    // ── Pipeline tracking (A–E) ───────────────────────────────────────────────
+    // A: Tapte leads
+    const notInterested = leads.filter(
+      (l) => l.status === 3 || l.status === 16,
+    ).length;
+    const newsletter = leads.filter((l) => l.status === 11).length;
+    const lost = notInterested + newsletter;
+
+    // B: Aktive i grønn pipeline (dialog → venter på signering)
+    const ACTIVE_PIPELINE = new Set([12, 13, 14, 15, 17]);
+    const activePipeline = leads.filter(
+      (l) => l.status && ACTIVE_PIPELINE.has(l.status),
+    ).length;
+
+    // All-time signed estimates (not period-filtered) — needed for C and D.
+    // Chunked to avoid URL length limits on large .in() filters.
+    const allSignedLeadIds = new Set<string>();
+    const CHUNK = 200;
+    for (let i = 0; i < leads.length; i += CHUNK) {
+      const ids = leads.slice(i, i + CHUNK).map((l) => l.id);
+      const { data: chunk } = await client
+        .from("estimates")
+        .select("lead_id")
+        .not("signed_at", "is", null)
+        .in("lead_id", ids);
+      (chunk || []).forEach((e) => allSignedLeadIds.add(e.lead_id));
+    }
+
+    // C: Signerte (har noen gang hatt en signert avtale)
+    const everSigned = leads.filter((l) => allSignedLeadIds.has(l.id)).length;
+
+    // D: Signert men aldri ferdig montert (status 20/21)
+    const MOUNTED = new Set([20, 21]);
+    const signedNotMounted = leads.filter(
+      (l) => allSignedLeadIds.has(l.id) && (!l.status || !MOUNTED.has(l.status)),
+    ).length;
+
+    // E: Kommisjon utbetalt
+    const commissionPaid = leads.filter((l) => l.status === 21).length;
+
+    // ── Lost lead depth (milestone journey analysis) ──────────────────────────
+    // For each lost lead, determine the deepest pipeline stage they ever reached.
+    // Uses status history for leads that have it; falls back to current status
+    // for older leads recorded before history tracking was introduced.
+    const lostLeads = leads.filter(
+      (l) => l.status === 3 || l.status === 16 || l.status === 11,
+    );
+    const lostLeadIds = lostLeads.map((l) => l.id);
+
+    // Collect all status values ever seen for each lost lead
+    const leadHistoryStatuses = new Map<string, Set<number>>();
+    for (let i = 0; i < lostLeadIds.length; i += CHUNK) {
+      const ids = lostLeadIds.slice(i, i + CHUNK);
+      const { data: historyChunk } = await client
+        .from("lead_status_history")
+        .select("lead_id, to_status")
+        .in("lead_id", ids);
+      (historyChunk || []).forEach((h: { lead_id: string; to_status: number }) => {
+        if (!leadHistoryStatuses.has(h.lead_id)) {
+          leadHistoryStatuses.set(h.lead_id, new Set());
+        }
+        leadHistoryStatuses.get(h.lead_id)!.add(h.to_status);
+      });
+    }
+
+    const MILESTONE_FOLLOW_UP = new Set([7, 8, 9, 10, 11]);
+    const MILESTONE_DIALOG = new Set([12, 13, 14, 15]);
+    const MILESTONE_OFFER = new Set([17]);
+    const MILESTONE_SIGNED_HIST = new Set([18, 19, 20, 21]);
+
+    const getLostMilestone = (lead: (typeof leads)[0]): string => {
+      const history = leadHistoryStatuses.get(lead.id);
+      if (!history || history.size === 0) {
+        // No history recorded yet — infer from current status:
+        // status 16 means they were in the pipeline before falling out
+        if (lead.status === 16) return "pipeline";
+        // status 11 (newsletter) is a pipeline stage
+        if (lead.status === 11) return "pipeline";
+        return "cold_calling";
+      }
+      if ([...MILESTONE_SIGNED_HIST].some((s) => history.has(s))) return "signed";
+      if ([...MILESTONE_OFFER].some((s) => history.has(s))) return "offer";
+      if ([...MILESTONE_DIALOG].some((s) => history.has(s))) return "dialog";
+      if ([...MILESTONE_FOLLOW_UP].some((s) => history.has(s))) return "pipeline";
+      return "cold_calling";
+    };
+
+    const lostByDepth = {
+      coldCalling: 0,
+      pipeline: 0,
+      dialog: 0,
+      offer: 0,
+      signed: 0,
+    };
+    lostLeads.forEach((lead) => {
+      const milestone = getLostMilestone(lead) as keyof typeof lostByDepth;
+      lostByDepth[milestone]++;
+    });
+
     return NextResponse.json({
       funnel,
       coldCallerStats,
+      inboundStats,
       installerGroupStats,
       newLeadsOverTime,
       signedOverTime,
@@ -397,6 +606,16 @@ export async function GET(req: Request) {
         signedInPeriod: signedCount,
         signedValueInPeriod: signedValue,
         pipelineValue,
+      },
+      pipelineTracking: {
+        lost,
+        notInterested,
+        newsletter,
+        activePipeline,
+        everSigned,
+        signedNotMounted,
+        commissionPaid,
+        lostByDepth,
       },
     });
   } catch (err) {

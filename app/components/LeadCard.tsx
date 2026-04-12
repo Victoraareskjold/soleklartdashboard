@@ -44,6 +44,43 @@ const getTaskToDisplay = (tasks: LeadTask[]): LeadTask | null => {
   return earliestTask;
 };
 
+const SOURCE_CONFIG: Record<string, { label: string; className: string }> = {
+  cold_call: {
+    label: "Cold calling",
+    className: "bg-blue-50 text-blue-600",
+  },
+  facebook: {
+    label: "Facebook",
+    className: "bg-indigo-50 text-indigo-600",
+  },
+  google: {
+    label: "Google",
+    className: "bg-green-50 text-green-600",
+  },
+  organic: {
+    label: "Organic",
+    className: "bg-gray-100 text-gray-500",
+  },
+};
+
+function SourceBadge({ lead }: { lead: Lead }) {
+  const src = lead.lead_source;
+  if (!src) return null;
+  const cfg = SOURCE_CONFIG[src];
+  const label = cfg?.label ?? src;
+  const className = cfg?.className ?? "bg-gray-100 text-gray-500";
+  const personName = lead.assigned_user?.name;
+  const displayLabel =
+    src === "cold_call" && personName ? `Cold calling · ${personName}` : label;
+  return (
+    <span
+      className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded ${className}`}
+    >
+      {displayLabel}
+    </span>
+  );
+}
+
 export default function LeadCard({
   lead,
   tasks = [],
@@ -93,10 +130,13 @@ export default function LeadCard({
       </select>
 
       <Link href={`/leads/${lead.id}`}>
-        <p className="font-bold text-blue-600 text-md border-b border-black pb-1 pt-7 mb-3">
-          {lead.company || lead.person_info || "Mangler navn"} -{" "}
-          {lead.address || "Ingen addresse"}
-        </p>
+        <div className="pt-7 pb-1 mb-3 border-b border-black flex items-start justify-between gap-2">
+          <p className="font-bold text-blue-600 text-md">
+            {lead.company || lead.person_info || "Mangler navn"} -{" "}
+            {lead.address || "Ingen addresse"}
+          </p>
+          <SourceBadge lead={lead} />
+        </div>
 
         <div className="flex flex-row justify-between items-center">
           <div>

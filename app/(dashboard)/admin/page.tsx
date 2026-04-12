@@ -30,10 +30,22 @@ interface FunnelStage {
 
 interface ColdCallerStat {
   name: string;
-  total: number;
-  reachedPipeline: number;
-  signed: number;
-  signedValue: number;
+  assigned: number;
+  called: number;
+  converted: number;
+  notInterested: number;
+  noAnswer: number;
+  conversionRate: number;
+}
+
+interface InboundSourceStat {
+  source: string;
+  label: string;
+  assigned: number;
+  called: number;
+  converted: number;
+  notInterested: number;
+  noAnswer: number;
   conversionRate: number;
 }
 
@@ -53,6 +65,7 @@ interface TimeSeries {
 interface AdminStats {
   funnel: FunnelStage[];
   coldCallerStats: ColdCallerStat[];
+  inboundStats: InboundSourceStat[];
   installerGroupStats: InstallerGroupStat[];
   newLeadsOverTime: TimeSeries[];
   signedOverTime: TimeSeries[];
@@ -64,9 +77,25 @@ interface AdminStats {
     signedValueInPeriod: number;
     pipelineValue: number;
   };
+  pipelineTracking: {
+    lost: number;
+    notInterested: number;
+    newsletter: number;
+    activePipeline: number;
+    everSigned: number;
+    signedNotMounted: number;
+    commissionPaid: number;
+    lostByDepth?: {
+      coldCalling: number;
+      pipeline: number;
+      dialog: number;
+      offer: number;
+      signed: number;
+    };
+  };
 }
 
-type DatePreset = "week" | "month" | "3months" | "6months" | "year";
+type DatePreset = "week" | "month" | "3months" | "6months" | "year" | "alltime";
 type GroupBy = "day" | "week" | "month";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,6 +106,7 @@ const DATE_PRESETS: { label: string; value: DatePreset }[] = [
   { label: "Siste 3 mnd", value: "3months" },
   { label: "Siste 6 mnd", value: "6months" },
   { label: "I år", value: "year" },
+  { label: "All time", value: "alltime" },
 ];
 
 function getDateRange(preset: DatePreset): {
@@ -131,6 +161,9 @@ function getDateRange(preset: DatePreset): {
         to: today,
         groupBy: "month",
       };
+    }
+    case "alltime": {
+      return { from: "2020-01-01", to: today, groupBy: "month" };
     }
   }
 }
@@ -324,12 +357,6 @@ export default function AdminDashboard() {
     valueK: Math.round(d.value / 1000),
   }));
 
-  // Cold caller max for bar scaling
-  const maxColdCallerTotal = Math.max(
-    ...(stats?.coldCallerStats || []).map((c) => c.total),
-    1,
-  );
-
   return (
     <div className="p-6 max-w-screen-2xl mx-auto space-y-6">
       {/* Header */}
@@ -398,6 +425,113 @@ export default function AdminDashboard() {
               color="bg-green-50 text-green-800"
             />
           </div>
+
+          {/* Pipeline tracking A–E */}
+          {stats.pipelineTracking && (() => {
+            const pt = stats.pipelineTracking;
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {/* A: Tapte */}
+                <div className="rounded-xl border border-red-100 bg-red-50 p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-red-300">
+                    A · Tapte
+                  </span>
+                  <span className="text-2xl font-bold text-red-700">
+                    {pt.lost}
+                  </span>
+                  <span className="text-xs text-red-400">
+                    {pt.notInterested} ikke interessert
+                    <br />
+                    {pt.newsletter} nyhetsbrev
+                  </span>
+                  {pt.lostByDepth && (
+                    <div className="mt-2 pt-2 border-t border-red-100 flex flex-col gap-0.5">
+                      <span className="text-[10px] font-semibold text-red-300 uppercase tracking-wider mb-1">
+                        Hvor langt kom de?
+                      </span>
+                      {pt.lostByDepth.signed > 0 && (
+                        <span className="text-xs text-red-500">
+                          {pt.lostByDepth.signed} var signert
+                        </span>
+                      )}
+                      {pt.lostByDepth.offer > 0 && (
+                        <span className="text-xs text-red-400">
+                          {pt.lostByDepth.offer} hadde tilbud
+                        </span>
+                      )}
+                      {pt.lostByDepth.dialog > 0 && (
+                        <span className="text-xs text-red-400">
+                          {pt.lostByDepth.dialog} i dialog
+                        </span>
+                      )}
+                      {pt.lostByDepth.pipeline > 0 && (
+                        <span className="text-xs text-red-300">
+                          {pt.lostByDepth.pipeline} nådde pipeline
+                        </span>
+                      )}
+                      {pt.lostByDepth.coldCalling > 0 && (
+                        <span className="text-xs text-red-300">
+                          {pt.lostByDepth.coldCalling} aldri i pipeline
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* B: Aktive i pipeline */}
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">
+                    B · Aktive
+                  </span>
+                  <span className="text-2xl font-bold text-blue-700">
+                    {pt.activePipeline}
+                  </span>
+                  <span className="text-xs text-blue-400">
+                    Dialog → venter på signering
+                  </span>
+                </div>
+
+                {/* C: Signerte */}
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                    C · Signert
+                  </span>
+                  <span className="text-2xl font-bold text-emerald-700">
+                    {pt.everSigned}
+                  </span>
+                  <span className="text-xs text-emerald-400">
+                    Har hatt signert avtale
+                  </span>
+                </div>
+
+                {/* D: Signert men ikke montert */}
+                <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                    D · Ikke montert
+                  </span>
+                  <span className="text-2xl font-bold text-amber-700">
+                    {pt.signedNotMounted}
+                  </span>
+                  <span className="text-xs text-amber-400">
+                    Signert, aldri ferdigmontert
+                  </span>
+                </div>
+
+                {/* E: Kommisjon utbetalt */}
+                <div className="rounded-xl border border-green-100 bg-green-50 p-4 flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-green-300">
+                    E · Kommisjon
+                  </span>
+                  <span className="text-2xl font-bold text-green-700">
+                    {pt.commissionPaid}
+                  </span>
+                  <span className="text-xs text-green-400">
+                    Kommisjon utbetalt
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Row 1: Pipeline funnel + status pie */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -539,12 +673,13 @@ export default function AdminDashboard() {
                   Ingen data.
                 </p>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   {stats.coldCallerStats.map((caller, i) => (
                     <div
                       key={caller.name + i}
                       className="flex flex-col gap-1.5"
                     >
+                      {/* Name row */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-gray-300 w-4">
@@ -556,7 +691,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-gray-400">
-                            {caller.total} leads
+                            {caller.called}/{caller.assigned} ringt
                           </span>
                           <span
                             className={`font-semibold px-1.5 py-0.5 rounded ${
@@ -571,38 +706,46 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                       </div>
-                      {/* Progress: reached pipeline vs total */}
-                      <div className="flex gap-1 h-2">
+                      {/* Progress bar: converted / not interested / no answer / not called */}
+                      <div className="flex gap-0.5 h-2 rounded-full overflow-hidden bg-gray-100">
                         <div
-                          className="rounded-full bg-green-400"
+                          className="bg-green-400 h-full"
                           style={{
-                            width: `${(caller.reachedPipeline / maxColdCallerTotal) * 100}%`,
+                            width: `${(caller.converted / caller.assigned) * 100}%`,
                           }}
-                          title={`${caller.reachedPipeline} nådde pipeline`}
+                          title={`${caller.converted} konvertert`}
                         />
                         <div
-                          className="rounded-full bg-gray-200"
+                          className="bg-red-300 h-full"
                           style={{
-                            width: `${((caller.total - caller.reachedPipeline) / maxColdCallerTotal) * 100}%`,
+                            width: `${(caller.notInterested / caller.assigned) * 100}%`,
                           }}
-                          title={`${caller.total - caller.reachedPipeline} stoppet i cold calling`}
+                          title={`${caller.notInterested} ikke interessert`}
+                        />
+                        <div
+                          className="bg-yellow-300 h-full"
+                          style={{
+                            width: `${(caller.noAnswer / caller.assigned) * 100}%`,
+                          }}
+                          title={`${caller.noAnswer} ingen svar`}
                         />
                       </div>
+                      {/* Results row */}
                       <div className="flex gap-3 text-xs text-gray-400">
                         <span className="text-green-600">
-                          {caller.reachedPipeline} pipeline
+                          {caller.converted} konvertert
                         </span>
-                        {caller.signed > 0 && (
-                          <span className="text-emerald-700 font-medium">
-                            {caller.signed} signert ·{" "}
-                            {formatCurrency(caller.signedValue)} kr
-                          </span>
-                        )}
+                        <span className="text-red-400">
+                          {caller.notInterested} ikke int.
+                        </span>
+                        <span className="text-yellow-500">
+                          {caller.noAnswer} ingen svar
+                        </span>
                       </div>
                     </div>
                   ))}
                   <p className="text-xs text-gray-300 mt-1">
-                    % = andel av egne leads som nådde pipeline
+                    % = konvertert av tildelte nummer
                   </p>
                 </div>
               )}
@@ -697,7 +840,92 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* Row 3: Time-series */}
+          {/* Row 3: Inbound / warm leads */}
+          <Card title="Varme leads — trafikkkilder">
+            {stats.inboundStats.every((s) => s.assigned === 0) ? (
+              <p className="text-sm text-gray-400 py-4 text-center">
+                Ingen inbound leads i perioden.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {stats.inboundStats.map((src) => (
+                  <div key={src.source} className="flex flex-col gap-1.5">
+                    {/* Source header */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-800">
+                        {src.label}
+                      </span>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-gray-400">
+                          {src.called}/{src.assigned} behandlet
+                        </span>
+                        <span
+                          className={`font-semibold px-1.5 py-0.5 rounded ${
+                            src.conversionRate >= 30
+                              ? "bg-green-100 text-green-700"
+                              : src.conversionRate >= 15
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-50 text-red-600"
+                          }`}
+                        >
+                          {src.conversionRate}%
+                        </span>
+                      </div>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="flex gap-0.5 h-2 rounded-full overflow-hidden bg-gray-100">
+                      {src.assigned > 0 && (
+                        <>
+                          <div
+                            className="bg-green-400 h-full"
+                            style={{
+                              width: `${(src.converted / src.assigned) * 100}%`,
+                            }}
+                            title={`${src.converted} konvertert`}
+                          />
+                          <div
+                            className="bg-red-300 h-full"
+                            style={{
+                              width: `${(src.notInterested / src.assigned) * 100}%`,
+                            }}
+                            title={`${src.notInterested} ikke interessert`}
+                          />
+                          <div
+                            className="bg-yellow-300 h-full"
+                            style={{
+                              width: `${(src.noAnswer / src.assigned) * 100}%`,
+                            }}
+                            title={`${src.noAnswer} ingen svar`}
+                          />
+                        </>
+                      )}
+                    </div>
+                    {/* Results */}
+                    <div className="flex gap-3 text-xs text-gray-400">
+                      <span className="text-green-600">
+                        {src.converted} konvertert
+                      </span>
+                      <span className="text-red-400">
+                        {src.notInterested} ikke int.
+                      </span>
+                      <span className="text-yellow-500">
+                        {src.noAnswer} ingen svar
+                      </span>
+                    </div>
+                    {src.assigned === 0 && (
+                      <p className="text-xs text-gray-300">Ingen leads</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-300 mt-4">
+              % = konvertert av innkomne leads · Kilde bestemt av fbclid/gclid i
+              merknaden
+            </p>
+          </Card>
+
+          {/* Row 4: Time-series */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* New leads over time */}
             <Card
