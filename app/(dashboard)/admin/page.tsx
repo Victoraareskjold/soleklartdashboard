@@ -102,7 +102,7 @@ type GroupBy = "day" | "week" | "month";
 
 const DATE_PRESETS: { label: string; value: DatePreset }[] = [
   { label: "Denne uken", value: "week" },
-  { label: "Denne mnd", value: "month" },
+  { label: "Siste 30 dager", value: "month" },
   { label: "Siste 3 mnd", value: "3months" },
   { label: "Siste 6 mnd", value: "6months" },
   { label: "I år", value: "year" },
@@ -129,9 +129,10 @@ function getDateRange(preset: DatePreset): {
       };
     }
     case "month": {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      const d = new Date(now);
+      d.setDate(d.getDate() - 30);
       return {
-        from: first.toISOString().split("T")[0],
+        from: d.toISOString().split("T")[0],
         to: today,
         groupBy: "day",
       };
