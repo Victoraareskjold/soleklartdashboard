@@ -75,9 +75,11 @@ export default function LeadsPage() {
               defaultUser={
                 userName === "Driv"
                   ? "1fa66993-1595-413f-94b6-e35a3a1e4560"
-                  : ""
+                  : userName === "Elliot Havik"
+                    ? "21cc0443-4e44-4f4e-ab72-e5c47313a675"
+                    : ""
               }
-              disabled={userName === "Driv"}
+              disabled={userName === "Driv" || userName === "Elliot Havik"}
             />
           </div>
         </div>
