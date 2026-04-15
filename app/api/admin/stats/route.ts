@@ -113,8 +113,8 @@ const INBOUND_SOURCES: { key: string; label: string }[] = [
  */
 function parseInboundSource(note: string | null): string | null {
   if (!note || !note.includes("Tracking:")) return null;
-  if (/fbclid:\s*\S/.test(note)) return "facebook";
-  if (/gclid:\s*\S/.test(note)) return "google";
+  if (/fbclid:[ \t]*\S/.test(note)) return "facebook";
+  if (/gclid:[ \t]*\S/.test(note)) return "google";
   return "organic";
 }
 
@@ -393,9 +393,9 @@ export async function GET(req: Request) {
     periodLeads.forEach((lead) => {
       // Prefer stored lead_source; fall back to note-parsing for old records
       const source =
-        lead.lead_source && lead.lead_source !== "cold_call"
-          ? lead.lead_source
-          : parseInboundSource(lead.note);
+        parseInboundSource(lead.note) ||
+        (lead.lead_source && lead.lead_source.trim()) ||
+        "organic";
       if (!source || !inboundAgg[source]) return;
       inboundAgg[source].assigned++;
 
@@ -527,7 +527,8 @@ export async function GET(req: Request) {
     // D: Signert men aldri ferdig montert (status 20/21)
     const MOUNTED = new Set([20, 21]);
     const signedNotMounted = leads.filter(
-      (l) => allSignedLeadIds.has(l.id) && (!l.status || !MOUNTED.has(l.status)),
+      (l) =>
+        allSignedLeadIds.has(l.id) && (!l.status || !MOUNTED.has(l.status)),
     ).length;
 
     // E: Kommisjon utbetalt
@@ -550,12 +551,14 @@ export async function GET(req: Request) {
         .from("lead_status_history")
         .select("lead_id, to_status")
         .in("lead_id", ids);
-      (historyChunk || []).forEach((h: { lead_id: string; to_status: number }) => {
-        if (!leadHistoryStatuses.has(h.lead_id)) {
-          leadHistoryStatuses.set(h.lead_id, new Set());
-        }
-        leadHistoryStatuses.get(h.lead_id)!.add(h.to_status);
-      });
+      (historyChunk || []).forEach(
+        (h: { lead_id: string; to_status: number }) => {
+          if (!leadHistoryStatuses.has(h.lead_id)) {
+            leadHistoryStatuses.set(h.lead_id, new Set());
+          }
+          leadHistoryStatuses.get(h.lead_id)!.add(h.to_status);
+        },
+      );
     }
 
     const MILESTONE_FOLLOW_UP = new Set([7, 8, 9, 10, 11]);
@@ -573,10 +576,12 @@ export async function GET(req: Request) {
         if (lead.status === 11) return "pipeline";
         return "cold_calling";
       }
-      if ([...MILESTONE_SIGNED_HIST].some((s) => history.has(s))) return "signed";
+      if ([...MILESTONE_SIGNED_HIST].some((s) => history.has(s)))
+        return "signed";
       if ([...MILESTONE_OFFER].some((s) => history.has(s))) return "offer";
       if ([...MILESTONE_DIALOG].some((s) => history.has(s))) return "dialog";
-      if ([...MILESTONE_FOLLOW_UP].some((s) => history.has(s))) return "pipeline";
+      if ([...MILESTONE_FOLLOW_UP].some((s) => history.has(s)))
+        return "pipeline";
       return "cold_calling";
     };
 

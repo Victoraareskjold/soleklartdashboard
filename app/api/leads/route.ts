@@ -43,8 +43,8 @@ export async function GET(req: Request) {
 
 function detectLeadSource(note: string | null | undefined): string {
   if (!note || !note.includes("Tracking:")) return "cold_call";
-  if (/fbclid:\s*\S/.test(note)) return "facebook";
-  if (/gclid:\s*\S/.test(note)) return "google";
+  if (/fbclid:[ \t]*\S/.test(note)) return "facebook";
+  if (/gclid:[ \t]*\S/.test(note)) return "google";
   return "organic";
 }
 

@@ -153,6 +153,16 @@ CREATE TABLE public.lead_notes (
   CONSTRAINT lead_notes_note_id_fkey FOREIGN KEY (note_id) REFERENCES public.lead_notes(id),
   CONSTRAINT lead_notes_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id)
 );
+CREATE TABLE public.lead_status_history (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  lead_id uuid NOT NULL,
+  from_status integer,
+  to_status integer NOT NULL,
+  changed_at timestamp with time zone NOT NULL DEFAULT now(),
+  changed_by uuid,
+  CONSTRAINT lead_status_history_pkey PRIMARY KEY (id),
+  CONSTRAINT lead_status_history_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id)
+);
 CREATE TABLE public.lead_tasks (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -202,6 +212,7 @@ CREATE TABLE public.leads (
   created_by uuid,
   org_nr text,
   updated_price numeric,
+  lead_source text,
   CONSTRAINT leads_pkey PRIMARY KEY (id),
   CONSTRAINT leads_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id),
   CONSTRAINT leads_installer_group_id_fkey FOREIGN KEY (installer_group_id) REFERENCES public.installer_groups(id),
