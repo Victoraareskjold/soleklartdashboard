@@ -453,16 +453,11 @@ export default function LeadPage() {
     )[0];
   };
 
-  const getTotalForCustomer = (estimate: Estimate | null) => {
-    if (!estimate) return null;
-
-    return company?.trim()
-      ? Number(estimate.price_data?.total ?? 0)
-      : Number(estimate.price_data?.["total inkl. alt"] ?? 0);
-  };
-
   const latest = getLatestEstimate();
-  const total = getTotalForCustomer(latest);
+  const totalExMva = latest ? Number(latest.price_data?.total ?? 0) : null;
+  const totalInklMva = latest
+    ? Number(latest.price_data?.["total inkl. alt"] ?? 0)
+    : null;
 
   const handleLeadUpdatedPriceChange = async (value: number) => {
     setUpdatedPrice(value);
@@ -956,35 +951,67 @@ export default function LeadPage() {
 
         <div className="border-t-1 border-b-1 border-slate-700 py-4 my-4">
           <h1 className="font-medium mb-2">Fakturering</h1>
-          <div className="w-full">
-            <label className="text-xs font-medium text-gray-700">
-              {company?.trim() ? "Pris eks. mva (kr)" : "Pris inkl. mva (kr)"}
-            </label>
-            <input
-              type="number"
-              className="w-full text-sm mt-1"
-              value={updatedPrice ?? total ?? ""}
-              placeholder={
-                total !== null ? total.toLocaleString("nb-NO") : "Ingen estimat"
-              }
-              onChange={(e) => {
-                const val =
-                  e.target.value === "" ? null : Number(e.target.value);
-                setUpdatedPrice(val);
-              }}
-              onBlur={(e) => {
-                const val =
-                  e.target.value === "" ? null : Number(e.target.value);
-                if (val !== null) {
-                  handleLeadUpdatedPriceChange(val);
+          <div className="w-full flex flex-col gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-700">
+                Pris eks. mva (kr)
+              </label>
+              <input
+                type="number"
+                className="w-full text-sm mt-1"
+                value={updatedPrice ?? totalExMva ?? ""}
+                placeholder={
+                  totalExMva !== null
+                    ? totalExMva.toLocaleString("nb-NO")
+                    : "Ingen estimat"
                 }
-              }}
-            />
+                onChange={(e) => {
+                  const val =
+                    e.target.value === "" ? null : Number(e.target.value);
+                  setUpdatedPrice(val);
+                }}
+                onBlur={(e) => {
+                  const val =
+                    e.target.value === "" ? null : Number(e.target.value);
+                  if (val !== null) handleLeadUpdatedPriceChange(val);
+                }}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700">
+                Pris inkl. mva (kr)
+              </label>
+              <input
+                type="number"
+                className="w-full text-sm mt-1"
+                value={
+                  updatedPrice != null
+                    ? Math.round(updatedPrice * 1.25)
+                    : totalInklMva ?? ""
+                }
+                placeholder={
+                  totalInklMva !== null
+                    ? totalInklMva.toLocaleString("nb-NO")
+                    : "Ingen estimat"
+                }
+                onChange={(e) => {
+                  const val =
+                    e.target.value === "" ? null : Number(e.target.value);
+                  setUpdatedPrice(val !== null ? Math.round(val / 1.25) : null);
+                }}
+                onBlur={(e) => {
+                  const val =
+                    e.target.value === "" ? null : Number(e.target.value);
+                  if (val !== null)
+                    handleLeadUpdatedPriceChange(Math.round(val / 1.25));
+                }}
+              />
+            </div>
             {updatedPrice !== null &&
-              total !== null &&
-              updatedPrice !== total && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Estimat: {total.toLocaleString("nb-NO")} kr
+              totalExMva !== null &&
+              updatedPrice !== totalExMva && (
+                <p className="text-xs text-gray-400">
+                  Estimat: {totalExMva.toLocaleString("nb-NO")} kr eks. mva
                 </p>
               )}
           </div>

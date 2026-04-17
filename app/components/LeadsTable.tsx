@@ -237,12 +237,7 @@ export default function LeadsTable({
 
       if (!latest.price_data) return total;
 
-      const price =
-        lead.company && lead.company !== ""
-          ? latest.price_data.total
-          : latest.price_data["total inkl. alt"];
-
-      return total + (price || 0);
+      return total + (latest.price_data.total || 0);
     }, 0);
   };
 
@@ -296,7 +291,7 @@ export default function LeadsTable({
                   </div>
                   <div className="p-2 border-t">
                     <h2 className="font-bold text-sm text-center">
-                      Totalt:{" "}
+                      Totalt eks. mva:{" "}
                       {totalForStatus.toLocaleString("nb-NO", {
                         style: "currency",
                         currency: "NOK",
