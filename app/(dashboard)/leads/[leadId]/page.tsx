@@ -1210,6 +1210,105 @@ export default function LeadPage() {
                 </div>
               )}
 
+              {/* Soleklart kommisjon */}
+              {(() => {
+                const pd = selectedEstimate.price_data;
+                if (!pd) return null;
+                const installationTotal =
+                  (pd.installation?.søknad?.priceWithMarkup ?? 0) +
+                  (pd.installation?.solcelleAnlegg?.priceWithMarkup ?? 0) +
+                  (pd.installation?.battery?.priceWithMarkup ?? 0) +
+                  (pd.installation?.additionalCosts ?? []).reduce(
+                    (s, ac) => s + ac.priceWithMarkup,
+                    0,
+                  );
+                const lineItemsTotal =
+                  (pd.suppliers ?? []).reduce(
+                    (s, i) => s + i.priceWithMarkup,
+                    0,
+                  ) +
+                  (pd.mounting ?? []).reduce(
+                    (s, i) => s + i.priceWithMarkup,
+                    0,
+                  ) +
+                  installationTotal;
+                const commissionAmount = (pd.total ?? 0) - lineItemsTotal;
+                if (commissionAmount <= 0) return null;
+                return (
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-2 border-b pb-1">
+                      Soleklart Salgsprovisjon
+                    </h3>
+                    <div className="bg-orange-50 rounded-lg p-3 border border-orange-200 space-y-1">
+                      <div className="flex justify-between text-gray-700">
+                        <span>Grunnlag (før kommisjon)</span>
+                        <span className="font-medium">
+                          {lineItemsTotal.toLocaleString("nb-NO", {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}{" "}
+                          kr
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-gray-700">
+                        <span>Soleklart kommisjon</span>
+                        <span className="font-semibold text-orange-700">
+                          {commissionAmount.toLocaleString("nb-NO", {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}{" "}
+                          kr
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Enova-støtte */}
+              {(() => {
+                const kwp = selectedEstimate.kwp ?? 0;
+                if (!kwp) return null;
+                const eligibleKwp = Math.min(kwp, 15);
+                const enovaAmount = eligibleKwp * 2500;
+                const totalInklMva =
+                  selectedEstimate.price_data?.["total inkl. alt"] ?? 0;
+                return (
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-2 border-b pb-1">
+                      Enova-støtte
+                    </h3>
+                    <div className="bg-green-50 rounded-lg p-3 border border-green-200 space-y-1">
+                      <div className="flex justify-between text-gray-700">
+                        <span>
+                          {eligibleKwp.toFixed(2)} kWp × 2 500 kr
+                        </span>
+                        <span className="font-semibold text-green-700">
+                          -{enovaAmount.toLocaleString("nb-NO", {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}{" "}
+                          kr
+                        </span>
+                      </div>
+                      <div className="flex justify-between font-medium text-gray-800 border-t border-green-200 pt-1">
+                        <span>Pris etter Enova-støtte (inkl. mva)</span>
+                        <span>
+                          {(Number(totalInklMva) - enovaAmount).toLocaleString(
+                            "nb-NO",
+                            {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0,
+                            },
+                          )}{" "}
+                          kr
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Totals */}
               <div className="bg-gray-800 text-white rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-gray-300">
