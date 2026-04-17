@@ -18,7 +18,7 @@ const LeadStatusChart: React.FC<LeadStatusChartProps> = ({ summary }) => {
 
   const aggregated = summary.reduce(
     (acc, { status, count }) => {
-      if (status > 5) {
+      if (status > 5 && status !== 22) {
         acc.priceEstimate += count;
       } else {
         acc.byStatus[status] = (acc.byStatus[status] || 0) + count;
@@ -28,7 +28,7 @@ const LeadStatusChart: React.FC<LeadStatusChartProps> = ({ summary }) => {
     {
       byStatus: {} as Record<number, number>,
       priceEstimate: 0,
-    }
+    },
   );
 
   const data = [

@@ -391,7 +391,7 @@ export default function ColdCallingPage() {
       if (status === 0) {
         label = "Ingen status";
         color = "#CCCCCC";
-      } else if (status > 5) {
+      } else if (status > 5 && status !== 22) {
         label = "Vil ha tilbud";
         color = "#69FF59";
       } else {
