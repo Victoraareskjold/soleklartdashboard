@@ -174,7 +174,9 @@ export default function LeadsTable({
 
   const grouped = LEAD_STATUSES.reduce(
     (acc, status) => {
-      acc[status.value] = leads.filter((lead) => lead.status === status.value);
+      acc[status.value] = leads.filter(
+        (lead) => Number(lead.status) === status.value,
+      );
       return acc;
     },
     {} as Record<number, FullLead[]>,

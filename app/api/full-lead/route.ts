@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
 
+const PAGE_SIZE = 1000;
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -11,7 +13,7 @@ export async function GET(req: Request) {
     if (!teamId || !installerGroupId || !teamRole) {
       return NextResponse.json(
         { error: "Missing teamId or installerGroupId parameter" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -21,10 +23,14 @@ export async function GET(req: Request) {
     }
 
     const client = createSupabaseClient(token);
-    const { data, error } = await client
-      .from("leads")
-      .select(
-        `
+    const allData = [];
+    let from = 0;
+
+    while (true) {
+      const { data, error } = await client
+        .from("leads")
+        .select(
+          `
     *,
     assigned_user:users!leads_assigned_to_fkey(name),
     lead_tasks (
@@ -39,20 +45,28 @@ export async function GET(req: Request) {
       created_at,
       price_data
     )
-  `
-      )
-      .eq("team_id", teamId)
-      .eq("installer_group_id", installerGroupId);
+  `,
+        )
+        .eq("team_id", teamId)
+        .eq("installer_group_id", installerGroupId)
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (!data || error)
-      return NextResponse.json({ error: "Missing data" }, { status: 500 });
+      if (error) {
+        return NextResponse.json({ error: "Missing data" }, { status: 500 });
+      }
 
-    return NextResponse.json(data ?? []);
+      allData.push(...(data ?? []));
+
+      if (!data || data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+
+    return NextResponse.json(allData);
   } catch (err) {
     console.error("GET /api/leads error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
