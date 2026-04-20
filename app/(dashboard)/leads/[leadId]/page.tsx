@@ -160,6 +160,13 @@ export default function LeadPage() {
   const [createdBy, setCreatedBy] = useState("");
   const [updatedPrice, setUpdatedPrice] = useState<number | null>(null);
   const [domain, setDomain] = useState("");
+  const [leadSource, setLeadSource] = useState("");
+
+  const LEAD_SOURCES = [
+    { label: "Organic", value: "organic" },
+    { label: "Google", value: "google" },
+    { label: "Facebook", value: "facebook" },
+  ];
 
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(
     null,
@@ -264,6 +271,7 @@ export default function LeadPage() {
         setCreatedBy(data.created_by ?? "");
         setBirthDate(data.birth_date ?? "");
         setUpdatedPrice(data.updated_price ?? null);
+        setLeadSource(data.lead_source ?? "organic");
       }),
       getEstimatesByLeadId(leadIdStr).then((data) => {
         setEstimates(data ?? []);
@@ -329,6 +337,7 @@ export default function LeadPage() {
         roof_slope: roofSlope || null,
         roof_age: roofAge || null,
         birth_date: birthDate || null,
+        lead_source: leadSource || null,
       });
     } catch (err) {
       console.error("Failed to update:", err);
@@ -724,7 +733,7 @@ export default function LeadPage() {
             />
           </div>
 
-          <div className="flex flex-row items-center gap-1 mt-2">
+          <div className="grid grid-cols-2 items-center gap-2 mt-2">
             <div className="w-full">
               <p>Avtaleeier</p>
               <TeamMemberSelector
@@ -744,6 +753,25 @@ export default function LeadPage() {
                 onSelectMember={handleAssigneeChange}
                 defaultUser={assignedTo}
               />
+            </div>
+
+            <div className="w-full">
+              <p>Kilde:</p>
+              <select
+                className="border p-2 rounded-md bg-gray-50 w-full"
+                value={leadSource}
+                onChange={(e) => {
+                  const newSource = e.target.value;
+                  setLeadSource(newSource);
+                  updateSingleField("lead_source", newSource);
+                }}
+              >
+                {LEAD_SOURCES.map((src) => (
+                  <option key={src.value} value={src.value}>
+                    {src.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <button
@@ -987,7 +1015,7 @@ export default function LeadPage() {
                 value={
                   updatedPrice != null
                     ? Math.round(updatedPrice * 1.25)
-                    : totalInklMva ?? ""
+                    : (totalInklMva ?? "")
                 }
                 placeholder={
                   totalInklMva !== null
@@ -1307,11 +1335,10 @@ export default function LeadPage() {
                     </h3>
                     <div className="bg-green-50 rounded-lg p-3 border border-green-200 space-y-1">
                       <div className="flex justify-between text-gray-700">
-                        <span>
-                          {eligibleKwp.toFixed(2)} kWp × 2 500 kr
-                        </span>
+                        <span>{eligibleKwp.toFixed(2)} kWp × 2 500 kr</span>
                         <span className="font-semibold text-green-700">
-                          -{enovaAmount.toLocaleString("nb-NO", {
+                          -
+                          {enovaAmount.toLocaleString("nb-NO", {
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 0,
                           })}{" "}
