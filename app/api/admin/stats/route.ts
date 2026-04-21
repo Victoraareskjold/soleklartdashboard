@@ -490,7 +490,7 @@ export async function GET(req: Request) {
       .reduce((sum, l) => sum + (l.updated_price || 0), 0);
 
     const activeLeads = leads.filter(
-      (l) => l.status && !new Set([1, 3, 16]).has(l.status),
+      (l) => l.status && !new Set([1, 2, 3, 4, 5, 16, 22]).has(l.status),
     ).length;
 
     // ── Pipeline tracking (A–E) ───────────────────────────────────────────────
