@@ -189,6 +189,7 @@ export async function GET(req: Request) {
           "id, status, created_at, updated_at, updated_price, assigned_to, created_by, installer_group_id, note, lead_source",
         )
         .eq("team_id", teamId)
+        .neq("installer_group_id", "5e627e51-a3fd-43bc-90f3-4cc28c0ecb7f")
         .range(offset, offset + PAGE_SIZE - 1);
 
       if (error) throw error;
@@ -203,8 +204,10 @@ export async function GET(req: Request) {
     const toDate = new Date(to);
     toDate.setHours(23, 59, 59, 999);
 
+    const EXCLUDED_PERIOD_STATUSES = new Set([1, 2, 3, 4, 5, 16, 22]);
     const periodLeads = leads.filter((l) => {
       if (!l.created_at) return false;
+      if (!l.status || EXCLUDED_PERIOD_STATUSES.has(l.status)) return false;
       const d = new Date(l.created_at);
       return d >= fromDate && d <= toDate;
     });
@@ -245,6 +248,36 @@ export async function GET(req: Request) {
     leads.forEach((l) => {
       leadValueMap[l.id] = l.updated_price || 0;
     });
+
+    // Unified signed events in period: estimates with signed_at OR leads with
+    // a signed status (18-21) updated in period — deduplicated by lead_id.
+    type SignedEvent = { lead_id: string; date: string; value: number };
+    const signedEventMap = new Map<string, SignedEvent>();
+
+    signedEstimates.forEach((e) => {
+      signedEventMap.set(e.lead_id, {
+        lead_id: e.lead_id,
+        date: e.signed_at,
+        value:
+          leadValueMap[e.lead_id] ||
+          (e.price_data as Record<string, number> | null)?.total ||
+          0,
+      });
+    });
+
+    leads.forEach((l) => {
+      if (!l.status || !SIGNED_STATUSES.has(l.status)) return;
+      if (signedEventMap.has(l.id)) return;
+      const d = new Date(l.updated_at ?? l.created_at ?? "");
+      if (d < fromDate || d > toDate) return;
+      signedEventMap.set(l.id, {
+        lead_id: l.id,
+        date: (l.updated_at ?? l.created_at)!,
+        value: leadValueMap[l.id] || 0,
+      });
+    });
+
+    const signedEvents = Array.from(signedEventMap.values());
 
     // Fetch all team members (role + user_id only — team_members has no name column)
     const { data: teamMembersData } = await client
@@ -464,29 +497,20 @@ export async function GET(req: Request) {
     );
 
     const signedOverTime = groupByPeriod(
-      signedEstimates.map((e) => ({
-        date: e.signed_at,
+      signedEvents.map((e) => ({
+        date: e.date,
         count: 1,
-        value:
-          leadValueMap[e.lead_id] ||
-          (e.price_data as Record<string, number> | null)?.total ||
-          0,
+        value: e.value,
       })),
       groupBy,
     );
 
     // ── Summary ───────────────────────────────────────────────────────────────
-    const signedCount = signedEstimates.length;
-    const signedValue = signedEstimates.reduce(
-      (sum, e) =>
-        sum +
-        (leadValueMap[e.lead_id] ||
-          (e.price_data as Record<string, number> | null)?.total ||
-          0),
-      0,
-    );
+    const signedCount = signedEvents.length;
+    const signedValue = signedEvents.reduce((sum, e) => sum + e.value, 0);
+    const NOT_INTERESTED_STATUSES = new Set([1, 3, 16]);
     const pipelineValue = leads
-      .filter((l) => l.status && PIPELINE_STATUSES.has(l.status))
+      .filter((l) => l.status && !NOT_INTERESTED_STATUSES.has(l.status))
       .reduce((sum, l) => sum + (l.updated_price || 0), 0);
 
     const activeLeads = leads.filter(
