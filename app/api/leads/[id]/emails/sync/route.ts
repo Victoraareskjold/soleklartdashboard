@@ -30,7 +30,7 @@ interface MicrosoftGraphEmail {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const token = req.headers.get("authorization")?.replace("Bearer ", "");
@@ -45,7 +45,7 @@ export async function POST(
     if (!userId || !installerGroupId) {
       return NextResponse.json(
         { error: "Missing userId or installerGroupId" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -59,7 +59,7 @@ export async function POST(
     if (leadError || !lead?.email) {
       return NextResponse.json(
         { error: "Lead not found or has no email" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -72,7 +72,7 @@ export async function POST(
           error:
             "No valid Outlook connection found for user. Please reconnect on the profile page.",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -91,7 +91,7 @@ export async function POST(
       console.error("Graph API error:", graphData);
       return NextResponse.json(
         { error: "Failed to fetch emails from Outlook", details: graphData },
-        { status: graphRes.status }
+        { status: graphRes.status },
       );
     }
 
@@ -151,7 +151,7 @@ export async function POST(
       console.error("Error upserting emails:", upsertError);
       return NextResponse.json(
         { error: "Failed to store emails in database" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -163,7 +163,7 @@ export async function POST(
     console.error("Error syncing lead emails:", error);
     return NextResponse.json(
       { error: "Failed to sync emails" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
