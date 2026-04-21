@@ -11,7 +11,7 @@ export async function GET(
     const supabase = createSupabaseAdminClient();
 
     // Cold calling
-    const { count: coldCallingAmount, error: coldError } = await supabase
+    const { count: coldCallAmount, error: coldError } = await supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
       .eq("installer_group_id", installerGroupId)
@@ -30,7 +30,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      coldCallingAmount: coldCallingAmount ?? 0,
+      coldCallAmount: coldCallAmount ?? 0,
       contactAmount: contactAmount ?? 0,
     });
   } catch (err) {

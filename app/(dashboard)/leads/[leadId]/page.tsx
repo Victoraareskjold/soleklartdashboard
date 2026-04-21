@@ -166,7 +166,7 @@ export default function LeadPage() {
     { label: "Organic", value: "organic" },
     { label: "Google", value: "google" },
     { label: "Facebook", value: "facebook" },
-    { label: "Cold Calling", value: "coldcalling" },
+    { label: "Cold Calling", value: "coldcall" },
   ];
 
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(

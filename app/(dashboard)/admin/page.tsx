@@ -56,6 +56,28 @@ interface InstallerGroupStat {
   value: number;
 }
 
+interface SegmentStats {
+  totalLeads: number;
+  activeLeads: number;
+  newInPeriod: number;
+  signedInPeriod: number;
+  signedValue: number;
+  pipelineValue: number;
+}
+
+interface InstallerBreakdownRow {
+  key: string;
+  label: string;
+  stats: SegmentStats;
+}
+
+interface InstallerBreakdown {
+  id: string;
+  name: string;
+  sources: InstallerBreakdownRow[];
+  callers: { userId: string; name: string; stats: SegmentStats }[];
+}
+
 interface TimeSeries {
   period: string;
   count: number;
@@ -67,6 +89,7 @@ interface AdminStats {
   coldCallerStats: ColdCallerStat[];
   inboundStats: InboundSourceStat[];
   installerGroupStats: InstallerGroupStat[];
+  installerBreakdown: InstallerBreakdown[];
   newLeadsOverTime: TimeSeries[];
   signedOverTime: TimeSeries[];
   summary: {
@@ -86,7 +109,7 @@ interface AdminStats {
     signedNotMounted: number;
     commissionPaid: number;
     lostByDepth?: {
-      coldCalling: number;
+      coldcall: number;
       pipeline: number;
       dialog: number;
       offer: number;
@@ -269,6 +292,15 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupBy>("day");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = (id: string) =>
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const fetchStats = useCallback(async () => {
     if (!teamId) return;
@@ -427,112 +459,312 @@ export default function AdminDashboard() {
             />
           </div>
 
-          {/* Pipeline tracking A–E */}
-          {stats.pipelineTracking && (() => {
-            const pt = stats.pipelineTracking;
-            return (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {/* A: Tapte */}
-                <div className="rounded-xl border border-red-100 bg-red-50 p-4 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-red-300">
-                    A · Tapte
-                  </span>
-                  <span className="text-2xl font-bold text-red-700">
-                    {pt.lost}
-                  </span>
-                  <span className="text-xs text-red-400">
-                    {pt.notInterested} ikke interessert
-                    <br />
-                    {pt.newsletter} nyhetsbrev
-                  </span>
-                  {pt.lostByDepth && (
-                    <div className="mt-2 pt-2 border-t border-red-100 flex flex-col gap-0.5">
-                      <span className="text-[10px] font-semibold text-red-300 uppercase tracking-wider mb-1">
-                        Hvor langt kom de?
-                      </span>
-                      {pt.lostByDepth.signed > 0 && (
-                        <span className="text-xs text-red-500">
-                          {pt.lostByDepth.signed} var signert
+          {/* Row 4: Per-installer breakdown grid */}
+          {(stats.installerBreakdown || []).filter(
+            (g) => g.name.toLowerCase() !== "testelektro",
+          ).length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+                Breakdown per installatør
+              </h2>
+              {stats.installerBreakdown
+                .filter((g) => g.name.toLowerCase() !== "testelektro")
+                .map((group) => {
+                  const isOpen = expandedGroups.has(group.id);
+                  const totals: SegmentStats = group.sources.reduce(
+                    (acc, r) => ({
+                      totalLeads: acc.totalLeads + r.stats.totalLeads,
+                      activeLeads: acc.activeLeads + r.stats.activeLeads,
+                      newInPeriod: acc.newInPeriod + r.stats.newInPeriod,
+                      signedInPeriod:
+                        acc.signedInPeriod + r.stats.signedInPeriod,
+                      signedValue: acc.signedValue + r.stats.signedValue,
+                      pipelineValue: acc.pipelineValue + r.stats.pipelineValue,
+                    }),
+                    {
+                      totalLeads: 0,
+                      activeLeads: 0,
+                      newInPeriod: 0,
+                      signedInPeriod: 0,
+                      signedValue: 0,
+                      pipelineValue: 0,
+                    },
+                  );
+
+                  return (
+                    <div
+                      key={group.id}
+                      className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
+                    >
+                      {/* Clickable header */}
+                      <button
+                        onClick={() => toggleGroup(group.id)}
+                        className="w-full flex items-center justify-between px-5 py-3 bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-100"
+                      >
+                        <span className="text-sm font-bold text-gray-800">
+                          {group.name}
                         </span>
-                      )}
-                      {pt.lostByDepth.offer > 0 && (
-                        <span className="text-xs text-red-400">
-                          {pt.lostByDepth.offer} hadde tilbud
+                        <span className="text-gray-400 text-xs">
+                          {isOpen ? "▲" : "▼"}
                         </span>
-                      )}
-                      {pt.lostByDepth.dialog > 0 && (
-                        <span className="text-xs text-red-400">
-                          {pt.lostByDepth.dialog} i dialog
-                        </span>
-                      )}
-                      {pt.lostByDepth.pipeline > 0 && (
-                        <span className="text-xs text-red-300">
-                          {pt.lostByDepth.pipeline} nådde pipeline
-                        </span>
-                      )}
-                      {pt.lostByDepth.coldCalling > 0 && (
-                        <span className="text-xs text-red-300">
-                          {pt.lostByDepth.coldCalling} aldri i pipeline
-                        </span>
-                      )}
+                      </button>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-gray-100 text-gray-400 uppercase tracking-wider">
+                              <th className="text-left px-5 py-2 font-semibold w-40">
+                                Segment
+                              </th>
+                              <th className="text-right px-3 py-2 font-semibold">
+                                Totalt
+                              </th>
+                              <th className="text-right px-3 py-2 font-semibold">
+                                Aktive
+                              </th>
+                              <th className="text-right px-3 py-2 font-semibold">
+                                Nye
+                              </th>
+                              <th className="text-right px-3 py-2 font-semibold">
+                                Signert
+                              </th>
+                              <th className="text-right px-3 py-2 font-semibold">
+                                Sign. verdi
+                              </th>
+                              <th className="text-right px-5 py-2 font-semibold">
+                                Pipeline
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {!isOpen && (
+                              <tr className="border-t border-gray-50">
+                                <td className="px-5 py-2 font-semibold text-gray-700">
+                                  Totalt
+                                </td>
+                                <td className="text-right px-3 py-2 text-gray-600">
+                                  {totals.totalLeads}
+                                </td>
+                                <td className="text-right px-3 py-2 text-blue-600 font-medium">
+                                  {totals.activeLeads}
+                                </td>
+                                <td className="text-right px-3 py-2 text-indigo-600">
+                                  {totals.newInPeriod}
+                                </td>
+                                <td className="text-right px-3 py-2 text-emerald-600 font-medium">
+                                  {totals.signedInPeriod}
+                                </td>
+                                <td className="text-right px-3 py-2 text-emerald-700">
+                                  {formatCurrency(totals.signedValue)} kr
+                                </td>
+                                <td className="text-right px-5 py-2 text-violet-700">
+                                  {formatCurrency(totals.pipelineValue)} kr
+                                </td>
+                              </tr>
+                            )}
+                            {isOpen && (
+                              <>
+                                <tr className="bg-gray-50">
+                                  <td
+                                    colSpan={7}
+                                    className="px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-300"
+                                  >
+                                    Kilder
+                                  </td>
+                                </tr>
+                                {group.sources.map((row) => (
+                                  <tr
+                                    key={row.key}
+                                    className="border-t border-gray-50 hover:bg-gray-50 transition-colors"
+                                  >
+                                    <td className="px-5 py-2 font-medium text-gray-700">
+                                      {row.label}
+                                    </td>
+                                    <td className="text-right px-3 py-2 text-gray-600">
+                                      {row.stats.totalLeads}
+                                    </td>
+                                    <td className="text-right px-3 py-2 text-blue-600 font-medium">
+                                      {row.stats.activeLeads}
+                                    </td>
+                                    <td className="text-right px-3 py-2 text-indigo-600">
+                                      {row.stats.newInPeriod}
+                                    </td>
+                                    <td className="text-right px-3 py-2 text-emerald-600 font-medium">
+                                      {row.stats.signedInPeriod}
+                                    </td>
+                                    <td className="text-right px-3 py-2 text-emerald-700">
+                                      {formatCurrency(row.stats.signedValue)} kr
+                                    </td>
+                                    <td className="text-right px-5 py-2 text-violet-700">
+                                      {formatCurrency(row.stats.pipelineValue)}{" "}
+                                      kr
+                                    </td>
+                                  </tr>
+                                ))}
+                                {group.callers.length > 0 && (
+                                  <>
+                                    <tr className="bg-gray-50">
+                                      <td
+                                        colSpan={7}
+                                        className="px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-300"
+                                      >
+                                        Leadinnhentere
+                                      </td>
+                                    </tr>
+                                    {group.callers.map((caller) => (
+                                      <tr
+                                        key={caller.userId}
+                                        className="border-t border-gray-50 hover:bg-gray-50 transition-colors"
+                                      >
+                                        <td className="px-5 py-2 font-medium text-gray-700">
+                                          {caller.name}
+                                        </td>
+                                        <td className="text-right px-3 py-2 text-gray-600">
+                                          {caller.stats.totalLeads}
+                                        </td>
+                                        <td className="text-right px-3 py-2 text-blue-600 font-medium">
+                                          {caller.stats.activeLeads}
+                                        </td>
+                                        <td className="text-right px-3 py-2 text-indigo-600">
+                                          {caller.stats.newInPeriod}
+                                        </td>
+                                        <td className="text-right px-3 py-2 text-emerald-600 font-medium">
+                                          {caller.stats.signedInPeriod}
+                                        </td>
+                                        <td className="text-right px-3 py-2 text-emerald-700">
+                                          {formatCurrency(
+                                            caller.stats.signedValue,
+                                          )}{" "}
+                                          kr
+                                        </td>
+                                        <td className="text-right px-5 py-2 text-violet-700">
+                                          {formatCurrency(
+                                            caller.stats.pipelineValue,
+                                          )}{" "}
+                                          kr
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  );
+                })}
+            </div>
+          )}
 
-                {/* B: Aktive i pipeline */}
-                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">
-                    B · Aktive
-                  </span>
-                  <span className="text-2xl font-bold text-blue-700">
-                    {pt.activePipeline}
-                  </span>
-                  <span className="text-xs text-blue-400">
-                    Dialog → venter på signering
-                  </span>
-                </div>
+          {/* Pipeline tracking A–E */}
+          {stats.pipelineTracking &&
+            (() => {
+              const pt = stats.pipelineTracking;
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {/* A: Tapte */}
+                  <div className="rounded-xl border border-red-100 bg-red-50 p-4 flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-red-300">
+                      A · Tapte
+                    </span>
+                    <span className="text-2xl font-bold text-red-700">
+                      {pt.lost}
+                    </span>
+                    <span className="text-xs text-red-400">
+                      {pt.notInterested} ikke interessert
+                      <br />
+                      {pt.newsletter} nyhetsbrev
+                    </span>
+                    {pt.lostByDepth && (
+                      <div className="mt-2 pt-2 border-t border-red-100 flex flex-col gap-0.5">
+                        <span className="text-[10px] font-semibold text-red-300 uppercase tracking-wider mb-1">
+                          Hvor langt kom de?
+                        </span>
+                        {pt.lostByDepth.signed > 0 && (
+                          <span className="text-xs text-red-500">
+                            {pt.lostByDepth.signed} var signert
+                          </span>
+                        )}
+                        {pt.lostByDepth.offer > 0 && (
+                          <span className="text-xs text-red-400">
+                            {pt.lostByDepth.offer} hadde tilbud
+                          </span>
+                        )}
+                        {pt.lostByDepth.dialog > 0 && (
+                          <span className="text-xs text-red-400">
+                            {pt.lostByDepth.dialog} i dialog
+                          </span>
+                        )}
+                        {pt.lostByDepth.pipeline > 0 && (
+                          <span className="text-xs text-red-300">
+                            {pt.lostByDepth.pipeline} nådde pipeline
+                          </span>
+                        )}
+                        {pt.lostByDepth.coldcall > 0 && (
+                          <span className="text-xs text-red-300">
+                            {pt.lostByDepth.coldcall} aldri i pipeline
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-                {/* C: Signerte */}
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
-                    C · Signert
-                  </span>
-                  <span className="text-2xl font-bold text-emerald-700">
-                    {pt.everSigned}
-                  </span>
-                  <span className="text-xs text-emerald-400">
-                    Har hatt signert avtale
-                  </span>
-                </div>
+                  {/* B: Aktive i pipeline */}
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">
+                      B · Aktive
+                    </span>
+                    <span className="text-2xl font-bold text-blue-700">
+                      {pt.activePipeline}
+                    </span>
+                    <span className="text-xs text-blue-400">
+                      Dialog → venter på signering
+                    </span>
+                  </div>
 
-                {/* D: Signert men ikke montert */}
-                <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                    D · Ikke montert
-                  </span>
-                  <span className="text-2xl font-bold text-amber-700">
-                    {pt.signedNotMounted}
-                  </span>
-                  <span className="text-xs text-amber-400">
-                    Signert, aldri ferdigmontert
-                  </span>
-                </div>
+                  {/* C: Signerte */}
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                      C · Signert
+                    </span>
+                    <span className="text-2xl font-bold text-emerald-700">
+                      {pt.everSigned}
+                    </span>
+                    <span className="text-xs text-emerald-400">
+                      Har hatt signert avtale
+                    </span>
+                  </div>
 
-                {/* E: Kommisjon utbetalt */}
-                <div className="rounded-xl border border-green-100 bg-green-50 p-4 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-green-300">
-                    E · Kommisjon
-                  </span>
-                  <span className="text-2xl font-bold text-green-700">
-                    {pt.commissionPaid}
-                  </span>
-                  <span className="text-xs text-green-400">
-                    Kommisjon utbetalt
-                  </span>
+                  {/* D: Signert men ikke montert */}
+                  <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                      D · Ikke montert
+                    </span>
+                    <span className="text-2xl font-bold text-amber-700">
+                      {pt.signedNotMounted}
+                    </span>
+                    <span className="text-xs text-amber-400">
+                      Signert, aldri ferdigmontert
+                    </span>
+                  </div>
+
+                  {/* E: Kommisjon utbetalt */}
+                  <div className="rounded-xl border border-green-100 bg-green-50 p-4 flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-green-300">
+                      E · Kommisjon
+                    </span>
+                    <span className="text-2xl font-bold text-green-700">
+                      {pt.commissionPaid}
+                    </span>
+                    <span className="text-xs text-green-400">
+                      Kommisjon utbetalt
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
 
           {/* Row 1: Pipeline funnel + status pie */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -926,7 +1158,7 @@ export default function AdminDashboard() {
             </p>
           </Card>
 
-          {/* Row 4: Time-series */}
+          {/* Row 5: Time-series */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* New leads over time */}
             <Card

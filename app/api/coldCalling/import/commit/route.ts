@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       installer_group_id: installerGroupId,
       team_id: teamId,
       status: 0,
-      lead_source: "cold_call",
+      lead_source: "coldcall",
       created_at: new Date().toISOString(),
     }));
 

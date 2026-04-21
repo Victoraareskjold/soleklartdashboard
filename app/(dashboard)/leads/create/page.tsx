@@ -78,10 +78,10 @@ export default function CreateLead() {
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
 
-    if (!user) return toast.error("You must be logged in"), setLoading(false);
-    if (!teamId) return toast.error("No team selected"), setLoading(false);
+    if (!user) return (toast.error("You must be logged in"), setLoading(false));
+    if (!teamId) return (toast.error("No team selected"), setLoading(false));
     if (!installerGroupId)
-      return toast.error("No installergroup selected"), setLoading(false);
+      return (toast.error("No installergroup selected"), setLoading(false));
 
     try {
       const lead = await createLead({
@@ -94,7 +94,7 @@ export default function CreateLead() {
         address,
         status: 7,
         priority: "iron",
-        lead_source: "cold_call",
+        lead_source: "coldcall",
       });
       toast.success(
         <div>
@@ -106,7 +106,7 @@ export default function CreateLead() {
             View
           </Link>
         </div>,
-        { autoClose: 5000 }
+        { autoClose: 5000 },
       );
     } catch (err) {
       console.error(err);

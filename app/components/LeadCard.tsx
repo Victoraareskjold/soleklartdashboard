@@ -45,7 +45,7 @@ const getTaskToDisplay = (tasks: LeadTask[]): LeadTask | null => {
 };
 
 const SOURCE_CONFIG: Record<string, { label: string; className: string }> = {
-  cold_call: {
+  coldcall: {
     label: "Cold calling",
     className: "bg-blue-50 text-blue-600",
   },
@@ -71,7 +71,7 @@ function SourceBadge({ lead }: { lead: Lead }) {
   const className = cfg?.className ?? "bg-gray-100 text-gray-500";
   const personName = lead.assigned_user?.name;
   const displayLabel =
-    src === "cold_call" && personName ? `Cold calling · ${personName}` : label;
+    src === "coldcall" && personName ? `Cold calling · ${personName}` : label;
   return (
     <span
       className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded ${className}`}

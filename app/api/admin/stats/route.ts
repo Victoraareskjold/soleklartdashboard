@@ -598,7 +598,7 @@ export async function GET(req: Request) {
         if (lead.status === 16) return "pipeline";
         // status 11 (newsletter) is a pipeline stage
         if (lead.status === 11) return "pipeline";
-        return "cold_calling";
+        return "coldcall";
       }
       if ([...MILESTONE_SIGNED_HIST].some((s) => history.has(s)))
         return "signed";
@@ -606,11 +606,11 @@ export async function GET(req: Request) {
       if ([...MILESTONE_DIALOG].some((s) => history.has(s))) return "dialog";
       if ([...MILESTONE_FOLLOW_UP].some((s) => history.has(s)))
         return "pipeline";
-      return "cold_calling";
+      return "coldcall";
     };
 
     const lostByDepth = {
-      coldCalling: 0,
+      coldcall: 0,
       pipeline: 0,
       dialog: 0,
       offer: 0,
@@ -619,6 +619,104 @@ export async function GET(req: Request) {
     lostLeads.forEach((lead) => {
       const milestone = getLostMilestone(lead) as keyof typeof lostByDepth;
       lostByDepth[milestone]++;
+    });
+
+    // ── Per-installer breakdown (installer × source/caller) ───────────────────
+    const ACTIVE_EXCL = new Set([1, 2, 3, 4, 5, 16, 22]);
+    const INBOUND_KEYS = new Set(INBOUND_SOURCES.map((s) => s.key));
+
+    const segStats = (segLeads: typeof leads) => {
+      const totalLeads = segLeads.length;
+      const activeL = segLeads.filter(
+        (l) => l.status && !ACTIVE_EXCL.has(l.status),
+      ).length;
+      const newInPeriod = segLeads.filter((l) => {
+        if (
+          !l.created_at ||
+          !l.status ||
+          EXCLUDED_PERIOD_STATUSES.has(l.status)
+        )
+          return false;
+        const d = new Date(l.created_at);
+        return d >= fromDate && d <= toDate;
+      }).length;
+      const signedInPeriod = segLeads.filter((l) =>
+        signedEventMap.has(l.id),
+      ).length;
+      const signedVal = segLeads
+        .filter((l) => signedEventMap.has(l.id))
+        .reduce((sum, l) => sum + (signedEventMap.get(l.id)?.value || 0), 0);
+      const pipelineVal = segLeads
+        .filter((l) => l.status && !NOT_INTERESTED_STATUSES.has(l.status))
+        .reduce((sum, l) => sum + (l.updated_price || 0), 0);
+      return {
+        totalLeads,
+        activeLeads: activeL,
+        newInPeriod,
+        signedInPeriod,
+        signedValue: signedVal,
+        pipelineValue: pipelineVal,
+      };
+    };
+
+    const installerBreakdown = (installerGroupsData || []).map((group) => {
+      const groupLeads = leads.filter((l) => l.installer_group_id === group.id);
+
+      const sourceBuckets: Record<string, typeof leads> = {
+        google: [],
+        facebook: [],
+        organic: [],
+        coldcall: [],
+      };
+      const callerBuckets: Record<string, typeof leads> = {};
+      coldCallerMembers.forEach((m) => {
+        callerBuckets[m.user_id] = [];
+      });
+
+      groupLeads.forEach((l) => {
+        const src =
+          parseInboundSource(l.note) ||
+          (l.lead_source && l.lead_source.trim()) ||
+          null;
+        // Explicitly "coldcall" source → cold calling bucket; null/unknown → organic
+        const isColdCalling = src && /^cold/i.test(src);
+        const bucket = isColdCalling
+          ? "coldcall"
+          : src && INBOUND_KEYS.has(src)
+            ? src
+            : "organic";
+        sourceBuckets[bucket].push(l);
+
+        // Callers only get leads from the coldcalling source bucket
+        if (
+          bucket === "coldcall" &&
+          l.assigned_to &&
+          callerBuckets[l.assigned_to] !== undefined
+        ) {
+          callerBuckets[l.assigned_to].push(l);
+        }
+      });
+
+      const sources = [
+        ...INBOUND_SOURCES.map((src) => ({
+          key: src.key,
+          label: src.label,
+          stats: segStats(sourceBuckets[src.key]),
+        })),
+        {
+          key: "coldcall",
+          label: "Cold calling",
+          stats: segStats(sourceBuckets.coldcall),
+        },
+      ];
+
+      const callers = coldCallerMembers.map((m) => ({
+          userId: m.user_id,
+          name: memberMap[m.user_id] || "Ukjent",
+          stats: segStats(callerBuckets[m.user_id]),
+        }));
+
+      return { id: group.id, name: group.name, sources, callers };
     });
 
     return NextResponse.json({
@@ -646,6 +744,7 @@ export async function GET(req: Request) {
         commissionPaid,
         lostByDepth,
       },
+      installerBreakdown,
     });
   } catch (err) {
     console.error("GET /api/admin/stats error:", err);
