@@ -4,6 +4,14 @@ export interface Base {
   updated_at: string;
 }
 
+export interface MailTemplate extends Base {
+  team_id: string;
+  name: string;
+  subject: string;
+  body: string;
+  template_key: string | null;
+}
+
 export interface User extends Base {
   email: string;
   name?: string;

@@ -1,17 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
-import { EmailContent, Estimate, InstallerGroup, User } from "@/lib/types";
+import { EmailContent, Estimate, InstallerGroup, MailTemplate, User } from "@/lib/types";
 import {
   sendLeadEmail,
   syncLeadEmails,
   getStoredLeadEmails,
   getInstallerGroup,
   getUser,
+  getMailTemplates,
 } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
+import { useTeam } from "@/context/TeamContext";
 import { toast } from "react-toastify";
-import mailTemplates from "@/constants/mailTemplates.json";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
@@ -112,7 +113,9 @@ export default function LeadEmailSection({
   estimates,
 }: LeadEmailSectionProps) {
   const { installerGroupId } = useInstallerGroup();
+  const { teamId } = useTeam();
 
+  const [mailTemplates, setMailTemplates] = useState<MailTemplate[]>([]);
   const [emailThreads, setEmailThreads] = useState<EmailThread[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -154,13 +157,8 @@ export default function LeadEmailSection({
 
   useEffect(() => {
     if (leadId && installerGroupId) {
-      // 1. Hent eksisterende e-poster fra DB umiddelbart
       fetchEmails();
-
-      // 2. Kjør synkronisering mot Outlook i bakgrunnen
       handleSync();
-
-      // 3. Hent metadata
       getInstallerGroup(installerGroupId).then((res) => {
         setInstallerData(res);
       });
@@ -168,6 +166,12 @@ export default function LeadEmailSection({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId, installerGroupId]);
+
+  useEffect(() => {
+    if (teamId) {
+      getMailTemplates(teamId).then((data) => setMailTemplates(data ?? []));
+    }
+  }, [teamId]);
 
   //const signature = `<br/>${userData?.name}<br />Nr. ${userData?.phone}`;
   const signature = `<br/><br/><br/>Med vennlig hilsen<br/>${userData?.name}<br/><br/>--<br/><br/><strong>Teknisk konsulent | Sol og energisystemer</strong><br/>Mob.: 458 71 718<br/>Adresse: ${installerData?.address}<br/><br/>Nettside: www.${installerData?.site}.no<br/><br/>${installerData?.name}<br/>Org.nr: ${installerData?.org_nr}`;
@@ -182,7 +186,8 @@ export default function LeadEmailSection({
 
   useEffect(() => {
     if (newEstimate && leadName && domain && installerData?.name) {
-      const template = mailTemplates.newEstimate;
+      const template = mailTemplates.find((t) => t.template_key === "newEstimate");
+      if (!template) return;
 
       const estimateLink = newEstimate.finished
         ? `https://www.${domain}.no/estimat/${newEstimate.id}?f=1`
@@ -202,14 +207,14 @@ export default function LeadEmailSection({
       setBody(emailBody);
       editor?.commands.setContent(emailBody + signature);
       setShowCompose(true);
-      setSelectedTemplate("newEstimate");
+      setSelectedTemplate(template.id);
     }
-  }, [newEstimate, leadName, domain, editor, installerData?.name, signature]);
+  }, [newEstimate, leadName, domain, editor, installerData?.name, signature, mailTemplates]);
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const templateKey = e.target.value;
-    setSelectedTemplate(templateKey);
-    if (!templateKey) {
+    const templateId = e.target.value;
+    setSelectedTemplate(templateId);
+    if (!templateId) {
       if (!replyToMessageId) {
         setSubject("");
       }
@@ -219,20 +224,15 @@ export default function LeadEmailSection({
       return;
     }
 
-    const template = mailTemplates[templateKey as keyof typeof mailTemplates];
+    const template = mailTemplates.find((t) => t.id === templateId);
     if (!template) return;
 
     let emailBody = template.body;
     let emailSubject = template.subject;
-    if (leadName) {
-      emailSubject = emailSubject.replace(
-        /{installerName}/g,
-        installerData?.name ?? "",
-      );
-      emailBody = emailBody
-        .replaceAll(/{leadName}/g, leadName)
-        .replaceAll(/{installerName}/g, installerData?.name ?? "");
-    }
+    emailSubject = emailSubject.replace(/{installerName}/g, installerData?.name ?? "");
+    emailBody = emailBody
+      .replaceAll(/{leadName}/g, leadName ?? "")
+      .replaceAll(/{installerName}/g, installerData?.name ?? "");
 
     if (emailBody.includes("{estimateLink}")) {
       const sortedEstimates = estimates?.sort(
@@ -247,10 +247,7 @@ export default function LeadEmailSection({
         toast.warn(
           "Kan ikke fylle ut estimatlenke. Ingen estimater funnet for denne leaden.",
         );
-        emailBody = emailBody.replace(
-          /{estimateLink}/g,
-          "[MANGLER ESTMATLENKE]",
-        );
+        emailBody = emailBody.replace(/{estimateLink}/g, "[MANGLER ESTIMATLENKE]");
       }
     }
 
@@ -618,8 +615,8 @@ export default function LeadEmailSection({
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Velg en mal...</option>
-                    {Object.entries(mailTemplates).map(([key, template]) => (
-                      <option key={key} value={key}>
+                    {mailTemplates.map((template) => (
+                      <option key={template.id} value={template.id}>
                         {template.name}
                       </option>
                     ))}

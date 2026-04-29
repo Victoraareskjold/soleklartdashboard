@@ -19,6 +19,7 @@ import {
   Team,
   TeamCommissionType,
   User,
+  MailTemplate,
 } from "./types";
 import {
   CategoryWithSubcategories,
@@ -471,4 +472,29 @@ export const addUserToTeam = async (data: AddTeamMemberPayload) => {
 
 export const getUser = async () => {
   return apiRequest<User>("/api/user");
+};
+
+export const getMailTemplates = async (teamId: string) => {
+  return apiRequest<MailTemplate[]>(`/api/admin/mail-templates?teamId=${teamId}`);
+};
+
+export const createMailTemplate = async (
+  teamId: string,
+  data: { name: string; subject: string; body: string; template_key?: string },
+) => {
+  return apiRequest<MailTemplate>(`/api/admin/mail-templates`, "POST", {
+    teamId,
+    ...data,
+  });
+};
+
+export const updateMailTemplate = async (
+  id: string,
+  data: { name: string; subject: string; body: string; template_key?: string },
+) => {
+  return apiRequest<MailTemplate>(`/api/admin/mail-templates/${id}`, "PUT", data);
+};
+
+export const deleteMailTemplate = async (id: string) => {
+  return apiRequest(`/api/admin/mail-templates/${id}`, "DELETE");
 };

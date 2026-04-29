@@ -13,6 +13,7 @@ export const CLIENT_ROUTES = {
   PRICETABLE: "/pricetable",
 
   ADMIN: "/admin",
+  MAIL_TEMPLATES: "/admin/mail-templates",
 
   TEAM: "/team",
   PROFILE: "/profile",
@@ -26,6 +27,7 @@ export const NAVBAR_ROUTES = [
   { name: "Priskalkulator", href: CLIENT_ROUTES.PRICETABLE, adminOnly: false },
 
   { name: "Admin", href: CLIENT_ROUTES.ADMIN, adminOnly: true },
+  { name: "E-postmaler", href: CLIENT_ROUTES.MAIL_TEMPLATES, adminOnly: true },
 
   { name: "Team", href: CLIENT_ROUTES.TEAM, adminOnly: false },
   { name: "Profil", href: CLIENT_ROUTES.PROFILE, adminOnly: false },
