@@ -57,14 +57,16 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
     <div className="flex gap-2 border-b border-gray-300 p-2 bg-gray-50 rounded-t-md">
       <button
         type="button"
-        onClick={() => toggle(() => editor.chain().focus().toggleBold().run())}
+        onMouseDown={() =>
+          toggle(() => editor.chain().focus().toggleBold().run())
+        }
         className={`${base} ${activeMarks.bold ? active : inactive}`}
       >
         <strong>Bold</strong>
       </button>
       <button
         type="button"
-        onClick={() =>
+        onMouseDown={() =>
           toggle(() => editor.chain().focus().toggleItalic().run())
         }
         className={`${base} ${activeMarks.italic ? active : inactive}`}
@@ -73,7 +75,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
       </button>
       <button
         type="button"
-        onClick={() =>
+        onMouseDown={() =>
           toggle(() => editor.chain().focus().toggleStrike().run())
         }
         className={`${base} ${activeMarks.strike ? active : inactive}`}

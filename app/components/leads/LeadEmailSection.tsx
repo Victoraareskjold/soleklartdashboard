@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { EmailContent, Estimate, InstallerGroup, MailTemplate, User } from "@/lib/types";
+import {
+  EmailContent,
+  Estimate,
+  InstallerGroup,
+  MailTemplate,
+  User,
+} from "@/lib/types";
 import {
   sendLeadEmail,
   syncLeadEmails,
@@ -59,7 +65,9 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
     <div className="flex gap-2 border-b border-gray-300 p-2 bg-gray-50 rounded-t-md">
       <button
         type="button"
-        onClick={() => toggle(() => editor.chain().focus().toggleBold().run())}
+        onMouseDown={() =>
+          toggle(() => editor.chain().focus().toggleBold().run())
+        }
         className={`${base} ${editor.isActive("bold") ? active : inactive}`}
       >
         <strong>Bold</strong>
@@ -67,7 +75,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
       <button
         type="button"
-        onClick={() =>
+        onMouseDown={() =>
           toggle(() => editor.chain().focus().toggleItalic().run())
         }
         className={`${base} ${editor.isActive("italic") ? active : inactive}`}
@@ -77,7 +85,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
 
       <button
         type="button"
-        onClick={() =>
+        onMouseDown={() =>
           toggle(() => editor.chain().focus().toggleStrike().run())
         }
         className={`${base} ${editor.isActive("strike") ? active : inactive}`}
@@ -186,7 +194,9 @@ export default function LeadEmailSection({
 
   useEffect(() => {
     if (newEstimate && leadName && domain && installerData?.name) {
-      const template = mailTemplates.find((t) => t.template_key === "newEstimate");
+      const template = mailTemplates.find(
+        (t) => t.template_key === "newEstimate",
+      );
       if (!template) return;
 
       const estimateLink = newEstimate.finished
@@ -209,7 +219,15 @@ export default function LeadEmailSection({
       setShowCompose(true);
       setSelectedTemplate(template.id);
     }
-  }, [newEstimate, leadName, domain, editor, installerData?.name, signature, mailTemplates]);
+  }, [
+    newEstimate,
+    leadName,
+    domain,
+    editor,
+    installerData?.name,
+    signature,
+    mailTemplates,
+  ]);
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const templateId = e.target.value;
@@ -229,7 +247,10 @@ export default function LeadEmailSection({
 
     let emailBody = template.body;
     let emailSubject = template.subject;
-    emailSubject = emailSubject.replace(/{installerName}/g, installerData?.name ?? "");
+    emailSubject = emailSubject.replace(
+      /{installerName}/g,
+      installerData?.name ?? "",
+    );
     emailBody = emailBody
       .replaceAll(/{leadName}/g, leadName ?? "")
       .replaceAll(/{installerName}/g, installerData?.name ?? "");
@@ -247,7 +268,10 @@ export default function LeadEmailSection({
         toast.warn(
           "Kan ikke fylle ut estimatlenke. Ingen estimater funnet for denne leaden.",
         );
-        emailBody = emailBody.replace(/{estimateLink}/g, "[MANGLER ESTIMATLENKE]");
+        emailBody = emailBody.replace(
+          /{estimateLink}/g,
+          "[MANGLER ESTIMATLENKE]",
+        );
       }
     }
 

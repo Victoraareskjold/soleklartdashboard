@@ -39,21 +39,21 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
     <div className="flex gap-2 border-b border-gray-200 p-2 bg-gray-50 rounded-t-md">
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleBold().run()}
+        onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}
         className={`${base} ${editor.isActive("bold") ? active : inactive}`}
       >
         <strong>B</strong>
       </button>
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleItalic().run()}
+        onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run(); }}
         className={`${base} ${editor.isActive("italic") ? active : inactive}`}
       >
         <em>I</em>
       </button>
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleStrike().run()}
+        onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleStrike().run(); }}
         className={`${base} ${editor.isActive("strike") ? active : inactive}`}
       >
         <span className="line-through">S</span>
