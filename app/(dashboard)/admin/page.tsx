@@ -60,6 +60,7 @@ interface SegmentStats {
   totalLeads: number;
   activeLeads: number;
   newInPeriod: number;
+  lostInPeriod: number;
   signedInPeriod: number;
   signedValue: number;
   pipelineValue: number;
@@ -476,6 +477,7 @@ export default function AdminDashboard() {
                       totalLeads: acc.totalLeads + r.stats.totalLeads,
                       activeLeads: acc.activeLeads + r.stats.activeLeads,
                       newInPeriod: acc.newInPeriod + r.stats.newInPeriod,
+                      lostInPeriod: acc.lostInPeriod + r.stats.lostInPeriod,
                       signedInPeriod:
                         acc.signedInPeriod + r.stats.signedInPeriod,
                       signedValue: acc.signedValue + r.stats.signedValue,
@@ -485,6 +487,7 @@ export default function AdminDashboard() {
                       totalLeads: 0,
                       activeLeads: 0,
                       newInPeriod: 0,
+                      lostInPeriod: 0,
                       signedInPeriod: 0,
                       signedValue: 0,
                       pipelineValue: 0,
@@ -517,13 +520,13 @@ export default function AdminDashboard() {
                                 Segment
                               </th>
                               <th className="text-right px-3 py-2 font-semibold">
-                                Totalt
-                              </th>
-                              <th className="text-right px-3 py-2 font-semibold">
-                                Aktive
+                                Kvalifiserte leads
                               </th>
                               <th className="text-right px-3 py-2 font-semibold">
                                 Nye
+                              </th>
+                              <th className="text-right px-3 py-2 font-semibold">
+                                Tapt
                               </th>
                               <th className="text-right px-3 py-2 font-semibold">
                                 Signert
@@ -542,14 +545,14 @@ export default function AdminDashboard() {
                                 <td className="px-5 py-2 font-semibold text-gray-700">
                                   Totalt
                                 </td>
-                                <td className="text-right px-3 py-2 text-gray-600">
-                                  {totals.totalLeads}
-                                </td>
                                 <td className="text-right px-3 py-2 text-blue-600 font-medium">
                                   {totals.activeLeads}
                                 </td>
                                 <td className="text-right px-3 py-2 text-indigo-600">
                                   {totals.newInPeriod}
+                                </td>
+                                <td className="text-right px-3 py-2 text-indigo-600">
+                                  {totals.lostInPeriod}
                                 </td>
                                 <td className="text-right px-3 py-2 text-emerald-600 font-medium">
                                   {totals.signedInPeriod}

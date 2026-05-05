@@ -643,6 +643,11 @@ export async function GET(req: Request) {
       const signedInPeriod = segLeads.filter((l) =>
         signedEventMap.has(l.id),
       ).length;
+      const lostInPeriod = segLeads.filter((l) => {
+        if (!l.updated_at || (l.status !== 3 && l.status !== 16)) return false;
+        const d = new Date(l.updated_at);
+        return d >= fromDate && d <= toDate;
+      }).length;
       const signedVal = segLeads
         .filter((l) => signedEventMap.has(l.id))
         .reduce((sum, l) => sum + (signedEventMap.get(l.id)?.value || 0), 0);
@@ -653,6 +658,7 @@ export async function GET(req: Request) {
         totalLeads,
         activeLeads: activeL,
         newInPeriod,
+        lostInPeriod,
         signedInPeriod,
         signedValue: signedVal,
         pipelineValue: pipelineVal,
