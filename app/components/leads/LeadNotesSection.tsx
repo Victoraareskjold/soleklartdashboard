@@ -217,10 +217,11 @@ export default function LeadNotesSection({ leadId }: Props) {
     );
 
     // Email notifications for @mentions are handled server-side in the API route
+    const noteContent = editor.getHTML().replace(/<p><\/p>/g, "<p><br></p>");
     const note = await createLeadNote(
       leadId,
       user.id,
-      editor.getHTML(),
+      noteContent,
       "note",
       undefined,
       attachmentsPayload,
@@ -465,8 +466,8 @@ export default function LeadNotesSection({ leadId }: Props) {
               </div>
 
               <div
-                className="text-md text-slate-600 mb-4 mt-2"
-                dangerouslySetInnerHTML={{ __html: note.content }}
+                className="text-md text-slate-600 mb-4 mt-2 [&_p]:mb-3 [&_p:last-child]:mb-0"
+                dangerouslySetInnerHTML={{ __html: note.content.replace(/<p><\/p>/g, "<p><br></p>") }}
               />
 
               {note.attachments && note.attachments.length > 0 && (

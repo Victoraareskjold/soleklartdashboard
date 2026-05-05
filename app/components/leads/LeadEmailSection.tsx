@@ -784,12 +784,13 @@ export default function LeadEmailSection({
                         </div>
                         <div className="overflow-x-auto">
                           <div
-                            className="text-sm text-gray-700 whitespace-pre-wrap break-words"
+                            className="text-sm text-gray-700 break-words [&_p]:mb-3 [&_p:last-child]:mb-0"
                             dangerouslySetInnerHTML={{
-                              __html:
+                              __html: (
                                 email.body ||
                                 email.body_preview ||
-                                "Ingen innhold",
+                                "Ingen innhold"
+                              ).replace(/<p><\/p>/g, "<p><br></p>"),
                             }}
                           />
                         </div>
