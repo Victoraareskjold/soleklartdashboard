@@ -210,7 +210,10 @@ export default function LeadEmailSection({
 
       const emailBody = template.body
         .replaceAll("{leadName}", leadName)
-        .replaceAll("{estimateLink}", estimateLink)
+        .replaceAll(
+          "{estimateLink}",
+          `<a href="${estimateLink}">Link til estimat</a>`,
+        )
         .replaceAll("{installerName}", installerData?.name);
 
       setSubject(emailSubject);
@@ -263,7 +266,10 @@ export default function LeadEmailSection({
       const latestEstimate = sortedEstimates?.[0];
       if (latestEstimate && domain) {
         const estimateLink = `https://www.${domain}.no/estimat/${latestEstimate.id}`;
-        emailBody = emailBody.replace(/{estimateLink}/g, estimateLink);
+        emailBody = emailBody.replace(
+          /{estimateLink}/g,
+          `<a href="${estimateLink}">Link til estimat</a>`,
+        );
       } else {
         toast.warn(
           "Kan ikke fylle ut estimatlenke. Ingen estimater funnet for denne leaden.",
