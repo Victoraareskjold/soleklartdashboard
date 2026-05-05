@@ -168,12 +168,13 @@ export async function GET(req: Request) {
 
     // Fetch ALL leads for this team — paginate to bypass the 1000-row default
     const PAGE_SIZE = 1000;
+    const CHUNK = 200;
+
     const leads: {
       id: string;
       status: number | null;
       created_at: string | null;
       updated_at: string | null;
-      updated_price: number | null;
       assigned_to: string | null;
       created_by: string | null;
       installer_group_id: string | null;
@@ -186,7 +187,7 @@ export async function GET(req: Request) {
       const { data, error } = await client
         .from("leads")
         .select(
-          "id, status, created_at, updated_at, updated_price, assigned_to, created_by, installer_group_id, note, lead_source",
+          "id, status, created_at, updated_at, assigned_to, created_by, installer_group_id, note, lead_source",
         )
         .eq("team_id", teamId)
         .neq("installer_group_id", "5e627e51-a3fd-43bc-90f3-4cc28c0ecb7f")
@@ -243,11 +244,25 @@ export async function GET(req: Request) {
       estOffset += PAGE_SIZE;
     }
 
-    // Lead value lookup
+    // Lead value lookup — latest estimate's price_data.total per lead
     const leadValueMap: Record<string, number> = {};
-    leads.forEach((l) => {
-      leadValueMap[l.id] = l.updated_price || 0;
-    });
+    leads.forEach((l) => { leadValueMap[l.id] = 0; });
+    for (let i = 0; i < leads.length; i += CHUNK) {
+      const ids = leads.slice(i, i + CHUNK).map((l) => l.id);
+      const { data: estVals } = await client
+        .from("estimates")
+        .select("lead_id, price_data, created_at")
+        .in("lead_id", ids)
+        .lte("created_at", toDate.toISOString())
+        .order("created_at", { ascending: false });
+      const seen = new Set<string>();
+      (estVals || []).forEach((e) => {
+        if (seen.has(e.lead_id)) return;
+        seen.add(e.lead_id);
+        const total = (e.price_data as Record<string, number> | null)?.total || 0;
+        if (total > 0) leadValueMap[e.lead_id] = total;
+      });
+    }
 
     // Unified signed events in period: estimates with signed_at OR leads with
     // a signed status (18-21) updated in period — deduplicated by lead_id.
@@ -259,8 +274,8 @@ export async function GET(req: Request) {
         lead_id: e.lead_id,
         date: e.signed_at,
         value:
-          leadValueMap[e.lead_id] ||
           (e.price_data as Record<string, number> | null)?.total ||
+          leadValueMap[e.lead_id] ||
           0,
       });
     });
@@ -324,7 +339,7 @@ export async function GET(req: Request) {
       if (!status) return;
       if (!statusAgg[status]) statusAgg[status] = { count: 0, totalValue: 0 };
       statusAgg[status].count++;
-      statusAgg[status].totalValue += lead.updated_price || 0;
+      statusAgg[status].totalValue += leadValueMap[lead.id] || 0;
     });
 
     const funnel = FUNNEL_STAGES.map((s) => ({
@@ -476,7 +491,7 @@ export async function GET(req: Request) {
         };
       }
       installerGroupAgg[gid].total++;
-      installerGroupAgg[gid].value += lead.updated_price || 0;
+      installerGroupAgg[gid].value += leadValueMap[lead.id] || 0;
       if (lead.status && SIGNED_STATUSES.has(lead.status)) {
         installerGroupAgg[gid].signed++;
       }
@@ -491,7 +506,7 @@ export async function GET(req: Request) {
       periodLeads.map((l) => ({
         date: l.created_at!,
         count: 1,
-        value: l.updated_price || 0,
+        value: leadValueMap[l.id] || 0,
       })),
       groupBy,
     );
@@ -509,9 +524,8 @@ export async function GET(req: Request) {
     const signedCount = signedEvents.length;
     const signedValue = signedEvents.reduce((sum, e) => sum + e.value, 0);
     const NOT_INTERESTED_STATUSES = new Set([1, 3, 16]);
-    const pipelineValue = leads
-      .filter((l) => l.status && !NOT_INTERESTED_STATUSES.has(l.status))
-      .reduce((sum, l) => sum + (l.updated_price || 0), 0);
+    const pipelineValue = periodLeads
+      .reduce((sum, l) => sum + (leadValueMap[l.id] || 0), 0);
 
     const activeLeads = leads.filter(
       (l) => l.status && !new Set([1, 2, 3, 4, 5, 16, 22]).has(l.status),
@@ -534,7 +548,6 @@ export async function GET(req: Request) {
     // All-time signed estimates (not period-filtered) — needed for C and D.
     // Chunked to avoid URL length limits on large .in() filters.
     const allSignedLeadIds = new Set<string>();
-    const CHUNK = 200;
     for (let i = 0; i < leads.length; i += CHUNK) {
       const ids = leads.slice(i, i + CHUNK).map((l) => l.id);
       const { data: chunk } = await client
@@ -653,7 +666,7 @@ export async function GET(req: Request) {
         .reduce((sum, l) => sum + (signedEventMap.get(l.id)?.value || 0), 0);
       const pipelineVal = segLeads
         .filter((l) => l.status && !NOT_INTERESTED_STATUSES.has(l.status))
-        .reduce((sum, l) => sum + (l.updated_price || 0), 0);
+        .reduce((sum, l) => sum + (leadValueMap[l.id] || 0), 0);
       return {
         totalLeads,
         activeLeads: activeL,
