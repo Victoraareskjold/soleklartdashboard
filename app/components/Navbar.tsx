@@ -46,7 +46,7 @@ export default function Navbar() {
         );
         const data = await res.json();
 
-        setColdCallingAmount(data.coldCallingAmount);
+        setColdCallingAmount(data.coldCallAmount);
         setContactAmount(data.contactAmount);
       } catch (err) {
         console.error(err);
