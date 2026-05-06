@@ -212,7 +212,7 @@ export default function LeadEmailSection({
         .replaceAll("{leadName}", leadName)
         .replaceAll(
           "{estimateLink}",
-          `<a href="${estimateLink}">Link til estimat</a>`,
+          `<a href="${estimateLink}">Åpne oppsett for solcelleanlegg</a>`,
         )
         .replaceAll("{installerName}", installerData?.name);
 
@@ -268,7 +268,7 @@ export default function LeadEmailSection({
         const estimateLink = `https://www.${domain}.no/estimat/${latestEstimate.id}`;
         emailBody = emailBody.replace(
           /{estimateLink}/g,
-          `<a href="${estimateLink}">Link til estimat</a>`,
+          `<a href="${estimateLink}">Åpne oppsett for solcelleanlegg</a>`,
         );
       } else {
         toast.warn(
