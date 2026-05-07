@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       company,
       role,
       created_by,
+      lead_source,
     } = await req.json();
 
     const supabase = createSupabaseAdminClient();
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
         roof_age: roof_age || null,
         assigned_to: assigned_to || null,
         status: 7,
-        lead_source: "coldcall",
+        lead_source: lead_source ?? "organic",
         note: note || null,
         company: company || null,
         role: role || null,
@@ -85,7 +86,6 @@ export async function PATCH(req: NextRequest) {
       .from("leads")
       .update({
         status: 7,
-        lead_source: "coldcall",
         created_by: userId,
         note: note || null,
         updated_at: new Date().toISOString(),
