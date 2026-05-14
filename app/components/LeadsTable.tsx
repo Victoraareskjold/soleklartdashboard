@@ -12,6 +12,7 @@ import {
 import { toast } from "react-toastify";
 import LeadCard from "./LeadCard";
 import { useRoles } from "@/context/RoleProvider";
+import { NOT_INTERESTED_STATUS } from "@/constants/leadStatuses";
 
 // Date helper functions
 const getStartOfWeek = (date: Date) => {
@@ -32,7 +33,7 @@ export const LEAD_STATUSES = [
   { value: 13, label: "Næringskunder (Dialog pågår)", color: "#DAFFB7" },
   { value: 14, label: "Venter på befaring", color: "#DAFFB7" },
   { value: 15, label: "Tilleggsinfo / Korrigering", color: "#DAFFB7" },
-  { value: 16, label: "Ikke interessert", color: "#FF7979" },
+  { value: NOT_INTERESTED_STATUS, label: "Ikke interessert", color: "#FF7979" },
   { value: 17, label: "Venter på signering", color: "#A3FFA3" },
   { value: 18, label: "Salg Fullført & Avtale Signert", color: "#6DFF68" },
   { value: 19, label: "Planlagt Installasjon", color: "#6DFF68" },

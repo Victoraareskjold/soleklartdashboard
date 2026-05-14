@@ -59,7 +59,7 @@ interface InstallerGroupStat {
 interface SegmentStats {
   totalLeads: number;
   activeLeads: number;
-  newInPeriod: number;
+  qualifiedInPeriod: number;
   lostInPeriod: number;
   signedInPeriod: number;
   signedValue: number;
@@ -472,21 +472,32 @@ export default function AdminDashboard() {
                 .filter((g) => g.name.toLowerCase() !== "testelektro")
                 .map((group) => {
                   const isOpen = expandedGroups.has(group.id);
-                  const totals: SegmentStats = group.sources.reduce(
-                    (acc, r) => ({
-                      totalLeads: acc.totalLeads + r.stats.totalLeads,
-                      activeLeads: acc.activeLeads + r.stats.activeLeads,
-                      newInPeriod: acc.newInPeriod + r.stats.newInPeriod,
-                      lostInPeriod: acc.lostInPeriod + r.stats.lostInPeriod,
-                      signedInPeriod:
-                        acc.signedInPeriod + r.stats.signedInPeriod,
-                      signedValue: acc.signedValue + r.stats.signedValue,
-                      pipelineValue: acc.pipelineValue + r.stats.pipelineValue,
+
+                  // Totals = inbound sources + individual callers.
+                  // The "coldcall" source bucket is NOT summed here — callers
+                  // are the per-person breakdown of that same bucket, so including
+                  // both would double-count every cold-call lead.
+                  const inboundSources = group.sources.filter(
+                    (r) => r.key !== "coldcall",
+                  );
+                  const expandedTotals: SegmentStats = [
+                    ...inboundSources.map((r) => r.stats),
+                    ...group.callers.map((c) => c.stats),
+                  ].reduce(
+                    (acc, s) => ({
+                      totalLeads: acc.totalLeads + s.totalLeads,
+                      activeLeads: acc.activeLeads + s.activeLeads,
+                      qualifiedInPeriod:
+                        acc.qualifiedInPeriod + s.qualifiedInPeriod,
+                      lostInPeriod: acc.lostInPeriod + s.lostInPeriod,
+                      signedInPeriod: acc.signedInPeriod + s.signedInPeriod,
+                      signedValue: acc.signedValue + s.signedValue,
+                      pipelineValue: acc.pipelineValue + s.pipelineValue,
                     }),
                     {
                       totalLeads: 0,
                       activeLeads: 0,
-                      newInPeriod: 0,
+                      qualifiedInPeriod: 0,
                       lostInPeriod: 0,
                       signedInPeriod: 0,
                       signedValue: 0,
@@ -523,9 +534,6 @@ export default function AdminDashboard() {
                                 Kvalifiserte leads
                               </th>
                               <th className="text-right px-3 py-2 font-semibold">
-                                Nye
-                              </th>
-                              <th className="text-right px-3 py-2 font-semibold">
                                 Tapt
                               </th>
                               <th className="text-right px-3 py-2 font-semibold">
@@ -546,36 +554,35 @@ export default function AdminDashboard() {
                                   Totalt
                                 </td>
                                 <td className="text-right px-3 py-2 text-blue-600 font-medium">
-                                  {totals.activeLeads}
+                                  {expandedTotals.qualifiedInPeriod}
                                 </td>
                                 <td className="text-right px-3 py-2 text-indigo-600">
-                                  {totals.newInPeriod}
-                                </td>
-                                <td className="text-right px-3 py-2 text-indigo-600">
-                                  {totals.lostInPeriod}
+                                  {expandedTotals.lostInPeriod}
                                 </td>
                                 <td className="text-right px-3 py-2 text-emerald-600 font-medium">
-                                  {totals.signedInPeriod}
+                                  {expandedTotals.signedInPeriod}
                                 </td>
                                 <td className="text-right px-3 py-2 text-emerald-700">
-                                  {formatCurrency(totals.signedValue)} kr
+                                  {formatCurrency(expandedTotals.signedValue)} kr
                                 </td>
                                 <td className="text-right px-5 py-2 text-violet-700">
-                                  {formatCurrency(totals.pipelineValue)} kr
+                                  {formatCurrency(expandedTotals.pipelineValue)}{" "}
+                                  kr
                                 </td>
                               </tr>
                             )}
                             {isOpen && (
                               <>
+                                {/* Inbound sources (google / facebook / organic) */}
                                 <tr className="bg-gray-50">
                                   <td
-                                    colSpan={7}
+                                    colSpan={6}
                                     className="px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-300"
                                   >
-                                    Kilder
+                                    Inbound kilder
                                   </td>
                                 </tr>
-                                {group.sources.map((row) => (
+                                {inboundSources.map((row) => (
                                   <tr
                                     key={row.key}
                                     className="border-t border-gray-50 hover:bg-gray-50 transition-colors"
@@ -583,14 +590,11 @@ export default function AdminDashboard() {
                                     <td className="px-5 py-2 font-medium text-gray-700">
                                       {row.label}
                                     </td>
-                                    <td className="text-right px-3 py-2 text-gray-600">
-                                      {row.stats.totalLeads}
-                                    </td>
                                     <td className="text-right px-3 py-2 text-blue-600 font-medium">
-                                      {row.stats.activeLeads}
+                                      {row.stats.qualifiedInPeriod}
                                     </td>
-                                    <td className="text-right px-3 py-2 text-indigo-600">
-                                      {row.stats.newInPeriod}
+                                    <td className="text-right px-3 py-2 text-red-500">
+                                      {row.stats.lostInPeriod}
                                     </td>
                                     <td className="text-right px-3 py-2 text-emerald-600 font-medium">
                                       {row.stats.signedInPeriod}
@@ -604,14 +608,15 @@ export default function AdminDashboard() {
                                     </td>
                                   </tr>
                                 ))}
+                                {/* Cold calling — one row per caller (breakdown of the coldcall bucket) */}
                                 {group.callers.length > 0 && (
                                   <>
                                     <tr className="bg-gray-50">
                                       <td
-                                        colSpan={7}
+                                        colSpan={6}
                                         className="px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-300"
                                       >
-                                        Leadinnhentere
+                                        Cold calling — per innhenter
                                       </td>
                                     </tr>
                                     {group.callers.map((caller) => (
@@ -622,14 +627,11 @@ export default function AdminDashboard() {
                                         <td className="px-5 py-2 font-medium text-gray-700">
                                           {caller.name}
                                         </td>
-                                        <td className="text-right px-3 py-2 text-gray-600">
-                                          {caller.stats.totalLeads}
-                                        </td>
                                         <td className="text-right px-3 py-2 text-blue-600 font-medium">
-                                          {caller.stats.activeLeads}
+                                          {caller.stats.qualifiedInPeriod}
                                         </td>
-                                        <td className="text-right px-3 py-2 text-indigo-600">
-                                          {caller.stats.newInPeriod}
+                                        <td className="text-right px-3 py-2 text-red-500">
+                                          {caller.stats.lostInPeriod}
                                         </td>
                                         <td className="text-right px-3 py-2 text-emerald-600 font-medium">
                                           {caller.stats.signedInPeriod}

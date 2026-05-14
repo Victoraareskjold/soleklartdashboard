@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
+import {
+  COLDCALLING_STATUSES,
+  NOT_INTERESTED_STATUS,
+  PIPELINE_STATUSES_ALL,
+} from "@/constants/leadStatuses";
 
 // Canonical pipeline order — used for funnel + bottleneck views
 export const FUNNEL_STAGES = [
@@ -82,7 +87,7 @@ export const FUNNEL_STAGES = [
   { value: 1, label: "Annet", color: "#989898", group: "dead" },
   { value: 3, label: "Ikke interessert", color: "#626262", group: "dead" },
   {
-    value: 16,
+    value: NOT_INTERESTED_STATUS,
     label: "Ikke interessert (pipeline)",
     color: "#FF7979",
     group: "dead",
@@ -224,7 +229,9 @@ export async function GET(req: Request) {
 
     // Lead value lookup — latest estimate's price_data.total per lead
     const leadValueMap: Record<string, number> = {};
-    leads.forEach((l) => { leadValueMap[l.id] = 0; });
+    leads.forEach((l) => {
+      leadValueMap[l.id] = 0;
+    });
     for (let i = 0; i < leads.length; i += CHUNK) {
       const ids = leads.slice(i, i + CHUNK).map((l) => l.id);
       const { data: estVals } = await client
@@ -237,7 +244,8 @@ export async function GET(req: Request) {
       (estVals || []).forEach((e) => {
         if (seen.has(e.lead_id)) return;
         seen.add(e.lead_id);
-        const total = (e.price_data as Record<string, number> | null)?.total || 0;
+        const total =
+          (e.price_data as Record<string, number> | null)?.total || 0;
         if (total > 0) leadValueMap[e.lead_id] = total;
       });
     }
@@ -250,9 +258,8 @@ export async function GET(req: Request) {
       if (!l.status || !SIGNED_STATUSES.has(l.status)) return;
       const d = new Date(l.updated_at ?? l.created_at ?? "");
       if (d < fromDate || d > toDate) return;
-      const value = (l.updated_price ?? 0) > 0
-        ? l.updated_price!
-        : leadValueMap[l.id] || 0;
+      const value =
+        (l.updated_price ?? 0) > 0 ? l.updated_price! : leadValueMap[l.id] || 0;
       if (value <= 0) return;
       signedEventMap.set(l.id, {
         lead_id: l.id,
@@ -366,7 +373,7 @@ export async function GET(req: Request) {
       // Results
       if (PIPELINE_STATUSES.has(s)) {
         coldCallerAgg[userId].converted++;
-      } else if (s === 3 || s === 16) {
+      } else if (s === 3 || s === NOT_INTERESTED_STATUS) {
         coldCallerAgg[userId].notInterested++;
       } else if (s === 4 || s === 22) {
         coldCallerAgg[userId].noAnswer++;
@@ -422,7 +429,7 @@ export async function GET(req: Request) {
 
       if (PIPELINE_STATUSES.has(s)) {
         inboundAgg[source].converted++;
-      } else if (s === 3 || s === 16) {
+      } else if (s === 3 || s === NOT_INTERESTED_STATUS) {
         inboundAgg[source].notInterested++;
       } else if (s === 4 || s === 22) {
         inboundAgg[source].noAnswer++;
@@ -471,15 +478,6 @@ export async function GET(req: Request) {
     );
 
     // ── Time series ───────────────────────────────────────────────────────────
-    const newLeadsOverTime = groupByPeriod(
-      periodLeads.map((l) => ({
-        date: l.created_at!,
-        count: 1,
-        value: leadValueMap[l.id] || 0,
-      })),
-      groupBy,
-    );
-
     const signedOverTime = groupByPeriod(
       signedEvents.map((e) => ({
         date: e.date,
@@ -493,25 +491,28 @@ export async function GET(req: Request) {
     const signedCount = signedEvents.length;
     const signedValue = signedEvents.reduce((sum, e) => sum + e.value, 0);
     const NOT_INTERESTED_STATUSES = new Set([1, 3, 16]);
-    const pipelineValue = periodLeads
-      .reduce((sum, l) => sum + (leadValueMap[l.id] || 0), 0);
+    const pipelineValue = periodLeads.reduce(
+      (sum, l) => sum + (leadValueMap[l.id] || 0),
+      0,
+    );
 
     const activeLeads = leads.filter(
-      (l) => l.status && !new Set([1, 2, 3, 4, 5, 16, 22]).has(l.status),
+      (l) => l.status && !PIPELINE_STATUSES_ALL.has(l.status),
     ).length;
 
     // ── Pipeline tracking (A–E) ───────────────────────────────────────────────
     // A: Tapte leads
     const notInterested = leads.filter(
-      (l) => l.status === 3 || l.status === 16,
+      (l) => l.status === 3 || l.status === NOT_INTERESTED_STATUS,
     ).length;
     const newsletter = leads.filter((l) => l.status === 11).length;
     const lost = notInterested + newsletter;
 
-    // B: Aktive i grønn pipeline (dialog → venter på signering)
-    const ACTIVE_PIPELINE = new Set([12, 13, 14, 15, 17]);
     const activePipeline = leads.filter(
-      (l) => l.status && ACTIVE_PIPELINE.has(l.status),
+      (l) =>
+        l.status &&
+        PIPELINE_STATUSES_ALL.has(l.status) &&
+        l.status !== NOT_INTERESTED_STATUS,
     ).length;
 
     // All-time signed estimates (not period-filtered) — needed for C and D.
@@ -545,7 +546,8 @@ export async function GET(req: Request) {
     // Uses status history for leads that have it; falls back to current status
     // for older leads recorded before history tracking was introduced.
     const lostLeads = leads.filter(
-      (l) => l.status === 3 || l.status === 16 || l.status === 11,
+      (l) =>
+        l.status === 3 || l.status === NOT_INTERESTED_STATUS || l.status === 11,
     );
     const lostLeadIds = lostLeads.map((l) => l.id);
 
@@ -577,7 +579,7 @@ export async function GET(req: Request) {
       if (!history || history.size === 0) {
         // No history recorded yet — infer from current status:
         // status 16 means they were in the pipeline before falling out
-        if (lead.status === 16) return "pipeline";
+        if (lead.status === NOT_INTERESTED_STATUS) return "pipeline";
         // status 11 (newsletter) is a pipeline stage
         if (lead.status === 11) return "pipeline";
         return "coldcall";
@@ -604,20 +606,18 @@ export async function GET(req: Request) {
     });
 
     // ── Per-installer breakdown (installer × source/caller) ───────────────────
-    const ACTIVE_EXCL = new Set([1, 2, 3, 4, 5, 16, 22]);
     const INBOUND_KEYS = new Set(INBOUND_SOURCES.map((s) => s.key));
 
     const segStats = (segLeads: typeof leads) => {
       const totalLeads = segLeads.length;
       const activeL = segLeads.filter(
-        (l) => l.status && !ACTIVE_EXCL.has(l.status),
+        (l) =>
+          l.status &&
+          !PIPELINE_STATUSES_ALL.has(l.status) &&
+          l.status !== NOT_INTERESTED_STATUS,
       ).length;
-      const newInPeriod = segLeads.filter((l) => {
-        if (
-          !l.created_at ||
-          !l.status ||
-          EXCLUDED_PERIOD_STATUSES.has(l.status)
-        )
+      const qualifiedInPeriod = segLeads.filter((l) => {
+        if (!l.created_at || !l.status || COLDCALLING_STATUSES.has(l.status))
           return false;
         const d = new Date(l.created_at);
         return d >= fromDate && d <= toDate;
@@ -626,7 +626,11 @@ export async function GET(req: Request) {
         signedEventMap.has(l.id),
       ).length;
       const lostInPeriod = segLeads.filter((l) => {
-        if (!l.updated_at || (l.status !== 3 && l.status !== 16)) return false;
+        if (
+          !l.updated_at ||
+          (l.status !== 3 && l.status !== NOT_INTERESTED_STATUS)
+        )
+          return false;
         const d = new Date(l.updated_at);
         return d >= fromDate && d <= toDate;
       }).length;
@@ -639,7 +643,7 @@ export async function GET(req: Request) {
       return {
         totalLeads,
         activeLeads: activeL,
-        newInPeriod,
+        qualifiedInPeriod,
         lostInPeriod,
         signedInPeriod,
         signedValue: signedVal,
@@ -699,10 +703,10 @@ export async function GET(req: Request) {
       ];
 
       const callers = coldCallerMembers.map((m) => ({
-          userId: m.user_id,
-          name: memberMap[m.user_id] || "Ukjent",
-          stats: segStats(callerBuckets[m.user_id]),
-        }));
+        userId: m.user_id,
+        name: memberMap[m.user_id] || "Ukjent",
+        stats: segStats(callerBuckets[m.user_id]),
+      }));
 
       return { id: group.id, name: group.name, sources, callers };
     });
@@ -712,12 +716,10 @@ export async function GET(req: Request) {
       coldCallerStats,
       inboundStats,
       installerGroupStats,
-      newLeadsOverTime,
       signedOverTime,
       summary: {
         totalLeads: leads.length,
         activeLeads,
-        newInPeriod: periodLeads.length,
         signedInPeriod: signedCount,
         signedValueInPeriod: signedValue,
         pipelineValue,
