@@ -988,7 +988,7 @@ export default function LeadPage() {
               <input
                 type="number"
                 className="w-full text-sm mt-1"
-                value={updatedPrice ?? totalExMva ?? ""}
+                value={updatedPrice?.toFixed(2) ?? totalExMva?.toFixed(2) ?? ""}
                 placeholder={
                   totalExMva !== null
                     ? totalExMva.toLocaleString("nb-NO")
@@ -1015,7 +1015,7 @@ export default function LeadPage() {
                 className="w-full text-sm mt-1"
                 value={
                   updatedPrice != null
-                    ? Math.round(updatedPrice * 1.25)
+                    ? Math.round(updatedPrice * 1.25).toFixed(2)
                     : (totalInklMva ?? "")
                 }
                 placeholder={
