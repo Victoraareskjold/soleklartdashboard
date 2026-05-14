@@ -180,6 +180,7 @@ export async function GET(req: Request) {
       installer_group_id: string | null;
       note: string | null;
       lead_source: string | null;
+      updated_price: number | null;
     }[] = [];
 
     let offset = 0;
@@ -187,7 +188,7 @@ export async function GET(req: Request) {
       const { data, error } = await client
         .from("leads")
         .select(
-          "id, status, created_at, updated_at, assigned_to, created_by, installer_group_id, note, lead_source",
+          "id, status, created_at, updated_at, assigned_to, created_by, installer_group_id, note, lead_source, updated_price",
         )
         .eq("team_id", teamId)
         .neq("installer_group_id", "5e627e51-a3fd-43bc-90f3-4cc28c0ecb7f")
@@ -221,29 +222,6 @@ export async function GET(req: Request) {
       return d >= fromDate && d <= toDate;
     });
 
-    // Signed estimates in period — also paginate
-    const signedEstimates: {
-      id: string;
-      lead_id: string;
-      signed_at: string;
-      price_data: unknown;
-    }[] = [];
-    let estOffset = 0;
-    while (true) {
-      const { data } = await client
-        .from("estimates")
-        .select("id, lead_id, signed_at, price_data")
-        .not("signed_at", "is", null)
-        .gte("signed_at", from)
-        .lte("signed_at", toDate.toISOString())
-        .range(estOffset, estOffset + PAGE_SIZE - 1);
-
-      if (!data || data.length === 0) break;
-      signedEstimates.push(...data);
-      if (data.length < PAGE_SIZE) break;
-      estOffset += PAGE_SIZE;
-    }
-
     // Lead value lookup — latest estimate's price_data.total per lead
     const leadValueMap: Record<string, number> = {};
     leads.forEach((l) => { leadValueMap[l.id] = 0; });
@@ -264,31 +242,22 @@ export async function GET(req: Request) {
       });
     }
 
-    // Unified signed events in period: estimates with signed_at OR leads with
-    // a signed status (18-21) updated in period — deduplicated by lead_id.
+    // Signed events in period: leads with SIGNED_STATUSES (18-21) updated in period
     type SignedEvent = { lead_id: string; date: string; value: number };
     const signedEventMap = new Map<string, SignedEvent>();
 
-    signedEstimates.forEach((e) => {
-      signedEventMap.set(e.lead_id, {
-        lead_id: e.lead_id,
-        date: e.signed_at,
-        value:
-          (e.price_data as Record<string, number> | null)?.total ||
-          leadValueMap[e.lead_id] ||
-          0,
-      });
-    });
-
     leads.forEach((l) => {
       if (!l.status || !SIGNED_STATUSES.has(l.status)) return;
-      if (signedEventMap.has(l.id)) return;
       const d = new Date(l.updated_at ?? l.created_at ?? "");
       if (d < fromDate || d > toDate) return;
+      const value = (l.updated_price ?? 0) > 0
+        ? l.updated_price!
+        : leadValueMap[l.id] || 0;
+      if (value <= 0) return;
       signedEventMap.set(l.id, {
         lead_id: l.id,
         date: (l.updated_at ?? l.created_at)!,
-        value: leadValueMap[l.id] || 0,
+        value,
       });
     });
 
