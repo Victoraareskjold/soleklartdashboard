@@ -12,7 +12,7 @@ import {
 import { toast } from "react-toastify";
 import LeadCard from "./LeadCard";
 import { useRoles } from "@/context/RoleProvider";
-import { NOT_INTERESTED_STATUS } from "@/constants/leadStatuses";
+import { LEAD_STATUSES } from "@/constants/leadStatuses";
 
 // Date helper functions
 const getStartOfWeek = (date: Date) => {
@@ -22,24 +22,6 @@ const getStartOfWeek = (date: Date) => {
   d.setHours(0, 0, 0, 0);
   return new Date(d.setDate(diff));
 };
-
-export const LEAD_STATUSES = [
-  { value: 7, label: "Oppfølging 1", color: "#FBF586" },
-  { value: 8, label: "Oppfølging 2", color: "#FBF586" },
-  { value: 9, label: "Oppfølging 3", color: "#FBF586" },
-  { value: 10, label: "Oppfølging 4", color: "#FBF586" },
-  { value: 11, label: "Nyhetsbrev (Langsiktig Nuturing)", color: "#ECE171" },
-  { value: 12, label: "Privatkunder (Dialog pågår)", color: "#DAFFB7" },
-  { value: 13, label: "Næringskunder (Dialog pågår)", color: "#DAFFB7" },
-  { value: 14, label: "Venter på befaring", color: "#DAFFB7" },
-  { value: 15, label: "Tilleggsinfo / Korrigering", color: "#DAFFB7" },
-  { value: NOT_INTERESTED_STATUS, label: "Ikke interessert", color: "#FF7979" },
-  { value: 17, label: "Venter på signering", color: "#A3FFA3" },
-  { value: 18, label: "Salg Fullført & Avtale Signert", color: "#6DFF68" },
-  { value: 19, label: "Planlagt Installasjon", color: "#6DFF68" },
-  { value: 20, label: "Anlegg Ferdigmontert", color: "#08FF00" },
-  { value: 21, label: "Kommisjon Utbetalt", color: "#08FF00" },
-];
 
 interface LeadsTableProps {
   leadOwner: string;

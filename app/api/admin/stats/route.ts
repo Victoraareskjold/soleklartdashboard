@@ -4,6 +4,7 @@ import {
   COLDCALLING_STATUSES,
   NOT_INTERESTED_STATUS,
   PIPELINE_STATUSES_ALL,
+  LEAD_STATUS_SET,
 } from "@/constants/leadStatuses";
 
 // Canonical pipeline order — used for funnel + bottleneck views
@@ -617,7 +618,7 @@ export async function GET(req: Request) {
           l.status !== NOT_INTERESTED_STATUS,
       ).length;
       const qualifiedInPeriod = segLeads.filter((l) => {
-        if (!l.created_at || !l.status || !PIPELINE_STATUSES_ALL.has(l.status))
+        if (!l.created_at || !l.status || !LEAD_STATUS_SET.has(l.status))
           return false;
         const d = new Date(l.created_at);
         return d >= fromDate && d <= toDate;
