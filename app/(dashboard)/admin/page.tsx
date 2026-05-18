@@ -42,11 +42,8 @@ interface InboundSourceStat {
   source: string;
   label: string;
   assigned: number;
-  called: number;
-  converted: number;
-  notInterested: number;
-  noAnswer: number;
-  conversionRate: number;
+  lost: number;
+  signed: number;
 }
 
 interface InstallerGroupStat {
@@ -1133,61 +1130,41 @@ export default function AdminDashboard() {
                       <span className="text-sm font-semibold text-gray-800">
                         {src.label}
                       </span>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-gray-400">
-                          {src.called}/{src.assigned} behandlet
-                        </span>
-                        <span
-                          className={`font-semibold px-1.5 py-0.5 rounded ${
-                            src.conversionRate >= 30
-                              ? "bg-green-100 text-green-700"
-                              : src.conversionRate >= 15
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-50 text-red-600"
-                          }`}
-                        >
-                          {src.conversionRate}%
-                        </span>
-                      </div>
+                      <span className="text-xs text-gray-400">
+                        {src.assigned} totalt
+                      </span>
                     </div>
-                    {/* Progress bar */}
+                    {/* Progress bar: signert (grønn) / tapt (rød) */}
                     <div className="flex gap-0.5 h-2 rounded-full overflow-hidden bg-gray-100">
                       {src.assigned > 0 && (
                         <>
                           <div
                             className="bg-green-400 h-full"
                             style={{
-                              width: `${(src.converted / src.assigned) * 100}%`,
+                              width: `${(src.signed / src.assigned) * 100}%`,
                             }}
-                            title={`${src.converted} konvertert`}
+                            title={`${src.signed} signert`}
                           />
                           <div
                             className="bg-red-300 h-full"
                             style={{
-                              width: `${(src.notInterested / src.assigned) * 100}%`,
+                              width: `${(src.lost / src.assigned) * 100}%`,
                             }}
-                            title={`${src.notInterested} ikke interessert`}
-                          />
-                          <div
-                            className="bg-yellow-300 h-full"
-                            style={{
-                              width: `${(src.noAnswer / src.assigned) * 100}%`,
-                            }}
-                            title={`${src.noAnswer} ingen svar`}
+                            title={`${src.lost} tapt`}
                           />
                         </>
                       )}
                     </div>
                     {/* Results */}
                     <div className="flex gap-3 text-xs text-gray-400">
-                      <span className="text-green-600">
-                        {src.converted} konvertert
+                      <span className="text-gray-600">
+                        {src.assigned} antall
                       </span>
                       <span className="text-red-400">
-                        {src.notInterested} ikke int.
+                        {src.lost} tapt
                       </span>
-                      <span className="text-yellow-500">
-                        {src.noAnswer} ingen svar
+                      <span className="text-green-600">
+                        {src.signed} signert
                       </span>
                     </div>
                     {src.assigned === 0 && (
@@ -1198,8 +1175,7 @@ export default function AdminDashboard() {
               </div>
             )}
             <p className="text-xs text-gray-300 mt-4">
-              % = konvertert av innkomne leads · Kilde bestemt av fbclid/gclid i
-              merknaden
+              Tapt = Ikke interessert + Nyhetsbrev · Kilde bestemt av fbclid/gclid i merknaden
             </p>
           </Card>
 

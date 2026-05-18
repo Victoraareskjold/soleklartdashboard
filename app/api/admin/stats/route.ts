@@ -415,20 +415,16 @@ export async function GET(req: Request) {
       {
         label: string;
         assigned: number;
-        called: number;
-        converted: number;
-        notInterested: number;
-        noAnswer: number;
+        lost: number;
+        signed: number;
       }
     > = {};
     INBOUND_SOURCES.forEach((src) => {
       inboundAgg[src.key] = {
         label: src.label,
         assigned: 0,
-        called: 0,
-        converted: 0,
-        notInterested: 0,
-        noAnswer: 0,
+        lost: 0,
+        signed: 0,
       };
     });
 
@@ -443,27 +439,18 @@ export async function GET(req: Request) {
 
       const s = lead.status;
       if (!s) return;
-      if (s !== 2) inboundAgg[source].called++;
 
-      if (QUALIFIED_STATUSES.has(s)) {
-        inboundAgg[source].converted++;
-      } else if (s === 3 || s === NOT_INTERESTED_STATUS) {
-        inboundAgg[source].notInterested++;
-      } else if (s === 4 || s === 22) {
-        inboundAgg[source].noAnswer++;
+      if (SIGNED_STATUSES.has(s)) {
+        inboundAgg[source].signed++;
+      } else if (s === 3 || s === NOT_INTERESTED_STATUS || s === 11) {
+        // Ikke interessert (3/16) + Nyhetsbrev (11) = tapt
+        inboundAgg[source].lost++;
       }
     });
 
     const inboundStats = INBOUND_SOURCES.map((src) => ({
       source: src.key,
       ...inboundAgg[src.key],
-      conversionRate:
-        inboundAgg[src.key].assigned > 0
-          ? Math.round(
-              (inboundAgg[src.key].converted / inboundAgg[src.key].assigned) *
-                1000,
-            ) / 10
-          : 0,
     }));
 
     // ── Installer group stats ─────────────────────────────────────────────────
