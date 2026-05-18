@@ -1,3 +1,16 @@
+// ─── Unworked / imported ─────────────────────────────────────────────────────
+// Leads get status 0 when imported via the cold calling import tool.
+// They stay at 0 until a caller first touches them (moves to status 2+).
+// Status 0 leads should NOT count as called or active — they are a queue.
+
+/** Status assigned to leads on import, before any calling has happened. */
+export const UNWORKED_STATUS = 0;
+
+// ─── Cold calling phase ───────────────────────────────────────────────────────
+// Leads start here. They either die (1/3) or get promoted to pipeline via
+// status 5 ("Vil ha tilbud").
+
+/** Status objects shown in the cold calling UI picker. */
 export const LeadStatus = [
   { value: 1, label: "Annet", color: "#989898" },
   { value: 2, label: "Ring opp", color: "#FFDB59" },
@@ -7,13 +20,55 @@ export const LeadStatus = [
   { value: 5, label: "Vil ha tilbud", color: "#69FF59" },
 ];
 
-// Pure cold calling statuses — lead has not yet entered the pipeline
-export const COLDCALLING_STATUSES = new Set([0]);
+/** Every status in the cold calling phase (active + dead). */
+export const COLDCALL_STATUSES = new Set([1, 2, 3, 4, 5, 22]);
 
-// All statuses that count as "entered pipeline" — includes lost/dead leads
-export const PIPELINE_STATUSES_ALL = new Set([1, 2, 3, 4, 5, 16, 22]);
+/** No-answer statuses during cold calling. */
+export const NO_ANSWER_STATUSES = new Set([4, 22]);
 
+/** Dead statuses that originate from cold calling (gave up before pipeline). */
+export const COLDCALL_DEAD_STATUSES = new Set([1, 3]);
+
+// ─── Pipeline phase ───────────────────────────────────────────────────────────
+// Lead has passed cold calling and is being actively worked.
+
+/** Statuses where the lead is in active sales pipeline follow-up. */
+export const PIPELINE_STATUSES = new Set([7, 8, 9, 10, 11, 12, 13, 14, 15]);
+
+/** "Not interested" status for leads that gave up *after* entering the pipeline. */
 export const NOT_INTERESTED_STATUS = 16;
+
+// ─── Closing phase ────────────────────────────────────────────────────────────
+
+/** All closing statuses (from "venter på signering" to "kommisjon utbetalt"). */
+export const CLOSING_STATUSES = new Set([17, 18, 19, 20, 21]);
+
+/** Statuses where a contract has been signed (deal is won). */
+export const SIGNED_STATUSES = new Set([18, 19, 20, 21]);
+
+// ─── Cross-phase helpers ──────────────────────────────────────────────────────
+
+/**
+ * All currently active statuses — lead is being worked in pipeline or closing.
+ * Excludes cold calling phase and all dead statuses.
+ */
+export const ACTIVE_STATUSES = new Set([
+  7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21,
+]);
+
+/**
+ * Statuses that count as "qualified" — lead has passed the cold calling filter.
+ * Includes status 5 ("Vil ha tilbud") as the bridge from cold call → pipeline.
+ */
+export const QUALIFIED_STATUSES = new Set([
+  5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21,
+]);
+
+/** Every dead/lost status across all phases. */
+export const DEAD_STATUSES = new Set([1, 3, 16]);
+
+// ─── Pipeline UI statuses ─────────────────────────────────────────────────────
+// Shown in the pipeline / installer view (post cold calling).
 
 export const LEAD_STATUSES = [
   { value: 7, label: "Oppfølging 1", color: "#FBF586" },

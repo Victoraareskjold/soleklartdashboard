@@ -93,6 +93,12 @@ interface AdminStats {
   installerBreakdown: InstallerBreakdown[];
   newLeadsOverTime: TimeSeries[];
   signedOverTime: TimeSeries[];
+  sourceDistribution: {
+    coldcall: number;
+    google: number;
+    facebook: number;
+    organic: number;
+  };
   summary: {
     totalLeads: number;
     activeLeads: number;
@@ -342,35 +348,27 @@ export default function AdminDashboard() {
     (f) => f.group !== "dead" && f.count > 0,
   );
 
-  // Status distribution for pie (group all active statuses)
+  // Source distribution for pie (period-filtered)
   const pieData = [
     {
       name: "Cold calling",
-      value: (stats?.funnel || [])
-        .filter((f) => f.group === "cold" && f.count > 0)
-        .reduce((s, f) => s + f.count, 0),
+      value: stats?.sourceDistribution?.coldcall ?? 0,
       color: "#FFDB59",
     },
     {
-      name: "Pipeline",
-      value: (stats?.funnel || [])
-        .filter((f) => f.group === "pipeline" && f.count > 0)
-        .reduce((s, f) => s + f.count, 0),
-      color: "#DAFFB7",
+      name: "Google Ads",
+      value: stats?.sourceDistribution?.google ?? 0,
+      color: "#4285F4",
     },
     {
-      name: "Closing",
-      value: (stats?.funnel || [])
-        .filter((f) => f.group === "closing" && f.count > 0)
-        .reduce((s, f) => s + f.count, 0),
+      name: "Facebook Ads",
+      value: stats?.sourceDistribution?.facebook ?? 0,
+      color: "#1877F2",
+    },
+    {
+      name: "Organic",
+      value: stats?.sourceDistribution?.organic ?? 0,
       color: "#6DFF68",
-    },
-    {
-      name: "Ikke interessert",
-      value: (stats?.funnel || [])
-        .filter((f) => f.group === "dead" && f.count > 0)
-        .reduce((s, f) => s + f.count, 0),
-      color: "#d1d5db",
     },
   ].filter((d) => d.value > 0);
 
@@ -831,8 +829,8 @@ export default function AdminDashboard() {
               )}
             </Card>
 
-            {/* Status distribution pie */}
-            <Card title="Status-fordeling">
+            {/* Source distribution pie */}
+            <Card title="Status-Pipeline fordeling">
               {pieData.length === 0 ? (
                 <p className="text-sm text-gray-400 py-8 text-center">
                   Ingen leads.

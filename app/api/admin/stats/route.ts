@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { createSupabaseClient } from "@/utils/supabase/client";
 import {
-  COLDCALLING_STATUSES,
+  UNWORKED_STATUS,
   NOT_INTERESTED_STATUS,
-  PIPELINE_STATUSES_ALL,
+  PIPELINE_STATUSES,
+  QUALIFIED_STATUSES,
+  SIGNED_STATUSES,
+  ACTIVE_STATUSES,
   LEAD_STATUS_SET,
 } from "@/constants/leadStatuses";
 
@@ -94,16 +97,6 @@ export const FUNNEL_STAGES = [
     group: "dead",
   },
 ];
-
-// Statuses that count as "reached pipeline" (quality lead from cold caller)
-const PIPELINE_STATUSES = new Set([
-  5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21,
-]);
-const SIGNED_STATUSES = new Set([18, 19, 20, 21]);
-// Pipeline + closing only (excludes cold calling stage 5) — used for installer group stats
-const INSTALLER_PIPELINE_STATUSES = new Set([
-  7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21,
-]);
 
 // Inbound traffic sources — add new entries here to support more channels
 const INBOUND_SOURCES: { key: string; label: string }[] = [
@@ -364,7 +357,8 @@ export async function GET(req: Request) {
       coldCallerAgg[userId].assigned++;
 
       const s = lead.status;
-      if (!s) return;
+      // Status 0 = imported, never touched by caller yet — skip all result tracking
+      if (s === null || s === undefined || s === UNWORKED_STATUS) return;
 
       // Worked through = not still waiting to be called (status 2)
       if (s !== 2) {
@@ -372,7 +366,7 @@ export async function GET(req: Request) {
       }
 
       // Results
-      if (PIPELINE_STATUSES.has(s)) {
+      if (QUALIFIED_STATUSES.has(s)) {
         coldCallerAgg[userId].converted++;
       } else if (s === 3 || s === NOT_INTERESTED_STATUS) {
         coldCallerAgg[userId].notInterested++;
@@ -428,7 +422,7 @@ export async function GET(req: Request) {
       if (!s) return;
       if (s !== 2) inboundAgg[source].called++;
 
-      if (PIPELINE_STATUSES.has(s)) {
+      if (QUALIFIED_STATUSES.has(s)) {
         inboundAgg[source].converted++;
       } else if (s === 3 || s === NOT_INTERESTED_STATUS) {
         inboundAgg[source].notInterested++;
@@ -458,7 +452,7 @@ export async function GET(req: Request) {
     leads.forEach((lead) => {
       const gid = lead.installer_group_id;
       if (!gid) return;
-      if (!lead.status || !INSTALLER_PIPELINE_STATUSES.has(lead.status)) return;
+      if (!lead.status || !ACTIVE_STATUSES.has(lead.status)) return;
       if (!installerGroupAgg[gid]) {
         installerGroupAgg[gid] = {
           name: groupNameMap[gid] || "Ukjent gruppe",
@@ -477,6 +471,24 @@ export async function GET(req: Request) {
     const installerGroupStats = Object.values(installerGroupAgg).sort(
       (a, b) => b.total - a.total,
     );
+
+    // ── Source distribution (period-filtered, pipeline statuses only) ─────────
+    // Uses the same periodLeads set as inboundStats — leads created in period
+    // that have entered the pipeline (excludes cold calling + dead statuses).
+    const sourceDistribution = { coldcall: 0, google: 0, facebook: 0, organic: 0 };
+    periodLeads.forEach((l) => {
+      const src =
+        parseInboundSource(l.note) || l.lead_source?.trim() || "organic";
+      if (src === "facebook") {
+        sourceDistribution.facebook++;
+      } else if (src === "google") {
+        sourceDistribution.google++;
+      } else if (/^cold/i.test(src)) {
+        sourceDistribution.coldcall++;
+      } else {
+        sourceDistribution.organic++;
+      }
+    });
 
     // ── Time series ───────────────────────────────────────────────────────────
     const signedOverTime = groupByPeriod(
@@ -498,7 +510,7 @@ export async function GET(req: Request) {
     );
 
     const activeLeads = leads.filter(
-      (l) => l.status && !PIPELINE_STATUSES_ALL.has(l.status),
+      (l) => l.status && ACTIVE_STATUSES.has(l.status),
     ).length;
 
     // ── Pipeline tracking (A–E) ───────────────────────────────────────────────
@@ -509,11 +521,9 @@ export async function GET(req: Request) {
     const newsletter = leads.filter((l) => l.status === 11).length;
     const lost = notInterested + newsletter;
 
+    // B: Aktive i pipeline — Dialog → venter på signering (7–17, excludes signed/installed)
     const activePipeline = leads.filter(
-      (l) =>
-        l.status &&
-        PIPELINE_STATUSES_ALL.has(l.status) &&
-        l.status !== NOT_INTERESTED_STATUS,
+      (l) => l.status && (PIPELINE_STATUSES.has(l.status) || l.status === 17),
     ).length;
 
     // All-time signed estimates (not period-filtered) — needed for C and D.
@@ -612,10 +622,7 @@ export async function GET(req: Request) {
     const segStats = (segLeads: typeof leads) => {
       const totalLeads = segLeads.length;
       const activeL = segLeads.filter(
-        (l) =>
-          l.status &&
-          !PIPELINE_STATUSES_ALL.has(l.status) &&
-          l.status !== NOT_INTERESTED_STATUS,
+        (l) => l.status && ACTIVE_STATUSES.has(l.status),
       ).length;
       const qualifiedInPeriod = segLeads.filter((l) => {
         if (!l.created_at || !l.status || !LEAD_STATUS_SET.has(l.status))
@@ -736,6 +743,7 @@ export async function GET(req: Request) {
         lostByDepth,
       },
       installerBreakdown,
+      sourceDistribution,
     });
   } catch (err) {
     console.error("GET /api/admin/stats error:", err);

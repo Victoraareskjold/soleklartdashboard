@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
+import { LEAD_STATUSES } from "@/constants/leadStatuses";
 import { Lead, LeadTask } from "@/lib/types";
 import Link from "next/link";
-import { LEAD_STATUSES } from "./LeadsTable";
 
 interface LeadCardProps {
   lead: Lead;
