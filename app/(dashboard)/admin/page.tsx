@@ -769,65 +769,93 @@ export default function AdminDashboard() {
               );
             })()}
 
-          {/* Row 1: Pipeline funnel + status pie */}
+          {/* Row 1: Cold calling distribution + source pie */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Funnel bar chart — shows WHERE leads pile up */}
-            <Card title="Pipeline — nåtilstand" className="lg:col-span-2">
-              {activeFunnel.length === 0 ? (
-                <p className="text-sm text-gray-400 py-8 text-center">
-                  Ingen leads.
-                </p>
-              ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart
-                    data={activeFunnel}
-                    layout="vertical"
-                    margin={{ top: 0, right: 48, left: 4, bottom: 0 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="#f0f0f0"
-                      horizontal={false}
-                    />
-                    <XAxis
-                      type="number"
-                      tick={{ fontSize: 11, fill: "#9ca3af" }}
-                      allowDecimals={false}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="label"
-                      width={160}
-                      tick={{ fontSize: 11, fill: "#374151" }}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        const d = payload[0].payload as FunnelStage;
-                        return (
-                          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs">
-                            <p className="font-semibold text-gray-800 mb-1">
-                              {d.label}
-                            </p>
-                            <p className="text-gray-600">Leads: {d.count}</p>
-                            {d.totalValue > 0 && (
-                              <p className="text-gray-600">
-                                Verdi: {formatCurrency(d.totalValue)} kr
-                              </p>
-                            )}
-                          </div>
-                        );
-                      }}
-                    />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                      {activeFunnel.map((entry) => (
-                        <Cell key={entry.status} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </Card>
+            {/* Cold caller distribution donut */}
+            {(() => {
+              const CALLER_COLORS = [
+                "#FFDB59", "#69B2FF", "#6DFF68", "#FF8C69", "#C084FC",
+                "#34D399", "#F472B6", "#60A5FA", "#FBBF24", "#A78BFA",
+              ];
+              const callerPieData = stats.coldCallerStats.map((c, i) => ({
+                name: c.name,
+                value: c.assigned,
+                color: CALLER_COLORS[i % CALLER_COLORS.length],
+              }));
+              const callerTotal = callerPieData.reduce((s, x) => s + x.value, 0);
+              return (
+                <Card title="Status – Cold calling fordeling" className="lg:col-span-2">
+                  {callerPieData.length === 0 || callerTotal === 0 ? (
+                    <p className="text-sm text-gray-400 py-8 text-center">
+                      Ingen cold calling data i perioden.
+                    </p>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-6 items-center">
+                      <ResponsiveContainer width="100%" height={260}>
+                        <PieChart>
+                          <Pie
+                            data={callerPieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={110}
+                            dataKey="value"
+                            labelLine={false}
+                          >
+                            {callerPieData.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} stroke="none" />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.length) return null;
+                              const d = payload[0].payload;
+                              return (
+                                <div className="bg-white border border-gray-200 rounded-lg shadow p-2 text-xs">
+                                  <p className="font-semibold">{d.name}</p>
+                                  <p>
+                                    {d.value} leads (
+                                    {Math.round((d.value / callerTotal) * 100)}%)
+                                  </p>
+                                </div>
+                              );
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="flex flex-col gap-2 min-w-[160px]">
+                        {callerPieData
+                          .slice()
+                          .sort((a, b) => b.value - a.value)
+                          .map((d) => (
+                            <div
+                              key={d.name}
+                              className="flex items-center justify-between text-xs gap-4"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                                  style={{ background: d.color }}
+                                />
+                                <span className="text-gray-600">{d.name}</span>
+                              </div>
+                              <span className="font-semibold text-gray-800 tabular-nums">
+                                {d.value}{" "}
+                                <span className="font-normal text-gray-400">
+                                  ({Math.round((d.value / callerTotal) * 100)}%)
+                                </span>
+                              </span>
+                            </div>
+                          ))}
+                        <p className="text-[10px] text-gray-300 mt-1">
+                          Totalt: {callerTotal} leads
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              );
+            })()}
 
             {/* Source distribution pie */}
             <Card title="Status-Pipeline fordeling">

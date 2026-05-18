@@ -475,7 +475,12 @@ export async function GET(req: Request) {
     // ── Source distribution (period-filtered, pipeline statuses only) ─────────
     // Uses the same periodLeads set as inboundStats — leads created in period
     // that have entered the pipeline (excludes cold calling + dead statuses).
-    const sourceDistribution = { coldcall: 0, google: 0, facebook: 0, organic: 0 };
+    const sourceDistribution = {
+      coldcall: 0,
+      google: 0,
+      facebook: 0,
+      organic: 0,
+    };
     periodLeads.forEach((l) => {
       const src =
         parseInboundSource(l.note) || l.lead_source?.trim() || "organic";
