@@ -54,6 +54,7 @@ interface InstallerGroupStat {
   total: number;
   signed: number;
   value: number;
+  signedRate?: number;
 }
 
 interface SegmentStats {
@@ -90,6 +91,8 @@ interface AdminStats {
   coldCallerStats: ColdCallerStat[];
   inboundStats: InboundSourceStat[];
   installerGroupStats: InstallerGroupStat[];
+  coldInstallerGroupStats: InstallerGroupStat[];
+  warmInstallerGroupStats: InstallerGroupStat[];
   installerBreakdown: InstallerBreakdown[];
   newLeadsOverTime: TimeSeries[];
   signedOverTime: TimeSeries[];
@@ -343,11 +346,6 @@ export default function AdminDashboard() {
 
   const s = stats?.summary;
 
-  // Active funnel stages only (exclude dead + empty)
-  const activeFunnel = (stats?.funnel || []).filter(
-    (f) => f.group !== "dead" && f.count > 0,
-  );
-
   // Source distribution for pie (period-filtered)
   const pieData = [
     {
@@ -371,12 +369,6 @@ export default function AdminDashboard() {
       color: "#6DFF68",
     },
   ].filter((d) => d.value > 0);
-
-  // Bottlenecks: pipeline + closing stages sorted by lead count (biggest pile-up first)
-  const bottlenecks = activeFunnel
-    .filter((f) => f.group === "pipeline" || f.group === "closing")
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 7);
 
   // Time series with labels
   const newLeadsChart = (stats?.newLeadsOverTime || []).map((d) => ({
@@ -561,7 +553,8 @@ export default function AdminDashboard() {
                                   {expandedTotals.signedInPeriod}
                                 </td>
                                 <td className="text-right px-3 py-2 text-emerald-700">
-                                  {formatCurrency(expandedTotals.signedValue)} kr
+                                  {formatCurrency(expandedTotals.signedValue)}{" "}
+                                  kr
                                 </td>
                                 <td className="text-right px-5 py-2 text-violet-700">
                                   {formatCurrency(expandedTotals.pipelineValue)}{" "}
@@ -774,17 +767,31 @@ export default function AdminDashboard() {
             {/* Cold caller distribution donut */}
             {(() => {
               const CALLER_COLORS = [
-                "#FFDB59", "#69B2FF", "#6DFF68", "#FF8C69", "#C084FC",
-                "#34D399", "#F472B6", "#60A5FA", "#FBBF24", "#A78BFA",
+                "#FFDB59",
+                "#69B2FF",
+                "#6DFF68",
+                "#FF8C69",
+                "#C084FC",
+                "#34D399",
+                "#F472B6",
+                "#60A5FA",
+                "#FBBF24",
+                "#A78BFA",
               ];
               const callerPieData = stats.coldCallerStats.map((c, i) => ({
                 name: c.name,
                 value: c.assigned,
                 color: CALLER_COLORS[i % CALLER_COLORS.length],
               }));
-              const callerTotal = callerPieData.reduce((s, x) => s + x.value, 0);
+              const callerTotal = callerPieData.reduce(
+                (s, x) => s + x.value,
+                0,
+              );
               return (
-                <Card title="Status – Cold calling fordeling" className="lg:col-span-2">
+                <Card
+                  title="Status – Cold calling fordeling"
+                  className="lg:col-span-2"
+                >
                   {callerPieData.length === 0 || callerTotal === 0 ? (
                     <p className="text-sm text-gray-400 py-8 text-center">
                       Ingen cold calling data i perioden.
@@ -815,7 +822,8 @@ export default function AdminDashboard() {
                                   <p className="font-semibold">{d.name}</p>
                                   <p>
                                     {d.value} leads (
-                                    {Math.round((d.value / callerTotal) * 100)}%)
+                                    {Math.round((d.value / callerTotal) * 100)}
+                                    %)
                                   </p>
                                 </div>
                               );
@@ -1015,58 +1023,20 @@ export default function AdminDashboard() {
               )}
             </Card>
 
-            {/* Bottlenecks */}
-            <Card title="Flaskehalser — størst opphoping">
-              {bottlenecks.length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">
-                  Ingen data.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {bottlenecks.map((b, i) => {
-                    const maxCount = bottlenecks[0].count;
-                    const pct = Math.round((b.count / maxCount) * 100);
-                    return (
-                      <div key={b.status} className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-gray-700 truncate max-w-[160px]">
-                            {i + 1}. {b.label}
-                          </span>
-                          <span className="font-bold text-gray-800 ml-2">
-                            {b.count}
-                          </span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-orange-400"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        {b.totalValue > 0 && (
-                          <p className="text-xs text-gray-400">
-                            {formatCurrency(b.totalValue)} kr
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-
-            {/* Installer group comparison */}
-            <Card title="Per installatørgruppe">
-              {stats.installerGroupStats.length === 0 ? (
+            {/* Cold leads per installer group, ranked by signed rate */}
+            <Card title="Kalde leads — per installatørgruppe">
+              {(stats.coldInstallerGroupStats ?? []).length === 0 ? (
                 <p className="text-sm text-gray-400 py-4 text-center">
                   Ingen data.
                 </p>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {stats.installerGroupStats.map((g) => {
-                    const signedRate =
-                      g.total > 0 ? Math.round((g.signed / g.total) * 100) : 0;
-                    const maxTotal = Math.max(
-                      ...stats.installerGroupStats.map((x) => x.total),
+                  {stats.coldInstallerGroupStats.map((g) => {
+                    const rate = g.signedRate ?? 0;
+                    const maxRate = Math.max(
+                      ...stats.coldInstallerGroupStats.map(
+                        (x) => x.signedRate ?? 0,
+                      ),
                       1,
                     );
                     return (
@@ -1075,26 +1045,70 @@ export default function AdminDashboard() {
                           <span className="font-medium text-gray-800 truncate max-w-[140px]">
                             {g.name}
                           </span>
-                          <span className="text-gray-400">{g.total} leads</span>
+                          <span className="font-semibold text-emerald-600">
+                            {rate}% signert
+                          </span>
                         </div>
                         <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
                           <div
                             className="h-full rounded-full bg-blue-400 transition-all"
-                            style={{ width: `${(g.total / maxTotal) * 100}%` }}
+                            style={{ width: `${(rate / maxRate) * 100}%` }}
                           />
                         </div>
                         <div className="flex gap-3 text-xs text-gray-400">
                           <span>
-                            <span className="text-emerald-600 font-medium">
-                              {g.signed}
-                            </span>{" "}
-                            signert ({signedRate}%)
+                            {g.total} leads · {g.signed} signert
                           </span>
-                          {g.value > 0 && (
-                            <span className="text-gray-500">
-                              {formatCurrency(g.value)} kr
-                            </span>
-                          )}
+                          {/* {g.value > 0 && (
+                            <span>{formatCurrency(g.value)} kr</span>
+                          )} */}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+
+            {/* Warm leads per installer group, ranked by signed rate */}
+            <Card title="Varme leads — per installatørgruppe">
+              {(stats.warmInstallerGroupStats ?? []).length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">
+                  Ingen data.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {stats.warmInstallerGroupStats.map((g) => {
+                    const rate = g.signedRate ?? 0;
+                    const maxRate = Math.max(
+                      ...stats.warmInstallerGroupStats.map(
+                        (x) => x.signedRate ?? 0,
+                      ),
+                      1,
+                    );
+                    return (
+                      <div key={g.name} className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium text-gray-800 truncate max-w-[140px]">
+                            {g.name}
+                          </span>
+                          <span className="font-semibold text-emerald-600">
+                            {rate}% signert
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-blue-400 transition-all"
+                            style={{ width: `${(rate / maxRate) * 100}%` }}
+                          />
+                        </div>
+                        <div className="flex gap-3 text-xs text-gray-400">
+                          <span>
+                            {g.total} leads · {g.signed} signert
+                          </span>
+                          {/* {g.value > 0 && (
+                            <span>{formatCurrency(g.value)} kr</span>
+                          )} */}
                         </div>
                       </div>
                     );

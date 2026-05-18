@@ -117,6 +117,18 @@ function parseInboundSource(note: string | null): string | null {
   return "organic";
 }
 
+const INBOUND_SOURCE_KEYS = new Set(["google", "facebook", "organic"]);
+
+function isInboundLead(lead: {
+  note: string | null;
+  lead_source: string | null;
+}): boolean {
+  if (parseInboundSource(lead.note)) return true;
+  if (lead.lead_source && INBOUND_SOURCE_KEYS.has(lead.lead_source.trim()))
+    return true;
+  return false;
+}
+
 type GroupBy = "day" | "week" | "month";
 
 function groupByPeriod(
@@ -322,12 +334,15 @@ export async function GET(req: Request) {
     }));
 
     // ── Cold-caller stats ─────────────────────────────────────────────────────
-    // Tracks calling activity per person:
-    // - assigned: total leads assigned (their "numbers")
-    // - called: leads they've actually worked (not still sitting at status 2 "Ring opp")
-    // - converted: reached pipeline (status 5 "Vil ha tilbud" or beyond)
+    // Only counts leads that are NOT inbound (google/facebook/organic).
+    // This ensures people who handle both cold calls and inbound leads don't
+    // get their inbound leads mixed into their cold calling numbers.
+    // - assigned: cold-call leads only (no inbound tracking in note/lead_source)
+    // - called: leads worked beyond status 2 "Ring opp"
+    // - converted: reached "Vil ha tilbud" or pipeline beyond
     // - notInterested: status 3 or 16
     // - noAnswer: status 4 or 22
+    const INBOUND_SOURCE_KEYS = new Set(["google", "facebook", "organic"]);
     const coldCallerAgg: Record<
       string,
       {
@@ -354,11 +369,19 @@ export async function GET(req: Request) {
     callerPeriodLeads.forEach((lead) => {
       const userId = lead.assigned_to;
       if (!userId || !coldCallerAgg[userId]) return;
-      coldCallerAgg[userId].assigned++;
+
+      // Skip inbound leads so they don't inflate cold calling numbers
+      const isInbound =
+        !!parseInboundSource(lead.note) ||
+        (!!lead.lead_source &&
+          INBOUND_SOURCE_KEYS.has(lead.lead_source.trim()));
+      if (isInbound) return;
 
       const s = lead.status;
-      // Status 0 = imported, never touched by caller yet — skip all result tracking
+      // Status 0 = imported, never touched — exclude entirely
       if (s === null || s === undefined || s === UNWORKED_STATUS) return;
+
+      coldCallerAgg[userId].assigned++;
 
       // Worked through = not still waiting to be called (status 2)
       if (s !== 2) {
@@ -444,33 +467,51 @@ export async function GET(req: Request) {
     }));
 
     // ── Installer group stats ─────────────────────────────────────────────────
-    const installerGroupAgg: Record<
+    type InstallerAgg = Record<
       string,
       { name: string; total: number; signed: number; value: number }
-    > = {};
+    >;
+    const installerGroupAgg: InstallerAgg = {};
+    const coldInstallerAgg: InstallerAgg = {};
+    const warmInstallerAgg: InstallerAgg = {};
+
+    const ensureGroup = (agg: InstallerAgg, gid: string, name: string) => {
+      if (!agg[gid]) agg[gid] = { name, total: 0, signed: 0, value: 0 };
+    };
 
     leads.forEach((lead) => {
       const gid = lead.installer_group_id;
       if (!gid) return;
       if (!lead.status || !ACTIVE_STATUSES.has(lead.status)) return;
-      if (!installerGroupAgg[gid]) {
-        installerGroupAgg[gid] = {
-          name: groupNameMap[gid] || "Ukjent gruppe",
-          total: 0,
-          signed: 0,
-          value: 0,
-        };
-      }
+      const name = groupNameMap[gid] || "Ukjent gruppe";
+      const val = leadValueMap[lead.id] || 0;
+      const isSigned = SIGNED_STATUSES.has(lead.status);
+
+      ensureGroup(installerGroupAgg, gid, name);
       installerGroupAgg[gid].total++;
-      installerGroupAgg[gid].value += leadValueMap[lead.id] || 0;
-      if (lead.status && SIGNED_STATUSES.has(lead.status)) {
-        installerGroupAgg[gid].signed++;
-      }
+      installerGroupAgg[gid].value += val;
+      if (isSigned) installerGroupAgg[gid].signed++;
+
+      const targetAgg = isInboundLead(lead) ? warmInstallerAgg : coldInstallerAgg;
+      ensureGroup(targetAgg, gid, name);
+      targetAgg[gid].total++;
+      targetAgg[gid].value += val;
+      if (isSigned) targetAgg[gid].signed++;
     });
+
+    const toSortedBySignedRate = (agg: InstallerAgg) =>
+      Object.values(agg)
+        .map((g) => ({
+          ...g,
+          signedRate: g.total > 0 ? Math.round((g.signed / g.total) * 100) : 0,
+        }))
+        .sort((a, b) => b.signedRate - a.signedRate || b.total - a.total);
 
     const installerGroupStats = Object.values(installerGroupAgg).sort(
       (a, b) => b.total - a.total,
     );
+    const coldInstallerGroupStats = toSortedBySignedRate(coldInstallerAgg);
+    const warmInstallerGroupStats = toSortedBySignedRate(warmInstallerAgg);
 
     // ── Source distribution (period-filtered, pipeline statuses only) ─────────
     // Uses the same periodLeads set as inboundStats — leads created in period
@@ -729,6 +770,8 @@ export async function GET(req: Request) {
       coldCallerStats,
       inboundStats,
       installerGroupStats,
+      coldInstallerGroupStats,
+      warmInstallerGroupStats,
       signedOverTime,
       summary: {
         totalLeads: leads.length,
