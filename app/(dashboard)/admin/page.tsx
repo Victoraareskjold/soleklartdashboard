@@ -1160,9 +1160,7 @@ export default function AdminDashboard() {
                       <span className="text-gray-600">
                         {src.assigned} antall
                       </span>
-                      <span className="text-red-400">
-                        {src.lost} tapt
-                      </span>
+                      <span className="text-red-400">{src.lost} tapt</span>
                       <span className="text-green-600">
                         {src.signed} signert
                       </span>
@@ -1175,47 +1173,13 @@ export default function AdminDashboard() {
               </div>
             )}
             <p className="text-xs text-gray-300 mt-4">
-              Tapt = Ikke interessert + Nyhetsbrev · Kilde bestemt av fbclid/gclid i merknaden
+              Tapt = Ikke interessert + Nyhetsbrev · Kilde bestemt av
+              fbclid/gclid i merknaden
             </p>
           </Card>
 
           {/* Row 5: Time-series */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* New leads over time */}
-            <Card
-              title={`Nye leads over tid (${DATE_PRESETS.find((p) => p.value === preset)?.label})`}
-            >
-              {newLeadsChart.length === 0 ? (
-                <p className="text-sm text-gray-400 py-8 text-center">
-                  Ingen leads i perioden.
-                </p>
-              ) : (
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart
-                    data={newLeadsChart}
-                    margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 11, fill: "#9ca3af" }}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: "#9ca3af" }}
-                      allowDecimals={false}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar
-                      dataKey="count"
-                      name="Nye leads"
-                      fill="#93c5fd"
-                      radius={[3, 3, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </Card>
-
+          <div className="grid grid-cols-1gap-6">
             {/* Signed over time */}
             <Card
               title={`Signerte avtaler over tid (${DATE_PRESETS.find((p) => p.value === preset)?.label})`}
