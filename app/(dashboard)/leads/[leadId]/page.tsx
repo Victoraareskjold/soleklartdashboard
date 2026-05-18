@@ -27,7 +27,6 @@ import {
   EmailAttachment,
 } from "@/lib/types";
 import Link from "next/link";
-import { LEAD_STATUSES } from "@/app/components/LeadsTable";
 import { Calendar, File, ListTodo, Mail } from "lucide-react";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
 import { useTeam } from "@/context/TeamContext";
@@ -37,6 +36,7 @@ import TaskSection from "@/app/components/leads/TaskSection";
 import { getPanelWp } from "@/utils/getPanelWp";
 import AcitivitySection from "@/app/components/leads/AcitivitySection";
 import { toast } from "react-toastify";
+import { LEAD_STATUSES } from "@/constants/leadStatuses";
 
 interface InputProps {
   label: string;
