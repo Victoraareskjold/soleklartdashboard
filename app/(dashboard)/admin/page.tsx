@@ -220,11 +220,6 @@ const MONTHS = [
   "Des",
 ];
 
-function formatPeriodLabel(period: string, groupBy: GroupBy): string {
-  const d = new Date(period);
-  if (groupBy === "month") return MONTHS[d.getMonth()];
-  return `${d.getDate()}.${d.getMonth() + 1}`;
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -266,29 +261,6 @@ function StatPill({
   );
 }
 
-// Custom tooltip
-const CustomTooltip = ({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: { value: number | string; name: string; color?: string }[];
-  label?: string;
-}) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs max-w-[200px]">
-      <p className="font-semibold text-gray-800 mb-1 truncate">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color || "#374151" }}>
-          {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
-  );
-};
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
@@ -298,8 +270,14 @@ export default function AdminDashboard() {
   const [preset, setPreset] = useState<DatePreset>("month");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(false);
-  const [groupBy, setGroupBy] = useState<GroupBy>("day");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const currentYear = new Date().getFullYear();
+  const [signedYear, setSignedYear] = useState(currentYear);
+  const [signedYearData, setSignedYearData] = useState<
+    { label: string; count: number; valueK: number }[]
+  >([]);
+  const [signedYearLoading, setSignedYearLoading] = useState(false);
 
   const toggleGroup = (id: string) =>
     setExpandedGroups((prev) => {
@@ -315,7 +293,6 @@ export default function AdminDashboard() {
     try {
       const token = await getToken();
       const { from, to, groupBy: gb } = getDateRange(preset);
-      setGroupBy(gb);
       const res = await fetch(
         `/api/admin/stats?teamId=${teamId}&from=${from}&to=${to}&groupBy=${gb}`,
         { headers: { Authorization: `Bearer ${token}` } },
@@ -332,6 +309,51 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  useEffect(() => {
+    if (!teamId) return;
+    const controller = new AbortController();
+    setSignedYearLoading(true);
+    (async () => {
+      try {
+        const token = await getToken();
+        const res = await fetch(
+          `/api/admin/stats?teamId=${teamId}&from=${signedYear}-01-01&to=${signedYear}-12-31&groupBy=month`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const map = new Map<string, { count: number; value: number }>(
+          (data.signedOverTime || []).map(
+            (d: { period: string; count: number; value: number }) => [
+              d.period.substring(0, 7),
+              d,
+            ],
+          ),
+        );
+        setSignedYearData(
+          Array.from({ length: 12 }, (_, i) => {
+            const monthKey = `${signedYear}-${String(i + 1).padStart(2, "0")}`;
+            const d = map.get(monthKey);
+            return {
+              label: MONTHS[i],
+              count: d?.count ?? 0,
+              valueK: d ? Math.round(d.value / 1000) : 0,
+            };
+          }),
+        );
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError")
+          console.error(err);
+      } finally {
+        setSignedYearLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [teamId, signedYear]);
 
   if (teamRole && teamRole !== "admin") {
     return (
@@ -366,17 +388,6 @@ export default function AdminDashboard() {
       color: "#6DFF68",
     },
   ].filter((d) => d.value > 0);
-
-  // Time series with labels
-  const newLeadsChart = (stats?.newLeadsOverTime || []).map((d) => ({
-    ...d,
-    label: formatPeriodLabel(d.period, groupBy),
-  }));
-  const signedChart = (stats?.signedOverTime || []).map((d) => ({
-    ...d,
-    label: formatPeriodLabel(d.period, groupBy),
-    valueK: Math.round(d.value / 1000),
-  }));
 
   return (
     <div className="p-6 max-w-screen-2xl mx-auto space-y-6">
@@ -1178,20 +1189,57 @@ export default function AdminDashboard() {
             </p>
           </Card>
 
-          {/* Row 5: Time-series */}
-          <div className="grid grid-cols-1gap-6">
-            {/* Signed over time */}
-            <Card
-              title={`Signerte avtaler over tid (${DATE_PRESETS.find((p) => p.value === preset)?.label})`}
-            >
-              {signedChart.length === 0 ? (
-                <p className="text-sm text-gray-400 py-8 text-center">
-                  Ingen signerte avtaler i perioden.
-                </p>
-              ) : (
-                <ResponsiveContainer width="100%" height={180}>
+          {/* Signerte avtaler — årsvisning */}
+          {(() => {
+            const totalCount = signedYearData.reduce(
+              (sum, d) => sum + d.count,
+              0,
+            );
+            const totalValueK = signedYearData.reduce(
+              (sum, d) => sum + d.valueK,
+              0,
+            );
+            const years = Array.from(
+              { length: 5 },
+              (_, i) => currentYear - 2 + i,
+            );
+            return (
+              <Card title="Signerte avtaler per måned">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                  <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                    {years.map((y) => (
+                      <button
+                        key={y}
+                        onClick={() => setSignedYear(y)}
+                        disabled={signedYearLoading}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          signedYear === y
+                            ? "bg-white shadow-sm text-gray-900"
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-5 text-xs">
+                    <span className="text-emerald-600 font-semibold">
+                      {totalCount} salg totalt
+                    </span>
+                    <span className="text-violet-600 font-semibold">
+                      {formatCurrency(totalValueK * 1000)} kr totalt
+                    </span>
+                  </div>
+                </div>
+                <div className="relative">
+                  {signedYearLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-lg z-10">
+                      <span className="text-sm text-gray-400">Laster...</span>
+                    </div>
+                  )}
+                <ResponsiveContainer width="100%" height={220}>
                   <BarChart
-                    data={signedChart}
+                    data={signedYearData}
                     margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -1246,9 +1294,28 @@ export default function AdminDashboard() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
-              )}
-            </Card>
-          </div>
+                </div>
+                <div className="flex gap-8 mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                      Totalt antall salg
+                    </span>
+                    <span className="text-2xl font-bold text-emerald-700">
+                      {totalCount}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                      Total verdi
+                    </span>
+                    <span className="text-2xl font-bold text-violet-700">
+                      {formatCurrency(totalValueK * 1000)} kr
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            );
+          })()}
         </>
       )}
     </div>
