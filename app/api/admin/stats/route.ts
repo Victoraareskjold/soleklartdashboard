@@ -352,6 +352,7 @@ export async function GET(req: Request) {
         converted: number;
         notInterested: number;
         noAnswer: number;
+        other: number;
       }
     > = {};
 
@@ -363,6 +364,7 @@ export async function GET(req: Request) {
         converted: 0,
         notInterested: 0,
         noAnswer: 0,
+        other: 0,
       };
     });
 
@@ -395,6 +397,8 @@ export async function GET(req: Request) {
         coldCallerAgg[userId].notInterested++;
       } else if (s === 4 || s === 22) {
         coldCallerAgg[userId].noAnswer++;
+      } else if (s === 1) {
+        coldCallerAgg[userId].other++;
       }
     });
 
@@ -479,7 +483,9 @@ export async function GET(req: Request) {
       installerGroupAgg[gid].value += val;
       if (isSigned) installerGroupAgg[gid].signed++;
 
-      const targetAgg = isInboundLead(lead) ? warmInstallerAgg : coldInstallerAgg;
+      const targetAgg = isInboundLead(lead)
+        ? warmInstallerAgg
+        : coldInstallerAgg;
       ensureGroup(targetAgg, gid, name);
       targetAgg[gid].total++;
       targetAgg[gid].value += val;

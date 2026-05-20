@@ -36,6 +36,7 @@ interface ColdCallerStat {
   notInterested: number;
   noAnswer: number;
   conversionRate: number;
+  other: number;
 }
 
 interface InboundSourceStat {
@@ -219,7 +220,6 @@ const MONTHS = [
   "Nov",
   "Des",
 ];
-
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -971,13 +971,13 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-gray-400">
-                            {caller.called}/{caller.assigned} ringt
+                            {caller.called} totalt
                           </span>
                           <span
                             className={`font-semibold px-1.5 py-0.5 rounded ${
-                              caller.conversionRate >= 30
+                              caller.conversionRate >= 20
                                 ? "bg-green-100 text-green-700"
-                                : caller.conversionRate >= 15
+                                : caller.conversionRate >= 10
                                   ? "bg-yellow-100 text-yellow-700"
                                   : "bg-red-50 text-red-600"
                             }`}
@@ -987,7 +987,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       {/* Progress bar: converted / not interested / no answer / not called */}
-                      <div className="flex gap-0.5 h-2 rounded-full overflow-hidden bg-gray-100">
+                      <div className="flex h-2 rounded-full overflow-hidden bg-gray-100">
                         <div
                           className="bg-green-400 h-full"
                           style={{
@@ -1003,11 +1003,11 @@ export default function AdminDashboard() {
                           title={`${caller.notInterested} ikke interessert`}
                         />
                         <div
-                          className="bg-yellow-300 h-full"
+                          className="bg-slate-300 h-full"
                           style={{
-                            width: `${(caller.noAnswer / caller.assigned) * 100}%`,
+                            width: `${(caller.other / caller.assigned) * 100}%`,
                           }}
-                          title={`${caller.noAnswer} ingen svar`}
+                          title={`${caller.other} annet`}
                         />
                       </div>
                       {/* Results row */}
@@ -1020,6 +1020,9 @@ export default function AdminDashboard() {
                         </span>
                         <span className="text-yellow-500">
                           {caller.noAnswer} ingen svar
+                        </span>
+                        <span className="text-slate-400">
+                          {caller.other} annet
                         </span>
                       </div>
                     </div>
@@ -1237,63 +1240,63 @@ export default function AdminDashboard() {
                       <span className="text-sm text-gray-400">Laster...</span>
                     </div>
                   )}
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart
-                    data={signedYearData}
-                    margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 11, fill: "#9ca3af" }}
-                    />
-                    <YAxis
-                      yAxisId="left"
-                      tick={{ fontSize: 11, fill: "#9ca3af" }}
-                      allowDecimals={false}
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      tick={{ fontSize: 11, fill: "#9ca3af" }}
-                      tickFormatter={(v) => `${v}k`}
-                    />
-                    <Tooltip
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload?.length) return null;
-                        return (
-                          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs">
-                            <p className="font-semibold text-gray-800 mb-1">
-                              {label}
-                            </p>
-                            <p className="text-emerald-600">
-                              Avtaler: {payload[0]?.value}
-                            </p>
-                            {(payload[1]?.value as number) > 0 && (
-                              <p className="text-violet-600">
-                                Verdi: {payload[1]?.value}k kr
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart
+                      data={signedYearData}
+                      margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 11, fill: "#9ca3af" }}
+                      />
+                      <YAxis
+                        yAxisId="left"
+                        tick={{ fontSize: 11, fill: "#9ca3af" }}
+                        allowDecimals={false}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        tick={{ fontSize: 11, fill: "#9ca3af" }}
+                        tickFormatter={(v) => `${v}k`}
+                      />
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (!active || !payload?.length) return null;
+                          return (
+                            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs">
+                              <p className="font-semibold text-gray-800 mb-1">
+                                {label}
                               </p>
-                            )}
-                          </div>
-                        );
-                      }}
-                    />
-                    <Bar
-                      yAxisId="left"
-                      dataKey="count"
-                      name="Signerte"
-                      fill="#6ee7b7"
-                      radius={[3, 3, 0, 0]}
-                    />
-                    <Bar
-                      yAxisId="right"
-                      dataKey="valueK"
-                      name="Verdi (k)"
-                      fill="#c4b5fd"
-                      radius={[3, 3, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                              <p className="text-emerald-600">
+                                Avtaler: {payload[0]?.value}
+                              </p>
+                              {(payload[1]?.value as number) > 0 && (
+                                <p className="text-violet-600">
+                                  Verdi: {payload[1]?.value}k kr
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar
+                        yAxisId="left"
+                        dataKey="count"
+                        name="Signerte"
+                        fill="#6ee7b7"
+                        radius={[3, 3, 0, 0]}
+                      />
+                      <Bar
+                        yAxisId="right"
+                        dataKey="valueK"
+                        name="Verdi (k)"
+                        fill="#c4b5fd"
+                        radius={[3, 3, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
                 <div className="flex gap-8 mt-4 pt-4 border-t border-gray-100">
                   <div className="flex flex-col gap-0.5">

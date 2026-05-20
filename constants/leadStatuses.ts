@@ -27,7 +27,7 @@ export const COLDCALL_STATUSES = new Set([1, 2, 3, 4, 5, 22]);
 export const NO_ANSWER_STATUSES = new Set([4, 22]);
 
 /** Dead statuses that originate from cold calling (gave up before pipeline). */
-export const COLDCALL_DEAD_STATUSES = new Set([1, 3]);
+export const COLDCALL_DEAD_STATUSES = new Set([3]);
 
 // ─── Pipeline phase ───────────────────────────────────────────────────────────
 // Lead has passed cold calling and is being actively worked.
