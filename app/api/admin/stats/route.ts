@@ -482,13 +482,17 @@ export async function GET(req: Request) {
       installerGroupAgg[gid].value += val;
       if (isSigned) installerGroupAgg[gid].signed++;
 
-      const targetAgg = isInboundLead(lead)
-        ? warmInstallerAgg
-        : coldInstallerAgg;
-      ensureGroup(targetAgg, gid, name);
-      targetAgg[gid].total++;
-      targetAgg[gid].value += val;
-      if (isSigned) targetAgg[gid].signed++;
+      if (isInboundLead(lead)) {
+        ensureGroup(warmInstallerAgg, gid, name);
+        warmInstallerAgg[gid].total++;
+        warmInstallerAgg[gid].value += val;
+        if (isSigned) warmInstallerAgg[gid].signed++;
+      } else if (lead.lead_source?.trim() === "coldcall") {
+        ensureGroup(coldInstallerAgg, gid, name);
+        coldInstallerAgg[gid].total++;
+        coldInstallerAgg[gid].value += val;
+        if (isSigned) coldInstallerAgg[gid].signed++;
+      }
     });
 
     const toSortedBySignedRate = (agg: InstallerAgg) =>
