@@ -272,7 +272,7 @@ export default function LeadPage() {
         setCreatedBy(data.created_by ?? "");
         setBirthDate(data.birth_date ?? "");
         setUpdatedPrice(data.updated_price ?? null);
-        setLeadSource(data.lead_source ?? "organic");
+        setLeadSource(data.lead_source ?? "");
       }),
       getEstimatesByLeadId(leadIdStr).then((data) => {
         setEstimates(data ?? []);
@@ -767,6 +767,7 @@ export default function LeadPage() {
                   updateSingleField("lead_source", newSource);
                 }}
               >
+                <option value="">Mangler lead kilde</option>
                 {LEAD_SOURCES.map((src) => (
                   <option key={src.value} value={src.value}>
                     {src.label}

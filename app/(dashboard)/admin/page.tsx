@@ -425,22 +425,19 @@ export default function AdminDashboard() {
       {!loading && stats && (
         <>
           {/* Summary pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <StatPill
               label="Totalt leads"
               value={s?.totalLeads ?? 0}
               color="bg-gray-100 text-gray-800"
             />
+            {/* TODO */}
             <StatPill
-              label="Aktive leads"
+              label="Kvalifiserte leads"
               value={s?.activeLeads ?? 0}
               color="bg-blue-50 text-blue-800"
             />
-            <StatPill
-              label={`Nye (${DATE_PRESETS.find((p) => p.value === preset)?.label})`}
-              value={s?.newInPeriod ?? 0}
-              color="bg-indigo-50 text-indigo-800"
-            />
+
             <StatPill
               label="Pipeline-verdi"
               value={`${formatCurrency(s?.pipelineValue ?? 0)} kr`}

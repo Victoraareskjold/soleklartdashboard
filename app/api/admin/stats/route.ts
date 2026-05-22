@@ -390,7 +390,7 @@ export async function GET(req: Request) {
       }
 
       // Results
-      if (QUALIFIED_STATUSES.has(s)) {
+      if (QUALIFIED_STATUSES.has(s) && lead.lead_source == "coldcall") {
         coldCallerAgg[userId].converted++;
       } else if (s === 3 || s === NOT_INTERESTED_STATUS) {
         coldCallerAgg[userId].notInterested++;
