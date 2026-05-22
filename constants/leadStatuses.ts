@@ -61,7 +61,7 @@ export const ACTIVE_STATUSES = new Set([
  * Includes status 5 ("Vil ha tilbud") as the bridge from cold call → pipeline.
  */
 export const QUALIFIED_STATUSES = new Set([
-  5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21,
+  7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21,
 ]);
 
 /** Every dead/lost status across all phases. */

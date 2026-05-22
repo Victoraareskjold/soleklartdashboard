@@ -7,7 +7,6 @@ import {
   QUALIFIED_STATUSES,
   SIGNED_STATUSES,
   ACTIVE_STATUSES,
-  LEAD_STATUS_SET,
 } from "@/constants/leadStatuses";
 
 // Canonical pipeline order — used for funnel + bottleneck views
@@ -664,7 +663,7 @@ export async function GET(req: Request) {
         (l) => l.status && ACTIVE_STATUSES.has(l.status),
       ).length;
       const qualifiedInPeriod = segLeads.filter((l) => {
-        if (!l.created_at || !l.status || !LEAD_STATUS_SET.has(l.status))
+        if (!l.created_at || !l.status || !QUALIFIED_STATUSES.has(l.status))
           return false;
         const d = new Date(l.created_at);
         return d >= fromDate && d <= toDate;
@@ -673,11 +672,7 @@ export async function GET(req: Request) {
         signedEventMap.has(l.id),
       ).length;
       const lostInPeriod = segLeads.filter((l) => {
-        if (
-          !l.updated_at ||
-          (l.status !== 3 && l.status !== NOT_INTERESTED_STATUS)
-        )
-          return false;
+        if (!l.updated_at || l.status !== NOT_INTERESTED_STATUS) return false;
         const d = new Date(l.updated_at);
         return d >= fromDate && d <= toDate;
       }).length;
