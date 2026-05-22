@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTeam } from "@/context/TeamContext";
 import { useRoles } from "@/context/RoleProvider";
 import { getToken } from "@/lib/api";
@@ -287,28 +287,28 @@ export default function AdminDashboard() {
       return next;
     });
 
-  const fetchStats = useCallback(async () => {
-    if (!teamId) return;
-    setLoading(true);
-    try {
-      const token = await getToken();
-      const { from, to, groupBy: gb } = getDateRange(preset);
-      const res = await fetch(
-        `/api/admin/stats?teamId=${teamId}&from=${from}&to=${to}&groupBy=${gb}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!res.ok) throw new Error("Failed");
-      setStats(await res.json());
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [teamId, preset]);
-
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (!teamId) return;
+    const controller = new AbortController();
+    setLoading(true);
+    (async () => {
+      try {
+        const token = await getToken();
+        const { from, to, groupBy: gb } = getDateRange(preset);
+        const res = await fetch(
+          `/api/admin/stats?teamId=${teamId}&from=${from}&to=${to}&groupBy=${gb}`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal },
+        );
+        if (!res.ok) throw new Error("Failed");
+        setStats(await res.json());
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") console.error(err);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [teamId, preset]);
 
   useEffect(() => {
     if (!teamId) return;
