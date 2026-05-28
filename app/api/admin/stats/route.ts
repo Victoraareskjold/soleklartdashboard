@@ -532,6 +532,32 @@ export async function GET(req: Request) {
       }
     });
 
+    // ── Signed value by traffic source (period-filtered) ─────────────────────
+    // Uses signedEventMap so period filter matches the rest of the dashboard.
+    const valueBySource: Record<
+      string,
+      { signedValue: number; signedCount: number }
+    > = {
+      google: { signedValue: 0, signedCount: 0 },
+      facebook: { signedValue: 0, signedCount: 0 },
+      organic: { signedValue: 0, signedCount: 0 },
+      coldcall: { signedValue: 0, signedCount: 0 },
+    };
+
+    leads.forEach((l) => {
+      if (!signedEventMap.has(l.id)) return;
+      const event = signedEventMap.get(l.id)!;
+      const src =
+        parseInboundSource(l.note) || l.lead_source?.trim() || "organic";
+      const bucket = /^cold/i.test(src)
+        ? "coldcall"
+        : INBOUND_SOURCE_KEYS.has(src)
+          ? src
+          : "organic";
+      valueBySource[bucket].signedValue += event.value;
+      valueBySource[bucket].signedCount++;
+    });
+
     // ── Time series ───────────────────────────────────────────────────────────
     const signedOverTime = groupByPeriod(
       signedEvents.map((e) => ({
@@ -784,6 +810,7 @@ export async function GET(req: Request) {
       },
       installerBreakdown,
       sourceDistribution,
+      valueBySource,
     });
   } catch (err) {
     console.error("GET /api/admin/stats error:", err);

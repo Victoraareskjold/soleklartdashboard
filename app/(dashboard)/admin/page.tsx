@@ -100,6 +100,12 @@ interface AdminStats {
     facebook: number;
     organic: number;
   };
+  valueBySource: {
+    google: { signedValue: number; signedCount: number };
+    facebook: { signedValue: number; signedCount: number };
+    organic: { signedValue: number; signedCount: number };
+    coldcall: { signedValue: number; signedCount: number };
+  };
   summary: {
     totalLeads: number;
     activeLeads: number;
@@ -297,12 +303,16 @@ export default function AdminDashboard() {
         const { from, to, groupBy: gb } = getDateRange(preset);
         const res = await fetch(
           `/api/admin/stats?teamId=${teamId}&from=${from}&to=${to}&groupBy=${gb}`,
-          { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          },
         );
         if (!res.ok) throw new Error("Failed");
         setStats(await res.json());
       } catch (err) {
-        if (err instanceof Error && err.name !== "AbortError") console.error(err);
+        if (err instanceof Error && err.name !== "AbortError")
+          console.error(err);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -1188,6 +1198,211 @@ export default function AdminDashboard() {
               fbclid/gclid i merknaden
             </p>
           </Card>
+
+          {/* Signert verdi per trafikkilde */}
+          {stats.valueBySource &&
+            (() => {
+              const SOURCE_DEF = [
+                {
+                  key: "facebook" as const,
+                  label: "Facebook",
+                  color: "bg-blue-50 text-blue-800",
+                  bar: "bg-blue-400",
+                },
+                {
+                  key: "google" as const,
+                  label: "Google",
+                  color: "bg-sky-50 text-sky-800",
+                  bar: "bg-sky-400",
+                },
+                {
+                  key: "organic" as const,
+                  label: "Organic",
+                  color: "bg-emerald-50 text-emerald-800",
+                  bar: "bg-emerald-400",
+                },
+                {
+                  key: "coldcall" as const,
+                  label: "Cold calling",
+                  color: "bg-yellow-50 text-yellow-800",
+                  bar: "bg-yellow-400",
+                },
+              ];
+
+              const vbs = stats.valueBySource;
+              const totalValue = SOURCE_DEF.reduce(
+                (sum, s) => sum + vbs[s.key].signedValue,
+                0,
+              );
+              const totalCount = SOURCE_DEF.reduce(
+                (sum, s) => sum + vbs[s.key].signedCount,
+                0,
+              );
+              const maxValue = Math.max(
+                ...SOURCE_DEF.map((s) => vbs[s.key].signedValue),
+                1,
+              );
+
+              // Per-installer rows: each installer's signed value per source
+              const installerRows = (stats.installerBreakdown || [])
+                .filter((g) => g.name.toLowerCase() !== "testelektro")
+                .map((group) => {
+                  const bySource: Record<
+                    string,
+                    { value: number; count: number }
+                  > = {};
+                  group.sources.forEach((src) => {
+                    bySource[src.key] = {
+                      value: src.stats.signedValue,
+                      count: src.stats.signedInPeriod,
+                    };
+                  });
+                  const rowTotal = SOURCE_DEF.reduce(
+                    (sum, s) => sum + (bySource[s.key]?.value ?? 0),
+                    0,
+                  );
+                  const rowCount = SOURCE_DEF.reduce(
+                    (sum, s) => sum + (bySource[s.key]?.count ?? 0),
+                    0,
+                  );
+                  return { group, bySource, rowTotal, rowCount };
+                })
+                .sort((a, b) => b.rowTotal - a.rowTotal);
+
+              if (
+                totalCount === 0 &&
+                installerRows.every((r) => r.rowCount === 0)
+              )
+                return null;
+
+              return (
+                <Card title="Signert verdi per trafikkilde">
+                  {/* Total summary pills */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                    {SOURCE_DEF.map((s) => {
+                      const d = vbs[s.key];
+                      const pct =
+                        totalValue > 0
+                          ? Math.round((d.signedValue / totalValue) * 100)
+                          : 0;
+                      return (
+                        <div
+                          key={s.key}
+                          className={`rounded-lg px-4 py-3 flex flex-col gap-1 ${s.color}`}
+                        >
+                          <span className="text-xs font-semibold opacity-60 uppercase tracking-wider">
+                            {s.label}
+                          </span>
+                          <span className="text-lg font-bold">
+                            {formatCurrency(d.signedValue)} kr
+                          </span>
+                          <span className="text-xs opacity-70">
+                            {d.signedCount} salg · {pct}% av total
+                          </span>
+                          {/* Value bar relative to max source */}
+                          <div className="h-1 rounded-full bg-black/10 mt-1 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${s.bar}`}
+                              style={{
+                                width: `${(d.signedValue / maxValue) * 100}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Total row */}
+                  <div className="flex items-center justify-between px-1 mb-3 text-xs text-gray-400">
+                    <span className="font-semibold text-gray-600">
+                      Totalt alle kilder
+                    </span>
+                    <span className="font-bold text-gray-800">
+                      {formatCurrency(totalValue)} kr · {totalCount} salg
+                    </span>
+                  </div>
+
+                  {/* Per-installer table */}
+                  {installerRows.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-100 text-gray-400 uppercase tracking-wider">
+                            <th className="text-left px-0 py-2 font-semibold w-40">
+                              Installatør
+                            </th>
+                            {SOURCE_DEF.map((s) => (
+                              <th
+                                key={s.key}
+                                className="text-right px-3 py-2 font-semibold"
+                              >
+                                {s.label}
+                              </th>
+                            ))}
+                            <th className="text-right px-0 py-2 font-semibold">
+                              Totalt
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {installerRows.map(
+                            ({ group, bySource, rowTotal, rowCount }) => (
+                              <tr
+                                key={group.id}
+                                className="border-t border-gray-50 hover:bg-gray-50 transition-colors"
+                              >
+                                <td className="px-0 py-2 font-medium text-gray-700 truncate max-w-[140px]">
+                                  {group.name}
+                                </td>
+                                {SOURCE_DEF.map((s) => {
+                                  const d = bySource[s.key];
+                                  return (
+                                    <td
+                                      key={s.key}
+                                      className="text-right px-3 py-2 text-gray-600"
+                                    >
+                                      {d && d.value > 0 ? (
+                                        <>
+                                          <span className="font-medium">
+                                            {formatCurrency(d.value)} kr
+                                          </span>
+                                          <span className="text-gray-400 ml-1">
+                                            ({d.count})
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <span className="text-gray-200">—</span>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                                <td className="text-right px-0 py-2 font-semibold text-gray-800">
+                                  {rowTotal > 0 ? (
+                                    <>
+                                      {formatCurrency(rowTotal)} kr
+                                      <span className="text-gray-400 font-normal ml-1">
+                                        ({rowCount})
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-gray-200">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ),
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-300 mt-4">
+                    Kilde bestemt av fbclid/gclid i merknad · Periodefiltrert
+                    (samme som tidsvalg over)
+                  </p>
+                </Card>
+              );
+            })()}
 
           {/* Signerte avtaler — årsvisning */}
           {(() => {
