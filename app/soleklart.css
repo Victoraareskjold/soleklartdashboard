@@ -1,0 +1,359 @@
+/* ============================================================================
+   Soleklart designsystem — tokens
+   ----------------------------------------------------------------------------
+   Farger, typografi, spacing, radius, skygger og bevegelse.
+   Tokens ligger på :root (kun variabler, påvirker ingenting av seg selv).
+   Basestiler for elementer er scopet til .sk-site slik at dashbordet
+   (som bruker Tailwind) ikke blir påvirket.
+   ========================================================================== */
+
+:root {
+  /* ── Typografi ──────────────────────────────────────────────────────── */
+  --font-display: var(--font-poppins), "Segoe UI", system-ui, sans-serif;
+  --font-body: var(--font-public-sans), "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+
+  /* ── Merkevarefarger — avledet fra logoen (oransje sol over blått vann) ── */
+  --blue-900: #0b1b33;
+  --blue-800: #0e2c63;
+  --blue-700: #1450c4;
+  --blue-600: #1869ff; /* primær */
+  --blue-500: #4a88ff;
+  --blue-300: #a3c4fb;
+  --blue-100: #dce9fe;
+  --blue-50: #f1f6ff;
+
+  --orange-700: #b96f00;
+  --orange-600: #e08d0c;
+  --orange-500: #faa31a; /* sekundær */
+  --orange-300: #fdd08a;
+  --orange-100: #fef0da;
+  --orange-50: #fff9ef;
+
+  /* ── Nøytraler ──────────────────────────────────────────────────────── */
+  --white: #ffffff;
+  --grey-50: #f7f8fa;
+  --grey-100: #eef1f5;
+  --grey-200: #e1e6ed;
+  --grey-300: #c8d1dc;
+  --grey-400: #97a3b4;
+  --grey-500: #6b7889;
+  --grey-600: #4a5768;
+  --grey-700: #33404f;
+  --grey-900: #16202d;
+
+  /* ── Status ─────────────────────────────────────────────────────────── */
+  --green-600: #10874b;
+  --green-100: #e2f5ea;
+  --red-600: #c8332b;
+  --red-100: #fbe7e5;
+  --amber-600: #b96f00;
+  --amber-100: #fef0da;
+
+  /* ── Semantiske aliaser ─────────────────────────────────────────────── */
+  --brand-primary: var(--blue-600);
+  --brand-primary-hover: var(--blue-700);
+  --brand-primary-active: var(--blue-800);
+  --brand-secondary: var(--orange-500);
+  --brand-secondary-hover: var(--orange-600);
+  --brand-soft: var(--blue-300);
+
+  --text-heading: var(--blue-900);
+  --text-body: var(--grey-600);
+  --text-muted: var(--grey-500);
+  --text-on-brand: var(--white);
+  --text-link: var(--blue-600);
+  --text-link-hover: var(--blue-700);
+
+  --surface-page: var(--white);
+  --surface-subtle: var(--grey-50);
+  --surface-card: var(--white);
+  --surface-brand: var(--blue-600);
+  --surface-brand-soft: var(--blue-50);
+  --surface-accent-soft: var(--orange-50);
+  --surface-inverse: var(--blue-900);
+
+  --border-subtle: var(--grey-200);
+  --border-strong: var(--grey-300);
+  --border-brand: var(--blue-600);
+  --focus-ring: rgba(24, 105, 255, 0.35);
+
+  --status-success-fg: var(--green-600);
+  --status-success-bg: var(--green-100);
+  --status-danger-fg: var(--red-600);
+  --status-danger-bg: var(--red-100);
+  --status-warning-fg: var(--amber-600);
+  --status-warning-bg: var(--amber-100);
+  --status-info-fg: var(--blue-700);
+  --status-info-bg: var(--blue-100);
+
+  /* ── Typeskala — display i Poppins, resten i Public Sans. Aldri kursiv. ── */
+  --text-display-size: 60px;
+  --text-display-lh: 1.05;
+  --text-h1-size: 44px;
+  --text-h1-lh: 1.12;
+  --text-h2-size: 32px;
+  --text-h2-lh: 1.18;
+  --text-h3-size: 24px;
+  --text-h3-lh: 1.25;
+  --text-h4-size: 19px;
+  --text-h4-lh: 1.35;
+
+  --text-lead-size: 20px;
+  --text-lead-lh: 1.55;
+  --text-body-size: 16px;
+  --text-body-lh: 1.6;
+  --text-small-size: 14px;
+  --text-small-lh: 1.5;
+  --text-caption-size: 12px;
+  --text-caption-lh: 1.4;
+
+  --text-label-size: 13px;
+  --text-label-lh: 1.2;
+  --text-label-tracking: 0.06em;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --tracking-display: -0.02em;
+  --tracking-heading: -0.01em;
+  --tracking-body: 0em;
+
+  /* ── 4px-grid. Seksjoner puster — Soleklart-layouter er luftige. ────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-32: 128px;
+
+  --section-padding-y: var(--space-24);
+  --section-padding-y-compact: var(--space-16);
+  --gutter: var(--space-6);
+  --container-max: 1180px;
+  --container-narrow: 760px;
+
+  /* ── Form og dybde ──────────────────────────────────────────────────── */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgba(11, 27, 51, 0.06);
+  --shadow-sm: 0 1px 3px rgba(11, 27, 51, 0.08), 0 1px 2px rgba(11, 27, 51, 0.04);
+  --shadow-md: 0 4px 16px rgba(11, 27, 51, 0.08);
+  --shadow-lg: 0 12px 32px rgba(11, 27, 51, 0.1);
+  --shadow-brand: 0 6px 18px rgba(24, 105, 255, 0.22);
+  --shadow-inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+
+  --border-width: 1px;
+
+  /* ── Bevegelse er stille og funksjonell — ingen sprett, ingen lange fades ── */
+  --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --transition-base: all var(--duration-base) var(--ease-standard);
+}
+
+/* ============================================================================
+   Basestiler — kun for den offentlige nettsiden (.sk-site)
+   ========================================================================== */
+
+.sk-site {
+  font-family: var(--font-body);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-lh);
+  color: var(--text-body);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+}
+
+.sk-site h1,
+.sk-site h2,
+.sk-site h3,
+.sk-site h4,
+.sk-site h5,
+.sk-site h6 {
+  font-family: var(--font-display);
+  color: var(--text-heading);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-heading);
+  margin: 0;
+}
+
+.sk-site h1 {
+  font-size: var(--text-h1-size);
+  line-height: var(--text-h1-lh);
+  letter-spacing: var(--tracking-display);
+}
+.sk-site h2 {
+  font-size: var(--text-h2-size);
+  line-height: var(--text-h2-lh);
+}
+.sk-site h3 {
+  font-size: var(--text-h3-size);
+  line-height: var(--text-h3-lh);
+}
+.sk-site h4 {
+  font-size: var(--text-h4-size);
+  line-height: var(--text-h4-lh);
+}
+
+.sk-site p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.sk-site em,
+.sk-site i,
+.sk-site address {
+  font-style: normal;
+}
+
+.sk-site a {
+  color: var(--text-link);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+}
+
+.sk-site a:hover {
+  color: var(--text-link-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sk-site :focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+.sk-site img,
+.sk-site svg {
+  display: block;
+  max-width: 100%;
+}
+
+.sk-site button {
+  font-family: inherit;
+}
+
+/* ============================================================================
+   Layout-hjelpere
+   ----------------------------------------------------------------------------
+   Komponentene bruker inline-stiler (som i designsystemet). Disse klassene
+   finnes fordi responsivitet krever media queries, som inline-stiler ikke har.
+   ========================================================================== */
+
+.sk-section {
+  padding: 88px 32px;
+}
+
+.sk-container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+}
+
+.sk-container--narrow {
+  max-width: var(--container-narrow);
+  margin: 0 auto;
+}
+
+/* Hero: to kolonner på desktop, én på mobil */
+.sk-hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 64px;
+  align-items: center;
+}
+
+/* Kortgrid: 2 kolonner på desktop */
+.sk-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* Partnergrid: 3 kolonner på desktop */
+.sk-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.sk-split {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.sk-header-nav {
+  display: flex;
+  gap: 28px;
+  margin-left: 16px;
+  flex: 1;
+}
+
+.sk-footer-cols {
+  display: flex;
+  gap: 64px;
+}
+
+/* Skjul på mobil */
+@media (max-width: 900px) {
+  .sk-section {
+    padding: 56px 20px;
+  }
+  .sk-hero-grid,
+  .sk-grid-2,
+  .sk-grid-3,
+  .sk-split {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .sk-header-nav {
+    display: none;
+  }
+  .sk-footer-cols {
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  .sk-hide-mobile {
+    display: none !important;
+  }
+  .sk-site h1 {
+    font-size: 38px;
+  }
+  .sk-site h2 {
+    font-size: 27px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  .sk-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-site *,
+  .sk-site *::before,
+  .sk-site *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
