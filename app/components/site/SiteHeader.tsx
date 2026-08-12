@@ -7,7 +7,7 @@ import { Logo } from "./Logo";
 const NAV = [
   { label: "Om Soleklart", href: "/#om-soleklart" },
   { label: "Hva vi hjelper med", href: "/#hva-vi-hjelper-med" },
-  { label: "Partnere", href: "/partnere" },
+  /* { label: "Partnere", href: "/partnere" }, */
 ];
 
 export function SiteHeader() {
