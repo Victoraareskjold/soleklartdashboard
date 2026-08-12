@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { Mail, Phone, LogOut, CheckCircle } from "lucide-react";
+import { CLIENT_ROUTES } from "@/constants/routes";
 
 interface UserProfile {
   id: string;
@@ -107,7 +108,7 @@ export default function ProfilePageInner() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Logget ut");
-    window.location.href = "/";
+    window.location.href = CLIENT_ROUTES.AUTH;
   };
 
   if (loading)

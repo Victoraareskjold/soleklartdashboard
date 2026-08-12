@@ -23,16 +23,15 @@ export function SiteHeader() {
       }}
     >
       <div
-        className="sk-container"
+        className="sk-container sk-header-bar"
         style={{
-          padding: "0 24px",
           height: 76,
           display: "flex",
           alignItems: "center",
           gap: 24,
         }}
       >
-        <Logo href="/" height={20} priority />
+        <Logo href="/" height={28} priority />
 
         <nav className="sk-header-nav">
           {NAV.map((item) => (
@@ -58,14 +57,13 @@ export function SiteHeader() {
             gap: 8,
           }}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            href={BECOME_PARTNER_MAILTO}
-            style={{ flexShrink: 0 }}
-          >
-            Bli partner
-          </Button>
+          {/* Skjules på mobil — «Bli partner» finnes både i hero og i footer,
+              og headeren har ikke plass til begge knappene på små skjermer. */}
+          <span className="sk-hide-mobile">
+            <Button variant="ghost" size="sm" href={BECOME_PARTNER_MAILTO}>
+              Bli partner
+            </Button>
+          </span>
           <Button
             size="sm"
             icon="log-in"

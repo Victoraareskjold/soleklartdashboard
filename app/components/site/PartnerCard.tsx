@@ -33,7 +33,16 @@ export function PartnerCard({ partner }: { partner: Partner }) {
   return (
     <Link
       href={`/partnere/${partner.slug}`}
-      style={{ display: "block", textDecoration: "none" }}
+      style={{
+        display: "block",
+        // Lenken er selve grid-elementet, så den må ha full høyde for at
+        // kortet inni skal kunne strekke seg like langt som naboene.
+        height: "100%",
+        textDecoration: "none",
+        // Kortet ligger inni en <a>, så tekstfargen må settes eksplisitt
+        // for at brødteksten ikke skal arve lenkeblå.
+        color: "var(--text-body)",
+      }}
     >
       <Card
         padding="lg"

@@ -301,6 +301,12 @@
   align-items: start;
 }
 
+/* Knapp som skal ligge nederst til høyre i en sk-split-header */
+.sk-cta-end {
+  justify-self: end;
+  align-self: end;
+}
+
 .sk-header-nav {
   display: flex;
   gap: 28px;
@@ -311,6 +317,10 @@
 .sk-footer-cols {
   display: flex;
   gap: 64px;
+}
+
+.sk-header-bar {
+  padding: 0 24px;
 }
 
 /* Skjul på mobil */
@@ -331,6 +341,9 @@
   .sk-footer-cols {
     gap: 40px;
     flex-wrap: wrap;
+  }
+  .sk-cta-end {
+    justify-self: start;
   }
   .sk-hide-mobile {
     display: none !important;

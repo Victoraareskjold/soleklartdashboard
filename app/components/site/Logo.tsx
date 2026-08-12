@@ -35,13 +35,19 @@ export function Logo({
       width={width}
       height={height}
       priority={priority}
-      style={{ height, width: "auto" }}
+      // maxWidth: none overstyrer `.sk-site img { max-width: 100% }`. Uten den
+      // klemmes wordmarken sammen på smale skjermer, siden høyden er låst.
+      style={{ height, width: "auto", maxWidth: "none", flex: "none" }}
     />
   );
 
   if (href) {
     return (
-      <Link href={href} aria-label="Soleklart – til forsiden" style={{ display: "block" }}>
+      <Link
+        href={href}
+        aria-label="Soleklart – til forsiden"
+        style={{ display: "block", flex: "none" }}
+      >
         {img}
       </Link>
     );

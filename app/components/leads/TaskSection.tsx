@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 import { Lead, LeadTask, Team } from "@/lib/types";
+import { CLIENT_ROUTES } from "@/constants/routes";
 import TeamMemberSelector from "../cold-calling/TeamMemberSelector";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthProvider";
@@ -390,7 +391,7 @@ export default function TaskSection({ leadId }: Props) {
     calendarBody += `Adresse: ${lead.address || "Ikke oppgitt"}\n`;
     calendarBody += `E-post: ${lead.email || "Ikke oppgitt"}\n`;
     calendarBody += `Telefon: ${lead.phone || lead.mobile || "Ikke oppgitt"}\n`;
-    calendarBody += `\nLink til lead: ${window.location.origin}/leads/${lead.id}`;
+    calendarBody += `\nLink til lead: ${window.location.origin}${CLIENT_ROUTES.LEADS}/${lead.id}`;
 
     const outlookParams = new URLSearchParams({
       path: "/calendar/action/compose",
@@ -447,7 +448,7 @@ export default function TaskSection({ leadId }: Props) {
         </div>
         
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${window.location.origin}/leads/${lead.id}?tab=Oppgaver" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">
+          <a href="${window.location.origin}${CLIENT_ROUTES.LEADS}/${lead.id}?tab=Oppgaver" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">
             Se lead i dashboard
           </a>
         </div>
