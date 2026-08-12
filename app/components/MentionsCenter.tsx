@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Note } from "@/lib/types";
+import { CLIENT_ROUTES } from "@/constants/routes";
 
 export default function MentionsCenter({ onClose }: { onClose: () => void }) {
   const [mentions, setMentions] = useState<Note[] | SimpleNote[]>([]);
@@ -54,7 +55,7 @@ export default function MentionsCenter({ onClose }: { onClose: () => void }) {
 
   const handleGoToLead = (note: SimpleNote) => {
     onClose();
-    router.push(`/leads/${note.lead_id}?tab=Merknader`);
+    router.push(`${CLIENT_ROUTES.LEADS}/${note.lead_id}?tab=Merknader`);
   };
 
   return (

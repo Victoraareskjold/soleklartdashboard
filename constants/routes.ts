@@ -1,22 +1,23 @@
 export const CLIENT_ROUTES = {
+  HOME: "/",
   AUTH: "/auth",
   ONBOARDING: "/onboarding",
 
-  DASHBOARD: "/",
-  OVERVIEW: "/overview",
+  DASHBOARD: "/dashboard",
+  OVERVIEW: "/dashboard/overview",
 
-  LEADS: "/leads",
-  CREATE_LEAD: "/leads/create",
-  COLD_CALLING: "/coldCalling",
-  CONTACTS: "/contacts",
+  LEADS: "/dashboard/leads",
+  CREATE_LEAD: "/dashboard/leads/create",
+  COLD_CALLING: "/dashboard/coldCalling",
+  CONTACTS: "/dashboard/contacts",
 
-  PRICETABLE: "/pricetable",
+  PRICETABLE: "/dashboard/pricetable",
 
-  ADMIN: "/admin",
-  MAIL_TEMPLATES: "/admin/mail-templates",
+  ADMIN: "/dashboard/admin",
+  MAIL_TEMPLATES: "/dashboard/admin/mail-templates",
 
-  TEAM: "/team",
-  PROFILE: "/profile",
+  TEAM: "/dashboard/team",
+  PROFILE: "/dashboard/profile",
 };
 
 export const NAVBAR_ROUTES = [

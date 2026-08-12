@@ -100,7 +100,7 @@ export default function CreateLead() {
         <div>
           Lead &quot;<strong>{lead.person_info}</strong>&quot; created!{" "}
           <Link
-            href={`${CLIENT_ROUTES.DASHBOARD}/leads/${lead.id}`}
+            href={`${CLIENT_ROUTES.LEADS}/${lead.id}`}
             className="font-bold"
           >
             View

@@ -1,4 +1,4 @@
-import { ColdCallLead } from "@/app/(dashboard)/coldCalling/page";
+import { ColdCallLead } from "@/app/dashboard/coldCalling/page";
 import { Copy, Pencil } from "lucide-react";
 import React, { useState } from "react";
 import { toast } from "react-toastify";

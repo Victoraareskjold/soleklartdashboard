@@ -1,6 +1,6 @@
 "use client";
 
-import { ColdCallLead, FormData } from "@/app/(dashboard)/coldCalling/page";
+import { ColdCallLead, FormData } from "@/app/dashboard/coldCalling/page";
 import { LeadStatus } from "@/constants/leadStatuses";
 import { RoofType } from "@/lib/types";
 

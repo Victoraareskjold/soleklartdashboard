@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, X, MapPin, Phone, Building2 } from "lucide-react";
 import { useTeam } from "@/context/TeamContext";
 import { getToken } from "@/lib/api";
+import { CLIENT_ROUTES } from "@/constants/routes";
 
 const ALL_STATUSES: Record<number, { label: string; color: string }> = {
   1: { label: "Annet", color: "#989898" },
@@ -104,7 +105,7 @@ export default function GlobalSearch({ onClose }: GlobalSearchProps) {
   };
 
   const navigate = (result: SearchResult) => {
-    router.push(`/leads/${result.id}`);
+    router.push(`${CLIENT_ROUTES.LEADS}/${result.id}`);
     onClose();
   };
 

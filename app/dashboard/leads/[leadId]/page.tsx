@@ -37,6 +37,7 @@ import { getPanelWp } from "@/utils/getPanelWp";
 import AcitivitySection from "@/app/components/leads/AcitivitySection";
 import { toast } from "react-toastify";
 import { LEAD_STATUSES } from "@/constants/leadStatuses";
+import { CLIENT_ROUTES } from "@/constants/routes";
 
 interface InputProps {
   label: string;
@@ -504,7 +505,7 @@ export default function LeadPage() {
       });
       if (!res.ok) throw new Error("Kunne ikke slette lead");
       toast.success("Lead slettet!");
-      router.push("/leads");
+      router.push(CLIENT_ROUTES.LEADS);
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt ved sletting");

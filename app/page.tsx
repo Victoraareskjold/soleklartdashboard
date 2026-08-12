@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthProvider";
+import { CLIENT_ROUTES } from "@/constants/routes";
 import Link from "next/link";
 
 export default function Home() {
@@ -25,7 +26,7 @@ export default function Home() {
         </div>
 
         <Link
-          href={isAuth ? "/pricetable" : "/auth"}
+          href={isAuth ? CLIENT_ROUTES.PRICETABLE : CLIENT_ROUTES.AUTH}
           className="inline-block w-full bg-white text-blue-600 font-semibold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
         >
           {isAuth ? "Gå til Dashboard" : "Logg inn"}

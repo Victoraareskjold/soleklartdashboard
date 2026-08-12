@@ -23,6 +23,18 @@ const clearUserLocalStorage = () => {
   });
 };
 
+// Speiler auth-status i en cookie som middleware kan lese for redirect-UX.
+// Dette er IKKE en sikkerhetsgrense - reell autorisasjon skjer via Bearer-token i API-rutene.
+const AUTH_COOKIE = "sk_auth";
+
+const setAuthCookie = (isAuthed: boolean) => {
+  if (isAuthed) {
+    document.cookie = `${AUTH_COOKIE}=1; path=/; max-age=2592000; samesite=lax`;
+  } else {
+    document.cookie = `${AUTH_COOKIE}=; path=/; max-age=0; samesite=lax`;
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { session },
       } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      setAuthCookie(!!session?.user);
       setLoading(false);
     };
 
@@ -50,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           clearUserLocalStorage();
         }
 
+        setAuthCookie(!!newUser);
         setUser(newUser);
       },
     );

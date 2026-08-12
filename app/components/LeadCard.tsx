@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { LEAD_STATUSES } from "@/constants/leadStatuses";
+import { CLIENT_ROUTES } from "@/constants/routes";
 import { Lead, LeadTask } from "@/lib/types";
 import Link from "next/link";
 
@@ -129,7 +130,7 @@ export default function LeadCard({
         ))}
       </select>
 
-      <Link href={`/leads/${lead.id}`}>
+      <Link href={`${CLIENT_ROUTES.LEADS}/${lead.id}`}>
         <div className="pt-7 pb-1 mb-3 border-b border-black flex items-start justify-between gap-2">
           <p className="font-bold text-blue-600 text-md">
             {lead.company || lead.person_info || "Mangler navn"} -{" "}

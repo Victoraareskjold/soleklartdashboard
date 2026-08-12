@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
 import { useRouter } from "next/navigation";
+import { CLIENT_ROUTES } from "@/constants/routes";
 
 export type ContactLead = {
   id: string;
@@ -196,7 +197,7 @@ export default function ContactsPage() {
       if (!res.ok) throw new Error("Feil ved oppretelse av avtale");
 
       toast.success("Avtale opprettet!");
-      router.push(`/leads/${contact.id}`);
+      router.push(`${CLIENT_ROUTES.LEADS}/${contact.id}`);
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt");
@@ -221,7 +222,7 @@ export default function ContactsPage() {
       const data = await res.json();
 
       toast.success("Avtale opprettet!");
-      router.push(`/leads/${data.id}`);
+      router.push(`${CLIENT_ROUTES.LEADS}/${data.id}`);
     } catch (err) {
       console.error(err);
       toast.error("Noe gikk galt");

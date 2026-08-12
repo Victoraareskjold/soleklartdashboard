@@ -16,6 +16,7 @@ export default function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const installerGroupId = searchParams.get("inviteLink");
+  const redirectTo = searchParams.get("redirect");
 
   useEffect(() => {
     if (installerGroupId) {
@@ -34,7 +35,7 @@ export default function AuthPageContent() {
           password,
         });
         if (error) throw error;
-        router.push(CLIENT_ROUTES.PRICETABLE);
+        router.push(redirectTo || CLIENT_ROUTES.PRICETABLE);
       }
 
       if (!isLogin) {
@@ -57,7 +58,7 @@ export default function AuthPageContent() {
             email,
             password,
             options: {
-              emailRedirectTo: `${window.location.origin}/${CLIENT_ROUTES.DASHBOARD}`,
+              emailRedirectTo: `${window.location.origin}${CLIENT_ROUTES.DASHBOARD}`,
             },
           });
         if (signUpError) throw signUpError;
