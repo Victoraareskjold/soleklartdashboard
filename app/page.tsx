@@ -18,7 +18,7 @@ export default function Home() {
       <Hero />
       <About />
       <Services />
-      <Partners />
+      {/* <Partners /> */}
       <ClosingCta />
     </SiteShell>
   );
