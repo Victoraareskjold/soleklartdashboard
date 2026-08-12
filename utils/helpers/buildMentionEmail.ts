@@ -23,7 +23,7 @@ export const buildMentionEmail = (
           <p><strong>Adresse:</strong> ${lead.address}</p>
         </div>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${origin}/leads/${lead.id}?tab=Merknader"
+          <a href="${origin}/dashboard/leads/${lead.id}?tab=Merknader"
              style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">
             Vis Lead
           </a>
