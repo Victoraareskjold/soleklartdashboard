@@ -148,7 +148,7 @@ export default function CreateLead() {
               onClick={handleToggleModal}
             ></div>
             <iframe
-              src="https://pvmap.vercel.app/?site=solarinstallationdashboard"
+              src="https://pvmap.vercel.app/?site=solarinstallationdashboard&aerial=0"
               className="h-5/6 w-5/6 relative z-50 m-auto rounded-xl"
             />
           </>
