@@ -1057,7 +1057,7 @@ export default function LeadPage() {
               onClick={handleToggleModal}
             ></div>
             <iframe
-              src={`https://pvmap.vercel.app/?site=${domain}&preAdr=${address}&aerial=0`}
+              src={`https://pvmap.vercel.app/?site=${domain}&embed=dashboard&preAdr=${address}&aerial=0`}
               className="h-5/6 w-5/6 relative z-100 m-auto rounded-xl"
             />
           </>
