@@ -177,7 +177,7 @@ export const createEstimate = async (estimate: CreateEstimateInput) => {
 
 // Update estimate
 export const updateEstimate = async (estimateId: string, data: unknown) => {
-  return apiRequest<Lead>(`/api/estimates/${estimateId}`, "PATCH", data);
+  return apiRequest<Estimate>(`/api/estimates/${estimateId}`, "PATCH", data);
 };
 
 // Lead Notes

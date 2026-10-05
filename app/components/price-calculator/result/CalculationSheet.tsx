@@ -580,6 +580,7 @@ export default function CalculationSheet({
       },
       total: grandTotal,
       "total inkl. alt": Number(grandTotal * 1.25),
+      totalOverride: null,
       simulationPdfUrl,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

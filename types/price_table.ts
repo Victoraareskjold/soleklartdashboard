@@ -72,27 +72,27 @@ interface RoofType {
   name: string;
 }
 
+/**
+ * En prislinje i et tilbud — produkt eller montering.
+ *
+ * `capacityKwh` og `attachmentUrl` er valgfrie: kapasitet er bare relevant
+ * for batterier, og produktark finnes ikke på alt.
+ */
+export type PriceLineItem = {
+  id: string;
+  name: string;
+  supplier: string;
+  product: string;
+  category: string;
+  quantity: number;
+  priceWithMarkup: number;
+  capacityKwh?: number | null;
+  attachmentUrl?: string;
+};
+
 export type PriceOverview = {
-  suppliers: {
-    id: string;
-    name: string;
-    supplier: string;
-    product: string;
-    category: string;
-    quantity: number;
-    priceWithMarkup: number;
-    attachmentUrl?: string;
-  }[];
-  mounting: {
-    id: string;
-    name: string;
-    supplier: string;
-    product: string;
-    category: string;
-    quantity: number;
-    priceWithMarkup: number;
-    attachmentUrl?: string;
-  }[];
+  suppliers: PriceLineItem[];
+  mounting: PriceLineItem[];
   installation: {
     søknad: {
       priceWithMarkup: number;
@@ -115,6 +115,9 @@ export type PriceOverview = {
       attachmentUrl?: string;
     }[];
   };
+  simulationPdfUrl?: string | null;
   total: number;
   "total inkl. alt": number;
+  /** Manuell tilbudspris eks. mva som overstyrer summen av linjene. */
+  totalOverride?: number | null;
 };

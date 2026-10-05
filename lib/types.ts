@@ -121,8 +121,14 @@ export interface Estimate {
   coverage_percentage?: number;
   price_data?: PriceOverview;
 
+  /** true = naeringskunde (vises eks. mva). Navnet er historisk. */
+  private?: boolean;
+  address?: string;
+  name?: string;
+  simulation_pdf?: string;
+
   finished?: boolean;
-  signed_at?: string;
+  signed_at?: string | null;
 }
 
 export type CreateEstimateInput = Partial<Estimate> & { lead_id: string } & {

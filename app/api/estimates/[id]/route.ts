@@ -66,8 +66,69 @@ export async function PATCH(
         { status: 400 },
       );
 
-    const updatedLead = await updateEstimate(client, estimateId, body);
-    return NextResponse.json(updatedLead);
+    // Et signert tilbud er laast. Serveren avgjoer dette, ikke klienten.
+    const { data: existing, error: lookupError } = await client
+      .from("estimates")
+      .select("signed_at")
+      .eq("id", estimateId)
+      .maybeSingle();
+
+    if (lookupError) throw lookupError;
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Fant ikke estimatet" },
+        { status: 404 },
+      );
+    }
+    if (existing.signed_at) {
+      return NextResponse.json(
+        {
+          error:
+            "Tilbudet er signert og kan ikke endres. Opprett et nytt estimat.",
+        },
+        { status: 409 },
+      );
+    }
+
+    // Bare disse feltene kan oppdateres herfra. signed_at, id og lead_id
+    // settes aldri fra redigeringsvisningen.
+    const EDITABLE_FIELDS = [
+      "total_panels",
+      "kwp",
+      "selected_panel_type",
+      "selected_roof_type",
+      "checked_roof_data",
+      "selected_el_price",
+      "yearly_cost",
+      "yearly_cost2",
+      "yearly_prod",
+      "desired_kwh",
+      "coverage_percentage",
+      "price_data",
+      "image_url",
+      "simulation_pdf",
+      "address",
+      "name",
+      "private",
+      "finished",
+    ] as const;
+
+    const updates: Record<string, unknown> = {};
+    for (const field of EDITABLE_FIELDS) {
+      if (field in body) updates[field] = body[field];
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: "Ingen felter aa oppdatere" },
+        { status: 400 },
+      );
+    }
+
+    updates.updated_at = new Date().toISOString();
+
+    const updatedEstimate = await updateEstimate(client, estimateId, updates);
+    return NextResponse.json(updatedEstimate);
   } catch (err) {
     console.error("PATCH /api/leads/[id] error:", err);
     return NextResponse.json(
