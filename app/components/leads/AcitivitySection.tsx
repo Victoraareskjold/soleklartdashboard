@@ -8,7 +8,7 @@ import {
   getStoredLeadEmails,
   getTeam,
 } from "@/lib/api";
-import { BarChart, FileText, ListTodo, Mail } from "lucide-react";
+import { BarChart, FileText, ListTodo, Loader2, Mail } from "lucide-react";
 import React from "react";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { Note, LeadTask, EmailContent, Team } from "@/lib/types";
@@ -58,7 +58,7 @@ export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
               type: "estimate",
               date: new Date(e.created_at),
               content: "Nytt estimat ble opprettet.",
-              icon: <BarChart className="h-4 w-4 text-gray-500" />,
+              icon: <BarChart className="h-4 w-4 text-amber-600" />,
             });
           }
         });
@@ -83,7 +83,7 @@ export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
                   )}
                 </>
               ),
-              icon: <ListTodo className="h-4 w-4 text-gray-500" />,
+              icon: <ListTodo className="h-4 w-4 text-violet-600" />,
             });
           }
         });
@@ -107,7 +107,7 @@ export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
                   )}
                 </>
               ),
-              icon: <FileText className="h-4 w-4 text-gray-500" />,
+              icon: <FileText className="h-4 w-4 text-emerald-600" />,
             });
           }
         });
@@ -128,7 +128,7 @@ export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
                     <span className="font-semibold">{email.subject}</span>
                   </>
                 ),
-                icon: <Mail className="h-4 w-4 text-gray-500" />,
+                icon: <Mail className="h-4 w-4 text-brand" />,
               });
             }
           });
@@ -147,37 +147,68 @@ export default function AcitivitySection({ leadId }: AcitivitySectionProps) {
   }, [leadId, installerGroupId, team]);
 
   if (loading) {
-    return <div>Laster aktivitet...</div>;
+    return (
+      <div className="sk-card flex items-center justify-center gap-2 p-10 text-sm text-muted">
+        <Loader2 size={16} className="animate-spin" />
+        Laster aktivitet...
+      </div>
+    );
   }
 
+  const iconBg: Record<Activity["type"], string> = {
+    estimate: "bg-amber-50 ring-amber-100",
+    task: "bg-violet-50 ring-violet-100",
+    note: "bg-emerald-50 ring-emerald-100",
+    email: "bg-blue-50 ring-blue-100",
+  };
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm">
-      <h2 className="text-xl font-semibold mb-5">Nylig aktivitet</h2>
-      {activities.length === 0 ? (
-        <p className="text-gray-500">Ingen nylig aktivitet.</p>
-      ) : (
-        <ul className="space-y-8">
-          {activities.map((activity, index) => (
-            <li key={index} className="flex items-start space-x-4">
-              <div className="flex-shrink-0 mt-1.5 h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
-                {activity.icon}
-              </div>
-              <div className="flex-grow">
-                <p className="text-sm text-gray-800">{activity.content}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {activity.date.toLocaleString("nb-NO", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="sk-card">
+      <div className="sk-card-header">
+        <h2 className="sk-section-title">Nylig aktivitet</h2>
+        {activities.length > 0 && (
+          <span className="sk-badge sk-badge-neutral">{activities.length}</span>
+        )}
+      </div>
+      <div className="sk-card-body">
+        {activities.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted">
+            Ingen nylig aktivitet.
+          </p>
+        ) : (
+          <ul className="relative">
+            {activities.map((activity, index) => (
+              <li key={index} className="relative flex items-start gap-4 pb-6 last:pb-0">
+                {index < activities.length - 1 && (
+                  <span
+                    aria-hidden
+                    className="absolute left-4 top-9 -bottom-0 w-px -translate-x-1/2 bg-line"
+                  />
+                )}
+                <div
+                  className={`relative z-[1] flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ring-1 ring-inset ${iconBg[activity.type]}`}
+                >
+                  {activity.icon}
+                </div>
+                <div className="min-w-0 flex-grow pt-1">
+                  <p className="text-sm leading-relaxed text-body [&_.font-semibold]:text-ink">
+                    {activity.content}
+                  </p>
+                  <p className="mt-0.5 text-xs tabular-nums text-muted">
+                    {activity.date.toLocaleString("nb-NO", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

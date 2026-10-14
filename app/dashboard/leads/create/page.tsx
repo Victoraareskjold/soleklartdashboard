@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { Map as MapIcon, UserPlus, X } from "lucide-react";
 
 interface InputProps {
   label: string;
@@ -27,16 +28,14 @@ const Input = ({
   type = "text",
   placeholder,
 }: InputProps) => (
-  <div className="mb-3">
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {label}
-    </label>
+  <div>
+    <label className="sk-label">{label}</label>
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      className="sk-input"
     />
   </div>
 );
@@ -136,68 +135,109 @@ export default function CreateLead() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <div>
-      <button onClick={handleToggleModal} className="smallLightButton">
-        Open PVMap
-      </button>
+    <div className="sk-page">
+      <div className="sk-page-header">
+        <div>
+          <p className="sk-eyebrow">Leads</p>
+          <h1 className="sk-page-title">Create Lead</h1>
+        </div>
+        <button
+          onClick={handleToggleModal}
+          className="sk-btn sk-btn-secondary"
+        >
+          <MapIcon size={16} />
+          Open PVMap
+        </button>
+      </div>
       {isModalOpen && (
-        <section className="flex h-full absolute inset-0 overflow-none">
+        <section className="fixed inset-0 z-[60] flex animate-fade-in p-6">
           <>
             <div
-              className="flex h-full w-full absolute bg-black opacity-25"
+              className="absolute inset-0 bg-ink/40 backdrop-blur-[3px]"
               onClick={handleToggleModal}
             ></div>
-            <iframe
-              src="https://pvmap.vercel.app/?site=solarinstallationdashboard&aerial=0"
-              className="h-5/6 w-5/6 relative z-50 m-auto rounded-xl"
-            />
+            <div className="relative m-auto h-5/6 w-5/6 animate-pop-in overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
+              <button
+                type="button"
+                className="sk-icon-btn absolute right-3 top-3 z-10 bg-surface/90 shadow-card"
+                onClick={handleToggleModal}
+                aria-label="Lukk"
+              >
+                <X size={18} />
+              </button>
+              <iframe
+                src="https://pvmap.vercel.app/?site=solarinstallationdashboard&aerial=0"
+                className="h-full w-full"
+              />
+            </div>
           </>
         </section>
       )}
-      <form onSubmit={handleSubmit}>
-        <Input
-          label="E-postadresse"
-          value={email}
-          onChange={setEmail}
-          placeholder="E-postadresse"
-        />
-        <Input
-          label="Telefon"
-          value={phone}
-          onChange={setPhone}
-          placeholder="Telefon"
-        />
-        <Input
-          label="Personinfo"
-          value={personInfo}
-          onChange={setPersonInfo}
-          placeholder="Personinfo"
-        />
-        <Input
-          label="Fødselsdato"
-          value={birthDate}
-          onChange={setBirthDate}
-          type="date"
-          placeholder="Fødselsdato"
-        />
-        <Input
-          label="Bedrift"
-          value={company}
-          onChange={setCompany}
-          placeholder="Bedrift"
-        />
-        <Input
-          label="Gateadresse"
-          value={address}
-          onChange={setAddress}
-          placeholder="Gateadresse"
-        />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div className="sk-card">
+          <div className="sk-card-header">
+            <h2 className="sk-section-title">Kontaktinformasjon</h2>
+          </div>
+          <div className="sk-card-body grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Input
+              label="E-postadresse"
+              value={email}
+              onChange={setEmail}
+              placeholder="E-postadresse"
+            />
+            <Input
+              label="Telefon"
+              value={phone}
+              onChange={setPhone}
+              placeholder="Telefon"
+            />
+            <Input
+              label="Personinfo"
+              value={personInfo}
+              onChange={setPersonInfo}
+              placeholder="Personinfo"
+            />
+            <Input
+              label="Fødselsdato"
+              value={birthDate}
+              onChange={setBirthDate}
+              type="date"
+              placeholder="Fødselsdato"
+            />
+            <Input
+              label="Bedrift"
+              value={company}
+              onChange={setCompany}
+              placeholder="Bedrift"
+            />
+            <Input
+              label="Gateadresse"
+              value={address}
+              onChange={setAddress}
+              placeholder="Gateadresse"
+            />
+          </div>
+        </div>
 
-        <SolarDataView solarData={solarData} setSolarData={setSolarData} />
+        <div className="sk-card">
+          <div className="sk-card-header">
+            <h2 className="sk-section-title">Soldata</h2>
+          </div>
+          <div className="sk-card-body">
+            <SolarDataView solarData={solarData} setSolarData={setSolarData} />
+          </div>
+        </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Creating..." : "Create Lead"}
-        </button>
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={loading}
+            className="sk-btn sk-btn-primary sk-btn-lg"
+          >
+            <UserPlus size={16} />
+            {loading ? "Creating..." : "Create Lead"}
+          </button>
+        </div>
       </form>
     </div>
   );

@@ -14,6 +14,7 @@ import { SolarData } from "../../SolarDataView";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { getPanelWp } from "@/utils/getPanelWp";
 import FacilityInfo from "./FacilityInfo";
+import { Plus, X } from "lucide-react";
 
 interface CalculatorResultsProps {
   suppliers: Supplier[] | null;
@@ -701,62 +702,67 @@ export default function CalculatorResults({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculatorState.items, suppliersAndProducts]);
 
-  if (!suppliers || suppliers.length === 0) return <p>Ingen suppliers</p>;
+  if (!suppliers || suppliers.length === 0)
+    return <div className="sk-empty">Ingen suppliers</div>;
   if (!suppliersAndProducts || suppliersAndProducts.length === 0)
-    return <p>Ingen supplierdata</p>;
-  if (allCategories.length === 0) return <p>Laster kategorier...</p>;
+    return <div className="sk-empty">Ingen supplierdata</div>;
+  if (allCategories.length === 0)
+    return <p className="text-sm text-muted">Laster kategorier...</p>;
 
   return (
-    <div className="flex gap-2">
+    <div className="flex items-start gap-5">
       <FacilityInfo
         solarData={solarData}
         setSolarData={setSolarData}
         ownConsumption={ownConsumption}
       />
-      <div>
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th colSpan={4} className="border p-2 bg-gray-100">
-                SOLCELLE ANLEGG
-              </th>
-              <th className="font-bold">
-                <button
-                  className="bg-green-600 p-4 text-white"
-                  onClick={() => setShowModal(true)}
-                >
-                  +
-                </button>
-              </th>
-            </tr>
-            <tr className="bg-gray-100">
-              <th className="border p-2">Antall</th>
-              <th className="border p-2">Utstyr</th>
-              <th className="border p-2">Leverandør</th>
-              <th className="border p-2 w-32">Pris eks. mva</th>
-              <th className="border p-2">🗑️</th>
-            </tr>
-          </thead>
-          <tbody>
-            {calculatorState.items
-              .sort((a, b) => {
-                const ai = a.index ?? Infinity;
-                const bi = b.index ?? Infinity;
-                return ai - bi;
-              })
+      <div className="flex min-w-0 flex-1 flex-col gap-5">
+        <div className="overflow-hidden rounded-xl border border-line">
+          <div className="flex items-center justify-between gap-3 border-b border-line bg-gray-50/60 px-3 py-2">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+              SOLCELLE ANLEGG
+            </h3>
+            <button
+              className="sk-btn sk-btn-secondary h-7 px-2 text-xs"
+              onClick={() => setShowModal(true)}
+            >
+              <Plus size={14} />
+              Legg til utstyr
+            </button>
+          </div>
+          <table className="sk-table">
+            <thead>
+              <tr>
+                <th className="w-20 py-2! text-center!">Antall</th>
+                <th className="py-2!">Utstyr</th>
+                <th className="w-56 py-2!">Leverandør</th>
+                <th className="w-36 py-2! text-right!">Pris eks. mva</th>
+                <th className="w-10 py-2!">
+                  <span className="sr-only">Slett</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {calculatorState.items
+                .sort((a, b) => {
+                  const ai = a.index ?? Infinity;
+                  const bi = b.index ?? Infinity;
+                  return ai - bi;
+                })
 
-              .map((item) => (
-                <CalculatorRow
-                  key={item.id}
-                  item={item}
-                  suppliers={suppliers}
-                  suppliersAndProducts={suppliersAndProducts}
-                  allCategories={allCategories}
-                  onUpdate={(updates) => updateItem(item.id, updates)}
-                />
-              ))}
-          </tbody>
-        </table>
+                .map((item) => (
+                  <CalculatorRow
+                    key={item.id}
+                    item={item}
+                    suppliers={suppliers}
+                    suppliersAndProducts={suppliersAndProducts}
+                    allCategories={allCategories}
+                    onUpdate={(updates) => updateItem(item.id, updates)}
+                  />
+                ))}
+            </tbody>
+          </table>
+        </div>
 
         <CalculationSheet
           calculatorState={calculatorState}
@@ -769,44 +775,55 @@ export default function CalculatorResults({
           leadId={leadId}
         />
         {showModal && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-            onClick={() => setShowModal(false)}
-          >
+          <div className="sk-overlay" onClick={() => setShowModal(false)}>
             <div
-              className="bg-white p-6 rounded-lg w-96 shadow"
+              className="sk-modal max-w-sm"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold mb-3">Legg til utstyr</h3>
-
-              <select
-                className="border w-full p-2 mb-2"
-                value={newItem.categoryId || ""}
-                onChange={(e) =>
-                  setNewItem({
-                    ...newItem,
-                    categoryId: e.target.value,
-                    subcategoryId: "",
-                  })
-                }
-              >
-                <option value="">Velg kategori...</option>
-                {allCategories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name.charAt(0).toUpperCase() + cat.name.slice(1)}{" "}
-                  </option>
-                ))}
-              </select>
-
-              <div className="flex justify-end gap-2">
+              <div className="flex items-center justify-between border-b border-line px-5 py-4">
+                <h3 className="sk-section-title">Legg til utstyr</h3>
                 <button
-                  className="px-3 py-2 bg-gray-300 rounded"
+                  type="button"
+                  className="sk-icon-btn size-8"
+                  onClick={() => setShowModal(false)}
+                  aria-label="Lukk"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="px-5 py-4">
+                <label className="sk-label">Kategori</label>
+                <select
+                  className="sk-input"
+                  value={newItem.categoryId || ""}
+                  onChange={(e) =>
+                    setNewItem({
+                      ...newItem,
+                      categoryId: e.target.value,
+                      subcategoryId: "",
+                    })
+                  }
+                >
+                  <option value="">Velg kategori...</option>
+                  {allCategories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name.charAt(0).toUpperCase() +
+                        cat.name.slice(1)}{" "}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-line bg-gray-50/60 px-5 py-3">
+                <button
+                  className="sk-btn sk-btn-secondary"
                   onClick={() => setShowModal(false)}
                 >
                   Avbryt
                 </button>
                 <button
-                  className="px-3 py-2 bg-green-600 text-white rounded"
+                  className="sk-btn sk-btn-primary"
                   onClick={handleAddItem}
                 >
                   Legg til

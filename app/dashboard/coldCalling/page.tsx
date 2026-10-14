@@ -11,12 +11,17 @@ import { useTeam } from "@/context/TeamContext";
 import { getInstallerGroup, getRoofTypes, getTeam } from "@/lib/api";
 import { InstallerGroup, RoofType, Team } from "@/lib/types";
 import {
+  ArrowRight,
+  Check,
   ChevronLeft,
   ChevronRight,
   Copy,
+  Inbox,
+  MapPin,
   Pencil,
+  Search,
+  Upload,
   X,
-  Check,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -186,7 +191,7 @@ export default function ColdCallingPage() {
           setFormData({});
         }
       } catch (err) {
-        if (err !== "AbortError") {
+        if ((err as Error)?.name !== "AbortError") {
           console.error("Failed to fetch leads:", err);
         }
       }
@@ -413,21 +418,61 @@ export default function ColdCallingPage() {
     [] as { label: string; count: number; color: string }[],
   );
 
+  const totalSummary = leadSummaryWithColor.reduce(
+    (sum, item) => sum + item.count,
+    0,
+  );
+  const pageStart = filteredColdCalls.length ? sliceAmount - 4 : 0;
+  const pageEnd = Math.min(sliceAmount, filteredColdCalls.length);
+
   return (
-    <div>
-      <div className="flex flex-row justify-between items-center gap-4 mb-4">
-        <div>
-          <div className="relative w-64 w-full self-left justify-center h-8">
+    <div className="sk-page">
+      {/* ── Header ── */}
+      <div className="sk-page-header">
+        <div className="flex items-center gap-4">
+          <div className="relative h-10 w-32 shrink-0 overflow-hidden rounded-xl border border-line bg-surface shadow-card">
             <Image
               fill
               alt={installerData?.name + " logo"}
               src={getLogoPath(installerData?.name)}
-              className="object-contain"
+              className="object-contain p-1.5"
             />
           </div>
-          <div className="flex flex-row gap-2 my-2">
-            <div className="flex flex-col">
-              <h1>Status</h1>
+          <div>
+            <h1 className="sk-page-title">Cold calling</h1>
+            <p className="sk-page-subtitle">
+              {installerData?.name} ·{" "}
+              <span className="font-semibold text-ink tabular-nums">
+                {filteredColdCalls.length}
+              </span>{" "}
+              leads i listen
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {status === 0 && (
+            <Link
+              className="sk-btn sk-btn-secondary"
+              href={CLIENT_ROUTES.COLD_CALLING + "/import"}
+            >
+              <Upload size={15} />
+              Importer
+            </Link>
+          )}
+          <button className="sk-btn sk-btn-primary" onClick={handleMove}>
+            {status >= 5 && status !== 22 ? "Flytt til kontakter" : "Flytt"}
+            <ArrowRight size={15} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Filters + stats ── */}
+      <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <div className="sk-card-pad flex flex-col justify-between gap-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="sk-label">Status</label>
               <TeamMemberSelector
                 team={team}
                 selectedMember={selectedMember}
@@ -435,10 +480,10 @@ export default function ColdCallingPage() {
                 defaultUser={user.id}
               />
             </div>
-            <div className="flex flex-col">
-              <h1>Cold caller</h1>
+            <div>
+              <label className="sk-label">Cold caller</label>
               <select
-                className="border p-2 rounded-md"
+                className="sk-input cursor-pointer"
                 onChange={(e) => setStatus(Number(e.target.value))}
               >
                 <option value={0}>Ringeliste</option>
@@ -451,268 +496,242 @@ export default function ColdCallingPage() {
             </div>
           </div>
 
-          <input
-            type="text"
-            placeholder="Søk etter navn eller beskrivelse"
-            className="border p-2 rounded-md w-full"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <div className="relative">
+            <Search
+              size={15}
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted"
+            />
+            <input
+              type="text"
+              placeholder="Søk etter navn eller beskrivelse"
+              className="sk-input pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div className="flex gap-4 items-center">
-          <div className="w-64 h-48">
+        <div className="sk-card-pad flex items-center gap-6">
+          <div className="relative size-36 shrink-0">
             <LeadStatusChart summary={leadSummary} />
+            {totalSummary > 0 && (
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="font-display text-xl font-semibold text-ink tabular-nums">
+                  {totalSummary}
+                </span>
+                <span className="text-[10px] font-semibold tracking-[0.08em] text-muted uppercase">
+                  Leads
+                </span>
+              </div>
+            )}
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
             {leadSummaryWithColor.map((item) => (
-              <div key={item.label} className="flex items-center gap-2">
-                <span
-                  className="w-4 h-4 rounded"
-                  style={{ backgroundColor: item.color }}
-                ></span>
-                <span>
-                  {item.label}: {item.count}
+              <div
+                key={item.label}
+                className="flex items-center justify-between gap-3 rounded-lg px-2 py-1 text-sm hover:bg-gray-50"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                    style={{ backgroundColor: item.color }}
+                  ></span>
+                  <span className="truncate text-body">{item.label}</span>
+                </span>
+                <span className="font-semibold text-ink tabular-nums">
+                  {item.count}
                 </span>
               </div>
             ))}
           </div>
         </div>
-
-        <div className="flex flex-col gap-2">
-          {status === 0 && (
-            <Link
-              className="w-42 text-center rounded-sm px-4 py-2 bg-[#FF8E4C] text-white"
-              href={CLIENT_ROUTES.COLD_CALLING + "/import"}
-            >
-              Importer
-            </Link>
-          )}
-          <button
-            className="w-42 text-center rounded-sm px-4 py-2 bg-green-500 text-white"
-            onClick={handleMove}
-          >
-            {status >= 5 && status !== 22 ? "Flytt til kontakter" : "Flytt"}
-          </button>
-        </div>
       </div>
 
-      <div>
-        {filteredColdCalls && (
-          <>
-            <table className="w-full">
-              <thead>
-                <tr>
-                  {headers.map((header, index) => (
-                    <th
-                      className={`border p-2 bg-blue-500 ${
-                        header === "" ? "w-10" : "w-1/6"
-                      }`}
-                      key={index}
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-            </table>
-
-            {filteredColdCalls
-              .slice(sliceAmount - 5, sliceAmount)
-              .map((lead, i) => {
-                const isEditing = editingLeadId === lead.id;
-                const rowColor = i % 2 === 0 ? "bg-[#82CCEB]" : "bg-[#BFE6F5]";
-
-                return (
-                  <div key={i} className="mb-4">
-                    <table className="w-full mb-1">
-                      <tbody>
-                        <tr aria-hidden="true">
-                          <td colSpan={fields.length + 2} className="h-4"></td>
-                        </tr>
-
-                        <tr className={rowColor}>
-                          {/* ── Address cell ── */}
-                          <td className="border p-1 w-1/6 pr-4 relative">
-                            {isEditing ? (
-                              <input
-                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
-                                value={editDraft.address}
-                                onChange={(e) =>
-                                  setEditDraft((d) => ({
-                                    ...d,
-                                    address: e.target.value,
-                                  }))
-                                }
-                              />
-                            ) : (
-                              <span
-                                className="cursor-pointer pr-4 block"
-                                onClick={() => handleCopyAddress(lead.address)}
-                              >
-                                {lead.address}
-                                <div className="absolute top-0 right-0 p-1">
-                                  <Copy size={14} />
-                                </div>
-                              </span>
-                            )}
-                          </td>
-
-                          {/* ── person_info ── */}
-                          <td className="border p-1 w-1/6">
-                            {isEditing ? (
-                              <input
-                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
-                                value={editDraft.person_info}
-                                onChange={(e) =>
-                                  setEditDraft((d) => ({
-                                    ...d,
-                                    person_info: e.target.value,
-                                  }))
-                                }
-                              />
-                            ) : (
-                              lead.person_info
-                            )}
-                          </td>
-
-                          {/* ── role ── */}
-                          <td className="border p-1 w-1/6">
-                            {isEditing ? (
-                              <input
-                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
-                                value={editDraft.role}
-                                onChange={(e) =>
-                                  setEditDraft((d) => ({
-                                    ...d,
-                                    role: e.target.value,
-                                  }))
-                                }
-                              />
-                            ) : (
-                              lead.role
-                            )}
-                          </td>
-
-                          {/* ── company ── */}
-                          <td className="border p-1 w-1/6">
-                            {isEditing ? (
-                              <input
-                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
-                                value={editDraft.company}
-                                onChange={(e) =>
-                                  setEditDraft((d) => ({
-                                    ...d,
-                                    company: e.target.value,
-                                  }))
-                                }
-                              />
-                            ) : (
-                              lead.company
-                            )}
-                          </td>
-
-                          {/* ── mobile ── */}
-                          <td className="border p-1 w-1/6">
-                            {isEditing ? (
-                              <input
-                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
-                                value={editDraft.mobile}
-                                onChange={(e) =>
-                                  setEditDraft((d) => ({
-                                    ...d,
-                                    mobile: e.target.value,
-                                  }))
-                                }
-                              />
-                            ) : (
-                              lead.mobile
-                            )}
-                          </td>
-
-                          {/* ── phone ── */}
-                          <td className="border p-1 w-1/6">
-                            {isEditing ? (
-                              <input
-                                className="w-full border rounded px-1 py-0.5 text-sm bg-white"
-                                value={editDraft.phone}
-                                onChange={(e) =>
-                                  setEditDraft((d) => ({
-                                    ...d,
-                                    phone: e.target.value,
-                                  }))
-                                }
-                              />
-                            ) : (
-                              lead.phone
-                            )}
-                          </td>
-
-                          {/* ── Edit / Save / Cancel controls ── */}
-                          <td className="border p-1 w-10 text-center">
-                            {isEditing ? (
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  title="Lagre"
-                                  disabled={isSavingEdit}
-                                  onClick={() => saveEditing(lead.id)}
-                                  className="text-green-600 hover:text-green-800 disabled:opacity-50"
-                                >
-                                  <Check size={16} />
-                                </button>
-                                <button
-                                  title="Avbryt"
-                                  onClick={cancelEditing}
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  <X size={16} />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                title="Rediger"
-                                onClick={() => startEditing(lead)}
-                                className="text-gray-500 hover:text-gray-800"
-                              >
-                                <Pencil size={14} />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-
-                    <RenderInputFields
-                      lead={lead}
-                      index={i}
-                      formData={formData}
-                      onFormDataChange={handleFormDataChange}
-                      roofTypeOptions={roofTypeOptions}
-                    />
-                  </div>
-                );
-              })}
-          </>
+      {/* ── Lead cards ── */}
+      <div className="space-y-4">
+        {filteredColdCalls.length === 0 && (
+          <div className="sk-empty">
+            <span className="flex size-10 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+              <Inbox size={18} />
+            </span>
+            <span className="font-medium text-ink">Ingen leads her</span>
+            <span className="text-xs">
+              Prøv et annet filter eller importer nye leads.
+            </span>
+          </div>
         )}
 
-        <div className="flex flex-row items-center gap-8 justify-center p-2">
-          <button
-            className="flex flex-row items-center gap-2"
-            disabled={sliceAmount <= 5}
-            onClick={() => setSliceAmount(sliceAmount - 5)}
-          >
-            <ChevronLeft size={16} /> Tilbake
-          </button>
-          <button
-            disabled={sliceAmount >= filteredColdCalls.length}
-            className="flex flex-row items-center gap-2"
-            onClick={() => setSliceAmount(sliceAmount + 5)}
-          >
-            Neste
-            <ChevronRight size={16} />
-          </button>
-        </div>
+        {filteredColdCalls
+          .slice(sliceAmount - 5, sliceAmount)
+          .map((lead, i) => {
+            const isEditing = editingLeadId === lead.id;
+
+            return (
+              <div
+                key={i}
+                className={`sk-card overflow-hidden transition-shadow hover:shadow-pop ${
+                  isEditing ? "ring-2 ring-brand/30" : ""
+                }`}
+              >
+                {/* ── Lead header: address + controls ── */}
+                <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-xs font-semibold text-brand tabular-nums">
+                      {sliceAmount - 4 + i}
+                    </span>
+                    {isEditing ? (
+                      <div className="w-full max-w-md">
+                        <input
+                          className="sk-input h-8"
+                          placeholder={headers[0]}
+                          value={editDraft.address}
+                          onChange={(e) =>
+                            setEditDraft((d) => ({
+                              ...d,
+                              address: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        title="Kopier adresse"
+                        className="group flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-left hover:bg-gray-50"
+                        onClick={() => handleCopyAddress(lead.address)}
+                      >
+                        <MapPin size={15} className="shrink-0 text-muted" />
+                        <span className="truncate font-display text-[15px] font-semibold text-ink">
+                          {lead.address || "—"}
+                        </span>
+                        <Copy
+                          size={13}
+                          className="shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100"
+                        />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1">
+                    {isEditing ? (
+                      <>
+                        <button
+                          title="Avbryt"
+                          onClick={cancelEditing}
+                          className="sk-btn sk-btn-ghost sk-btn-sm"
+                        >
+                          <X size={14} />
+                          Avbryt
+                        </button>
+                        <button
+                          title="Lagre"
+                          disabled={isSavingEdit}
+                          onClick={() => saveEditing(lead.id)}
+                          className="sk-btn sk-btn-primary sk-btn-sm"
+                        >
+                          <Check size={14} />
+                          Lagre
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        title="Rediger"
+                        onClick={() => startEditing(lead)}
+                        className="sk-icon-btn size-8"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Basic info ── */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 px-5 py-4 md:grid-cols-3 xl:grid-cols-5">
+                  {fields.map((field, idx) => {
+                    const draftKey = field as keyof BasicLeadEdit;
+                    const value = lead[field];
+                    const isPhone = field === "mobile" || field === "phone";
+                    return (
+                      <div key={field} className="min-w-0">
+                        <div className="mb-1 text-[11px] font-semibold text-muted">
+                          {headers[idx + 1]}
+                        </div>
+                        {isEditing ? (
+                          <input
+                            className="sk-input h-8"
+                            value={editDraft[draftKey]}
+                            onChange={(e) =>
+                              setEditDraft((d) => ({
+                                ...d,
+                                [draftKey]: e.target.value,
+                              }))
+                            }
+                          />
+                        ) : (
+                          <div
+                            className={`truncate text-sm ${
+                              value
+                                ? isPhone
+                                  ? "font-semibold text-ink tabular-nums"
+                                  : "font-medium text-ink"
+                                : "text-gray-400"
+                            }`}
+                          >
+                            {value || "—"}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ── Call outcome ── */}
+                <div className="border-t border-line bg-gray-50/60 px-5 py-4">
+                  <RenderInputFields
+                    lead={lead}
+                    index={i}
+                    formData={formData}
+                    onFormDataChange={handleFormDataChange}
+                    roofTypeOptions={roofTypeOptions}
+                  />
+                </div>
+              </div>
+            );
+          })}
       </div>
+
+      {/* ── Pagination ── */}
+      {filteredColdCalls.length > 0 && (
+        <div className="mt-6 flex items-center justify-between gap-4">
+          <p className="text-xs text-muted">
+            Viser{" "}
+            <span className="font-semibold text-ink tabular-nums">
+              {pageStart}–{pageEnd}
+            </span>{" "}
+            av{" "}
+            <span className="font-semibold text-ink tabular-nums">
+              {filteredColdCalls.length}
+            </span>
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              className="sk-btn sk-btn-secondary sk-btn-sm"
+              disabled={sliceAmount <= 5}
+              onClick={() => setSliceAmount(sliceAmount - 5)}
+            >
+              <ChevronLeft size={15} /> Tilbake
+            </button>
+            <button
+              disabled={sliceAmount >= filteredColdCalls.length}
+              className="sk-btn sk-btn-secondary sk-btn-sm"
+              onClick={() => setSliceAmount(sliceAmount + 5)}
+            >
+              Neste
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

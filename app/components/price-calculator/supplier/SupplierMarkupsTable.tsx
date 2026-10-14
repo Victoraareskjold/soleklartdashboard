@@ -42,18 +42,18 @@ export default function SupplierMarkupsTable() {
 
   const handleSaveSupplierMarkups = async (
     name: string,
-    markup_percentage: number
+    markup_percentage: number,
   ) => {
     if (!installerGroupId) return;
     try {
       const updated = await updateSuppliersWithCategories(
         installerGroupId,
         name,
-        markup_percentage
+        markup_percentage,
       );
 
       setSuppliersWithCategories((prev) =>
-        prev.map((sup) => (sup.name === updated.name ? updated : sup))
+        prev.map((sup) => (sup.name === updated.name ? updated : sup)),
       );
 
       toast.success("Lagret!");
@@ -71,13 +71,13 @@ export default function SupplierMarkupsTable() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-3">
       {installerData?.name && (
-        <div className="flex flex-row items-center gap-4 w-full">
-          <h2 className="text-xl font-bold">
+        <div className="flex w-full flex-row items-center justify-between gap-4">
+          <h3 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-ink">
             PÅSLAG AV MATERIELL OG TJENESTER
-          </h2>
-          <div className="relative w-64 self-left justify-center h-8">
+          </h3>
+          <div className="relative h-8 w-48">
             <Image
               fill
               alt={installerData.name + " logo"}
@@ -87,45 +87,52 @@ export default function SupplierMarkupsTable() {
           </div>
         </div>
       )}
-      <table className="w-full mt-4">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border p-2">Tjeneste</th>
-            <th className="border p-2">Påslag %</th>
-          </tr>
-        </thead>
-        <tbody>
-          {suppliersWithCategories.map((sup) => {
-            return (
-              <tr key={sup.name}>
-                <td className="p-1 border">
-                  <p>{sup.name.charAt(0).toUpperCase() + sup.name.slice(1)}</p>
-                </td>
-                <td className="border p-1">
-                  <input
-                    type="number"
-                    className="w-16 p-1 rounded"
-                    value={sup.markup_percentage}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
-                      setSuppliersWithCategories((prev) =>
-                        prev.map((x) =>
-                          x.name === sup.name
-                            ? { ...x, markup_percentage: val }
-                            : x
+      <div className="overflow-hidden rounded-xl border border-line">
+        <table className="sk-table">
+          <thead>
+            <tr>
+              <th className="w-1/2">Tjeneste</th>
+              <th className="text-right!">Påslag %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {suppliersWithCategories.map((sup) => {
+              return (
+                <tr key={sup.name}>
+                  <td className="py-1.5 font-medium text-ink">
+                    <p>
+                      {sup.name.charAt(0).toUpperCase() + sup.name.slice(1)}
+                    </p>
+                  </td>
+                  <td className="py-1.5 text-right">
+                    <input
+                      type="number"
+                      className="w-20 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white"
+                      value={sup.markup_percentage}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setSuppliersWithCategories((prev) =>
+                          prev.map((x) =>
+                            x.name === sup.name
+                              ? { ...x, markup_percentage: val }
+                              : x,
+                          ),
+                        );
+                      }}
+                      onBlur={() =>
+                        handleSaveSupplierMarkups(
+                          sup.name,
+                          sup.markup_percentage,
                         )
-                      );
-                    }}
-                    onBlur={() =>
-                      handleSaveSupplierMarkups(sup.name, sup.markup_percentage)
-                    }
-                  />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                      }
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

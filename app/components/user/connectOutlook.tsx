@@ -1,4 +1,5 @@
 "use client";
+import { Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function ConnectOutlook() {
@@ -18,11 +19,9 @@ export default function ConnectOutlook() {
   };
 
   return (
-    <div>
-      <button
-        onClick={connectOutlook}
-        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-      >
+    <div className="shrink-0">
+      <button onClick={connectOutlook} className="sk-btn sk-btn-primary">
+        <Mail size={15} />
         Koble til Outlook
       </button>
     </div>

@@ -1,3 +1,5 @@
+import { X } from "lucide-react";
+
 interface AttachmentCellProps {
   itemId: string;
   attachments: Record<string, string>;
@@ -33,28 +35,29 @@ const AttachmentCell = ({
     url.split("/").pop()?.replace(/^\d+-/, "") ?? "";
 
   return (
-    <td className="p-2">
+    <td className="px-2 py-1.5">
       {url ? (
         <div className="flex items-center gap-1">
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-500 hover:underline text-xs truncate max-w-20"
+            className="max-w-20 truncate text-xs font-medium text-brand hover:underline"
           >
             {getFileName(url)}
           </a>
           <button
             onClick={() => onRemoveAttachment(itemId)}
-            className="text-red-400 hover:text-red-600 font-bold text-sm"
+            className="inline-flex size-5 items-center justify-center rounded text-muted hover:bg-red-50 hover:text-red-600"
+            aria-label="Fjern vedlegg"
           >
-            ×
+            <X size={12} />
           </button>
         </div>
       ) : (
         <input
           type="file"
-          className="text-xs w-28"
+          className="w-28 text-xs text-muted file:mr-2 file:cursor-pointer file:rounded-md file:border-0 file:bg-gray-100 file:px-2 file:py-1 file:text-xs file:font-medium file:text-ink hover:file:bg-gray-200"
           onChange={(e) =>
             e.target.files && onFileUpload(itemId, e.target.files[0])
           }
@@ -85,29 +88,29 @@ export const ThreeWayCells = ({
 
   return (
     <>
-      <td className="p-2 text-right">
+      <td className="px-2 py-1.5 text-right">
         <input
           value={cost}
           onChange={(e) => onCostChange(itemId, e.target.value)}
-          className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
+          className="w-24 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white"
         />
       </td>
-      <td className="p-2 text-right">
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
         <input
           type="number"
           value={markup.toFixed(1)}
           onChange={(e) => onMarkupChange(itemId, e.target.value, cost)}
-          className="text-right w-16 bg-gray-100 p-1 border border-gray-200"
-        />{" "}
-        %
+          className="w-16 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white"
+        />
+        <span className="ml-0.5 text-xs text-muted">%</span>
       </td>
-      <td className="p-2 text-right">
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
         <input
           value={rowTotal.toFixed(0)}
           onChange={(e) => onTotalChange(itemId, e.target.value, markup)}
-          className="text-right w-24 bg-gray-100 p-1 border border-gray-200"
-        />{" "}
-        kr
+          className="w-24 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white font-semibold"
+        />
+        <span className="ml-0.5 text-xs text-muted">kr</span>
       </td>
       {finished && showAttachment && (
         <AttachmentCell

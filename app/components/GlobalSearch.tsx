@@ -2,7 +2,19 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, MapPin, Phone, Building2 } from "lucide-react";
+import {
+  Search,
+  SearchX,
+  X,
+  MapPin,
+  Phone,
+  Building2,
+  UserRound,
+  Loader2,
+  ArrowUp,
+  ArrowDown,
+  CornerDownLeft,
+} from "lucide-react";
 import { useTeam } from "@/context/TeamContext";
 import { getToken } from "@/lib/api";
 import { CLIENT_ROUTES } from "@/constants/routes";
@@ -126,147 +138,192 @@ export default function GlobalSearch({ onClose }: GlobalSearchProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]"
+      className="sk-overlay z-[100] items-start pt-[12vh]"
       onClick={onClose}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" />
-
       {/* Modal */}
       <div
-        className="relative w-full max-w-xl mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden"
+        className="sk-modal flex max-w-xl flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-          <Search size={18} className="text-gray-400 flex-shrink-0" />
+        <div className="flex items-center gap-3 border-b border-line px-5">
+          {loading ? (
+            <Loader2 size={20} className="shrink-0 animate-spin text-brand" />
+          ) : (
+            <Search size={20} className="shrink-0 text-muted" />
+          )}
           <input
             ref={inputRef}
             value={query}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="Søk på navn, adresse, telefon, e-post..."
-            className="flex-1 text-sm text-gray-800 placeholder-gray-400 outline-none bg-transparent"
+            className="h-14 flex-1 !rounded-none !border-0 !bg-transparent text-base text-ink !shadow-none outline-none placeholder:text-gray-400"
           />
           {query && (
-            <button onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}>
-              <X size={16} className="text-gray-400 hover:text-gray-600" />
+            <button
+              className="sk-icon-btn size-7"
+              onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}
+            >
+              <X size={16} />
             </button>
           )}
-          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs text-gray-400 border border-gray-200 rounded">
-            Esc
-          </kbd>
+          <kbd className="sk-kbd hidden sm:inline-flex">Esc</kbd>
         </div>
 
         {/* Results */}
         <div className="max-h-[420px] overflow-y-auto">
           {loading && (
-            <div className="px-4 py-6 text-center text-sm text-gray-400">
+            <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted">
+              <Loader2 size={16} className="animate-spin" />
               Søker...
             </div>
           )}
 
           {!loading && query.length >= 2 && results.length === 0 && (
-            <div className="px-4 py-6 text-center text-sm text-gray-400">
+            <div className="flex flex-col items-center gap-2 px-4 py-10 text-center text-sm text-muted">
+              <span className="inline-flex size-10 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                <SearchX size={18} />
+              </span>
               Ingen resultater for &ldquo;{query}&rdquo;
             </div>
           )}
 
           {!loading && query.length < 2 && (
-            <div className="px-4 py-6 text-center text-sm text-gray-400">
+            <div className="flex flex-col items-center gap-2 px-4 py-10 text-center text-sm text-muted">
+              <span className="inline-flex size-10 items-center justify-center rounded-full bg-brand-soft text-brand">
+                <Search size={18} />
+              </span>
               Skriv minst 2 tegn for å søke
             </div>
           )}
 
           {!loading && results.length > 0 && (
-            <ul>
-              {results.map((result, i) => {
-                const st = statusInfo(result.status);
-                const isSelected = i === selectedIndex;
-                return (
-                  <li key={result.id}>
-                    <button
-                      className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${
-                        isSelected ? "bg-gray-50" : "hover:bg-gray-50"
-                      }`}
-                      onClick={() => navigate(result)}
-                      onMouseEnter={() => setSelectedIndex(i)}
-                    >
-                      {/* Status dot */}
-                      <div
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
-                        style={{ background: st?.color ?? "#d1d5db" }}
-                      />
+            <div className="p-2">
+              <div className="flex items-center justify-between px-3 pb-1.5 pt-2">
+                <span className="sk-eyebrow">Leads</span>
+                <span className="text-[11px] font-medium text-muted tabular-nums">
+                  {results.length}
+                </span>
+              </div>
+              <ul className="space-y-0.5">
+                {results.map((result, i) => {
+                  const st = statusInfo(result.status);
+                  const isSelected = i === selectedIndex;
+                  return (
+                    <li key={result.id}>
+                      <button
+                        className={`group relative flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                          isSelected
+                            ? "bg-brand-soft ring-1 ring-blue-100 ring-inset"
+                            : "hover:bg-gray-50"
+                        }`}
+                        onClick={() => navigate(result)}
+                        onMouseEnter={() => setSelectedIndex(i)}
+                      >
+                        {/* Ikon med statusprikk */}
+                        <span
+                          className={`relative mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg border ${
+                            isSelected
+                              ? "border-blue-200 bg-white text-brand"
+                              : "border-line bg-gray-50 text-muted"
+                          }`}
+                        >
+                          {result.company ? (
+                            <Building2 size={16} />
+                          ) : (
+                            <UserRound size={16} />
+                          )}
+                          <span
+                            className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-white"
+                            style={{ background: st?.color ?? "#d1d5db" }}
+                          />
+                        </span>
 
-                      <div className="flex-1 min-w-0">
-                        {/* Name + company */}
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-gray-900 truncate">
-                            {result.person_info || "Ukjent navn"}
-                          </span>
-                          {result.company && (
-                            <span className="text-xs text-gray-400 flex items-center gap-1">
-                              <Building2 size={11} />
-                              {result.company}
+                        <div className="min-w-0 flex-1">
+                          {/* Name + company */}
+                          <div className="flex flex-wrap items-baseline gap-2">
+                            <span className="truncate text-sm font-semibold text-ink">
+                              {result.person_info || "Ukjent navn"}
+                            </span>
+                            {result.company && (
+                              <span className="flex items-center gap-1 text-xs text-muted">
+                                <Building2 size={11} />
+                                {result.company}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Address */}
+                          {result.address && (
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
+                              <MapPin size={11} className="shrink-0" />
+                              <span className="truncate">{result.address}</span>
+                            </p>
+                          )}
+
+                          {/* Phone */}
+                          {(result.mobile || result.phone) && (
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted tabular-nums">
+                              <Phone size={11} className="shrink-0" />
+                              {result.mobile || result.phone}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Right side: status + group */}
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          {st && (
+                            <span
+                              className="sk-badge text-gray-700"
+                              style={{ background: st.color + "33" }}
+                            >
+                              <span
+                                className="size-1.5 rounded-full"
+                                style={{ background: st.color }}
+                              />
+                              {st.label}
+                            </span>
+                          )}
+                          {result.installerGroupName && (
+                            <span className="text-[11px] text-muted">
+                              {result.installerGroupName}
                             </span>
                           )}
                         </div>
 
-                        {/* Address */}
-                        {result.address && (
-                          <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                            <MapPin size={11} className="flex-shrink-0" />
-                            <span className="truncate">{result.address}</span>
-                          </p>
-                        )}
-
-                        {/* Phone */}
-                        {(result.mobile || result.phone) && (
-                          <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                            <Phone size={11} className="flex-shrink-0" />
-                            {result.mobile || result.phone}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Right side: status + group */}
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        {st && (
-                          <span
-                            className="text-xs px-2 py-0.5 rounded-full font-medium"
-                            style={{
-                              background: st.color + "33",
-                              color: "#374151",
-                            }}
-                          >
-                            {st.label}
-                          </span>
-                        )}
-                        {result.installerGroupName && (
-                          <span className="text-xs text-gray-400">
-                            {result.installerGroupName}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                    {i < results.length - 1 && (
-                      <div className="h-px bg-gray-50 mx-4" />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                        <CornerDownLeft
+                          size={14}
+                          className={`mt-1 shrink-0 text-brand transition-opacity ${
+                            isSelected ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
         </div>
 
         {/* Footer hint */}
-        {results.length > 0 && (
-          <div className="px-4 py-2 border-t border-gray-100 flex items-center gap-4 text-xs text-gray-400">
-            <span>↑↓ naviger</span>
-            <span>↵ åpne</span>
-            <span>Esc lukk</span>
-          </div>
-        )}
+        <div className="flex items-center gap-4 border-t border-line bg-gray-50/80 px-4 py-2.5 text-xs text-muted">
+          <span className="flex items-center gap-1.5">
+            <kbd className="sk-kbd"><ArrowUp size={10} /></kbd>
+            <kbd className="sk-kbd"><ArrowDown size={10} /></kbd>
+            naviger
+          </span>
+          <span className="flex items-center gap-1.5">
+            <kbd className="sk-kbd"><CornerDownLeft size={10} /></kbd>
+            åpne
+          </span>
+          <span className="flex items-center gap-1.5">
+            <kbd className="sk-kbd">Esc</kbd>
+            lukk
+          </span>
+        </div>
       </div>
     </div>
   );

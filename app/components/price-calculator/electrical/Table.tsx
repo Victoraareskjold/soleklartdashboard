@@ -9,6 +9,7 @@ import { ProductCategory, ProductSubcategory } from "@/types/price_table";
 import { useEffect, useState } from "react";
 import { ElectricalInstallationItem } from "../supplier/Table";
 import { toast } from "react-toastify";
+import { Plus, Trash2, X, Zap } from "lucide-react";
 
 interface ElectricalInstallationTableProps {
   installerGroupId: string;
@@ -35,7 +36,7 @@ export default function ElectricalInstallationTable({
 
   useEffect(() => {
     getElectricalInstallationCategories(installerGroupId).then(
-      setAllCategories
+      setAllCategories,
     );
     getElectricalInstallationItems(installerGroupId).then(setItems);
   }, [installerGroupId]);
@@ -87,8 +88,8 @@ export default function ElectricalInstallationTable({
 
       setItems((prev) =>
         prev.map((item) =>
-          item.id === id ? { ...item, price_per: price } : item
-        )
+          item.id === id ? { ...item, price_per: price } : item,
+        ),
       );
     } catch (err) {
       console.error(err);
@@ -116,15 +117,15 @@ export default function ElectricalInstallationTable({
 
   const getSortedItems = (
     catName: string,
-    items: ElectricalInstallationItem[]
+    items: ElectricalInstallationItem[],
   ) => {
     if (catName.toLowerCase() === "søknad") {
       return [...items].sort((a, b) => {
         const an = søknadOrder.findIndex((x) =>
-          a.name.toLowerCase().includes(x)
+          a.name.toLowerCase().includes(x),
         );
         const bn = søknadOrder.findIndex((x) =>
-          b.name.toLowerCase().includes(x)
+          b.name.toLowerCase().includes(x),
         );
         return (an === -1 ? 999 : an) - (bn === -1 ? 999 : bn);
       });
@@ -143,7 +144,7 @@ export default function ElectricalInstallationTable({
     })
     .filter(
       (cat) =>
-        cat.items.length > 0 && cat.name.toLowerCase() !== "tilleggskostnader"
+        cat.items.length > 0 && cat.name.toLowerCase() !== "tilleggskostnader",
     )
     .sort((a, b) => {
       const ai = sortOrder.indexOf(a.name.toLowerCase());
@@ -158,29 +159,35 @@ export default function ElectricalInstallationTable({
     }))
     .find(
       (cat) =>
-        cat.items.length > 0 && cat.name.toLowerCase() === "tilleggskostnader"
+        cat.items.length > 0 && cat.name.toLowerCase() === "tilleggskostnader",
     );
 
   return (
     <>
       <div className="overflow-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">ELEKTRISK INSTALLASJON ⚡</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink">
+            ELEKTRISK INSTALLASJON <Zap size={14} className="text-accent" />
+          </h3>
           <button
             onClick={openModal}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            className="sk-btn sk-btn-secondary sk-btn-sm"
           >
-            + Legg til produkt
+            <Plus size={14} />
+            Legg til produkt
           </button>
         </div>
         <div className="grid grid-cols-2 gap-4">
           {/* Left column - Main categories */}
-          <div>
+          <div className="flex flex-col gap-4">
             {mainCategories.map((cat) => (
-              <div key={cat.id} className="mb-4">
-                <h3 className="text-lg font-bold bg-gray-100 p-2">
+              <div
+                key={cat.id}
+                className="overflow-hidden rounded-xl border border-line"
+              >
+                <h4 className="border-b border-line bg-gray-50 px-3 py-2 text-xs font-semibold tracking-wide text-ink">
                   {cat.name.toUpperCase()}
-                </h3>
+                </h4>
                 <ProductTable
                   items={cat.items}
                   onDelete={handleDeleteItem}
@@ -193,10 +200,10 @@ export default function ElectricalInstallationTable({
           {/* Right column - Additional costs */}
           <div>
             {additionalCostsCategory && (
-              <div className="mb-4">
-                <h3 className="text-lg font-bold bg-gray-100 p-2">
+              <div className="overflow-hidden rounded-xl border border-line">
+                <h4 className="border-b border-line bg-gray-50 px-3 py-2 text-xs font-semibold tracking-wide text-ink">
                   {additionalCostsCategory.name.toUpperCase()}
-                </h3>
+                </h4>
                 <ProductTable
                   items={additionalCostsCategory.items}
                   onDelete={handleDeleteItem}
@@ -210,22 +217,27 @@ export default function ElectricalInstallationTable({
 
       {/* Add Product Modal */}
       {showModal && (
-        <div
-          className="fixed inset-0 bg-black/20 flex items-center justify-center z-50"
-          onClick={closeModal}
-        >
+        <div className="sk-overlay" onClick={closeModal}>
           <div
-            className="bg-white rounded-lg p-6 w-[500px] max-h-[90vh] overflow-auto"
+            className="sk-modal max-w-[500px]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-bold mb-2">Legg til arbeid</h2>
+            <div className="flex items-center justify-between border-b border-line px-6 py-4">
+              <h2 className="sk-section-title">Legg til arbeid</h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="sk-icon-btn size-8"
+                aria-label="Lukk"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="px-6 py-5">
               {/* Category Selection */}
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Kategori *
-                </label>
+                <label className="sk-label">Kategori *</label>
                 <select
                   value={formData.category_id}
                   onChange={(e) =>
@@ -234,13 +246,14 @@ export default function ElectricalInstallationTable({
                       category_id: e.target.value,
                     })
                   }
-                  className="w-full border rounded p-2"
+                  className="sk-input"
                   required
                 >
                   <option value="">Velg kategori...</option>
                   {allCategories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
-                      {cat.name.charAt(0).toUpperCase() + cat.name.slice(1)}{" "}
+                      {cat.name.charAt(0).toUpperCase() +
+                        cat.name.slice(1)}{" "}
                     </option>
                   ))}
                 </select>
@@ -248,9 +261,7 @@ export default function ElectricalInstallationTable({
 
               {/* Product Name */}
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Produktnavn *
-                </label>
+                <label className="sk-label">Produktnavn *</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -264,9 +275,7 @@ export default function ElectricalInstallationTable({
 
               {/* Price */}
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Pris pr.
-                </label>
+                <label className="sk-label">Pris pr.</label>
                 <input
                   type="text"
                   value={formData.price_per}
@@ -281,18 +290,15 @@ export default function ElectricalInstallationTable({
                 />
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="-mx-6 -mb-5 mt-6 flex justify-end gap-2 border-t border-line bg-gray-50/60 px-6 py-4">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 border rounded hover:bg-gray-100"
+                  className="sk-btn sk-btn-secondary"
                 >
                   Avbryt
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
-                >
+                <button type="submit" className="sk-btn sk-btn-primary">
                   Legg til
                 </button>
               </div>
@@ -314,12 +320,12 @@ function ProductTable({
   onPriceChange: (productId: string, newPrice: string) => void;
 }) {
   const [localPrices, setLocalPrices] = useState(
-    Object.fromEntries(items.map((i) => [i.id, String(i.price_per ?? "")]))
+    Object.fromEntries(items.map((i) => [i.id, String(i.price_per ?? "")])),
   );
 
   useEffect(() => {
     setLocalPrices(
-      Object.fromEntries(items.map((i) => [i.id, String(i.price_per ?? "")]))
+      Object.fromEntries(items.map((i) => [i.id, String(i.price_per ?? "")])),
     );
   }, [items]);
 
@@ -354,30 +360,32 @@ function ProductTable({
   };
 
   return (
-    <table className="w-full border-collapse border border-gray-300">
+    <table className="sk-table">
       <thead>
-        <tr className="bg-gray-100">
-          <th className="border p-1 max-w-full text-left">Navn</th>
-          <th className="border p-1 w-72 text-left">
+        <tr>
+          <th className="max-w-full py-2!">Navn</th>
+          <th className="w-48 py-2! text-right!">
             {getPriceColumnHeader()} (eks. mva)
           </th>
-          <th className="border p-1 w-10">🗑️</th>
+          <th className="w-10 py-2!">
+            <span className="sr-only">Slett</span>
+          </th>
         </tr>
       </thead>
       <tbody>
         {items.map((item) => (
           <tr key={item.id}>
-            <td className="border">
+            <td className="py-1.5">
               <textarea
-                className="w-full p-1"
+                className="block w-full resize-none bg-transparent p-0 text-sm text-ink field-sizing-content disabled:cursor-default disabled:bg-transparent disabled:text-ink"
                 value={item.name}
                 readOnly
                 disabled
               />
             </td>
-            <td className="border">
+            <td className="whitespace-nowrap py-1.5 text-right">
               <input
-                className="w-full p-1"
+                className="w-28 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white"
                 type="text"
                 onChange={(e) => handleChange(item.id, e.target.value)}
                 onBlur={() => handleSave(item.id)}
@@ -386,13 +394,15 @@ function ProductTable({
                 }}
                 value={localPrices[item.id] ?? ""}
               />
+              <span className="ml-0.5 text-xs text-muted">kr</span>
             </td>
-            <td className="border">
+            <td className="px-1! py-1.5 text-center">
               <button
                 onClick={() => onDelete(item.id)}
-                className="w-full aspect-square hover:bg-red-100"
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted hover:bg-red-50 hover:text-red-600"
+                aria-label="Slett"
               >
-                x
+                <Trash2 size={14} />
               </button>
             </td>
           </tr>

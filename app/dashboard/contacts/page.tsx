@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
 import { useRouter } from "next/navigation";
 import { CLIENT_ROUTES } from "@/constants/routes";
+import { CalendarPlus, Plus, Search, UserRound, Users, X } from "lucide-react";
 
 export type ContactLead = {
   id: string;
@@ -253,178 +254,248 @@ export default function ContactsPage() {
     setIsModalOpen(true);
   };
 
+  const inputClass = "sk-input";
+
   return (
     <>
-      <div>
-        <h1>Kontakter</h1>
-        <div className="flex flex-row justify-between mb-4">
-          <div className="flex flex-col gap-2">
+      <div className="sk-page">
+        <div className="sk-page-header">
+          <div>
+            <h1 className="sk-page-title">Kontakter</h1>
+            <p className="sk-page-subtitle">
+              <span className="font-semibold text-ink tabular-nums">
+                {filteredColdCalls.length}
+              </span>{" "}
+              kontakter klare for avtale
+            </p>
+          </div>
+          <button
+            onClick={handleOpenCreateModal}
+            className="sk-btn sk-btn-primary"
+          >
+            <Plus size={16} />
+            Opprett kontakt
+          </button>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="w-56">
             <TeamMemberSelector
               team={team}
               selectedMember={selectedMember}
               onSelectMember={setSelectedMember}
             />
+          </div>
+          <div className="relative w-full max-w-sm">
+            <Search
+              size={15}
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted"
+            />
             <input
               type="text"
               placeholder="Søk etter navn eller beskrivelse"
-              className="border p-2 rounded-md"
+              className="sk-input pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div>
-            <button
-              onClick={handleOpenCreateModal}
-              className="w-42 text-center rounded-sm px-4 py-2 bg-[#FF8E4C] text-white"
-            >
-              Opprett konktakt
-            </button>
-          </div>
         </div>
 
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="w-1/10 text-left"></th>
-              {headers.map((header, index) => (
-                <th className="border p-2 w-1/8 text-left" key={index}>
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredColdCalls.map((coldCall) => (
-              <tr key={coldCall.id}>
-                <td className="w-1/10 border">
-                  <button
-                    onClick={() => handleUpdateToLead(coldCall)}
-                    className="w-full bg-[#FF8E4C] h-14 text-white"
-                  >
-                    Opprett avtale
-                  </button>
-                </td>
-                {fields.map((field) => (
-                  <td className="border p-1 w-1/8" key={field}>
-                    {coldCall[field]}
-                  </td>
-                ))}
-                {/* Bytt ut den gamle <td> for lead-innhenter med denne: */}
-                <td className="border p-1 w-1/8">
-                  {team?.members?.find(
-                    (m) => m.user_id === coldCall.assigned_to,
-                  )?.name ||
-                    coldCall.assigned_to ||
-                    "Ingen leadinnhenter"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {isModalOpen && (
-        <div className="absolute top-0 right-0 w-156 bg-blue-50 h-full shadow-lg z-10">
-          <div className="bg-[#85F2AD] p-4">
-            <h1 className="text-2xl font-semibold text-white">
-              Opprett kontakt
-            </h1>
+        <div className="sk-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="sk-table">
+              <thead>
+                <tr>
+                  {headers.map((header, index) => (
+                    <th key={index}>{header}</th>
+                  ))}
+                  <th className="w-px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredColdCalls.map((coldCall) => {
+                  const collector =
+                    team?.members?.find(
+                      (m) => m.user_id === coldCall.assigned_to,
+                    )?.name || coldCall.assigned_to;
+                  return (
+                    <tr key={coldCall.id}>
+                      {fields.map((field) => (
+                        <td
+                          key={field}
+                          className={
+                            field === "address" || field === "person_info"
+                              ? "font-medium text-ink!"
+                              : field === "mobile" || field === "phone"
+                                ? "whitespace-nowrap tabular-nums"
+                                : ""
+                          }
+                        >
+                          {coldCall[field] || (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                      ))}
+                      <td>
+                        {collector ? (
+                          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                            <UserRound size={13} className="text-muted" />
+                            {collector}
+                          </span>
+                        ) : (
+                          <span className="sk-badge sk-badge-neutral">
+                            Ingen leadinnhenter
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        <button
+                          onClick={() => handleUpdateToLead(coldCall)}
+                          className="sk-btn sk-btn-accent sk-btn-sm"
+                        >
+                          <CalendarPlus size={14} />
+                          Opprett avtale
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <div className="p-4">
-            <div className="grid grid-cols-2 gap-2">
-              {formDataFields.map((field) => (
-                <div key={field.value} className="flex flex-col gap-1">
-                  <label>{field.label}</label>
-                  {field.type === "text" && (
-                    <input
-                      className="border p-1.5 rounded-md bg-gray-50"
-                      type="text"
-                      placeholder={field.label}
-                      value={formData[field.value] ?? ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          [field.value]: e.target.value,
-                        }))
-                      }
-                    />
-                  )}
-                  {field.type === "number" && (
-                    <input
-                      className="border p-1.5 rounded-md bg-gray-50"
-                      type="number"
-                      placeholder={field.label}
-                      value={formData[field.value] ?? ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          [field.value]: e.target.value,
-                        }))
-                      }
-                    />
-                  )}
-                  {field.type === "textarea" && (
-                    <textarea
-                      className="border p-1.5 rounded-md bg-gray-50"
-                      placeholder={field.label}
-                      value={formData[field.value] ?? ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          [field.value]: e.target.value,
-                        }))
-                      }
-                    />
-                  )}
-                  {field.type === "select" && (
-                    <select
-                      className="border p-1.5 rounded-md bg-gray-50"
-                      value={formData[field.value] ?? ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          [field.value]: e.target.value,
-                        }))
-                      }
-                    >
-                      <option value="">Velg {field.label.toLowerCase()}</option>
+          {filteredColdCalls.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center text-sm text-muted">
+              <span className="flex size-10 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                <Users size={18} />
+              </span>
+              <span className="font-medium text-ink">Ingen kontakter</span>
+            </div>
+          )}
+        </div>
+      </div>
 
-                      {field.value === "roof_type_id"
-                        ? roofTypes.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.name}
-                            </option>
-                          ))
-                        : (field.options || []).map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                    </select>
-                  )}
+      {isModalOpen && (
+        <div className="sk-overlay">
+          <div className="sk-modal flex max-w-2xl flex-col">
+            <div className="flex items-center justify-between gap-3 border-b border-line px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-brand-soft text-brand">
+                  <UserRound size={17} />
+                </span>
+                <h2 className="font-display text-lg font-semibold text-ink">
+                  Opprett kontakt
+                </h2>
+              </div>
+              <button
+                className="sk-icon-btn"
+                onClick={() => setIsModalOpen(false)}
+                title="Lukk"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+                {formDataFields.map((field) => (
+                  <div
+                    key={field.value}
+                    className={field.type === "textarea" ? "col-span-2" : ""}
+                  >
+                    <label className="sk-label">{field.label}</label>
+                    {field.type === "text" && (
+                      <input
+                        className={inputClass}
+                        type="text"
+                        placeholder={field.label}
+                        value={formData[field.value] ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            [field.value]: e.target.value,
+                          }))
+                        }
+                      />
+                    )}
+                    {field.type === "number" && (
+                      <input
+                        className={`${inputClass} tabular-nums`}
+                        type="number"
+                        placeholder={field.label}
+                        value={formData[field.value] ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            [field.value]: e.target.value,
+                          }))
+                        }
+                      />
+                    )}
+                    {field.type === "textarea" && (
+                      <textarea
+                        className="sk-textarea min-h-20"
+                        placeholder={field.label}
+                        value={formData[field.value] ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            [field.value]: e.target.value,
+                          }))
+                        }
+                      />
+                    )}
+                    {field.type === "select" && (
+                      <select
+                        className={`${inputClass} cursor-pointer`}
+                        value={formData[field.value] ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            [field.value]: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">
+                          Velg {field.label.toLowerCase()}
+                        </option>
+
+                        {field.value === "roof_type_id"
+                          ? roofTypes.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))
+                          : (field.options || []).map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                      </select>
+                    )}
+                  </div>
+                ))}
+                <div>
+                  <label className="sk-label">Lead-innhenter</label>
+                  <TeamMemberSelector
+                    team={team}
+                    selectedMember={selectedMember}
+                    onSelectMember={setSelectedMember}
+                    defaultUser={selectedMember}
+                  />
                 </div>
-              ))}
-              <div className="flex flex-col gap-1">
-                <label>Lead-innhenter</label>
-                <TeamMemberSelector
-                  team={team}
-                  selectedMember={selectedMember}
-                  onSelectMember={setSelectedMember}
-                  defaultUser={selectedMember}
-                />
               </div>
             </div>
-            <div className="mt-4">
+
+            <div className="flex items-center justify-end gap-2 border-t border-line bg-gray-50/60 px-6 py-4">
               <button
-                className="px-8 py-2 bg-[#FF8E4C] text-white rounded-md"
-                onClick={handleCreateLead}
-              >
-                Opprett
-              </button>
-              <button
-                className="px-8 py-2 border border-[#FF8E4C] text-[#FF8E4C] ml-4 rounded-md"
+                className="sk-btn sk-btn-secondary"
                 onClick={() => setIsModalOpen(false)}
               >
                 Avbryt
+              </button>
+              <button className="sk-btn sk-btn-primary" onClick={handleCreateLead}>
+                <Plus size={16} />
+                Opprett
               </button>
             </div>
           </div>

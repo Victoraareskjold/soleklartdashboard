@@ -70,7 +70,7 @@ export default function TeamMemberSelector({
     <select
       value={selectedMember}
       onChange={(e) => onSelectMember(e.target.value)}
-      className="border p-2 rounded-md bg-gray-50 w-full"
+      className="sk-input h-9 min-w-40 cursor-pointer truncate"
       disabled={disabled}
     >
       <option value="">{firstOption}</option>

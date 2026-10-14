@@ -3,6 +3,7 @@ import { RoofType } from "@/lib/types";
 import { MountItem, SupplierWithProducts } from "@/types/price_table";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { Settings } from "lucide-react";
 
 interface MountingTableProps {
   suppliersAndProducts: SupplierWithProducts[];
@@ -22,7 +23,7 @@ export default function MountingTable({
   const [roofTypes, setRoofTypes] = useState<RoofType[]>([]);
   const [mountItems, setMountItems] = useState<MountItem[]>([]);
   const [localData, setLocalData] = useState<Record<string, LocalMountData>>(
-    {}
+    {},
   );
   const [loading, setLoading] = useState(true);
 
@@ -65,7 +66,7 @@ export default function MountingTable({
   const updateLocalData = (
     roofTypeId: string,
     field: keyof LocalMountData,
-    value: string
+    value: string,
   ) => {
     setLocalData((prev) => ({
       ...prev,
@@ -150,93 +151,102 @@ export default function MountingTable({
     }
   };
 
-  if (loading) return <div>Laster...</div>;
+  if (loading) return <div className="text-sm text-muted">Laster...</div>;
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">MONTERING ⚙️</h2>
-      <table className="w-full border-collapse border border-gray-300">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border p-2">Leverandører</th>
-            <th className="border p-2">Taktype og valgt feste</th>
-            <th className="border p-2">Arbeid pr. panel montert (eks. mva)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {roofTypes.map((roof) => {
-            const local = localData[roof.id] || {
-              supplierId: "",
-              productId: "",
-              pricePer: "0",
-            };
-            const mountOptions = getMountOptions(local.supplierId);
+    <div className="flex flex-col gap-3">
+      <h3 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink">
+        MONTERING <Settings size={14} className="text-muted" />
+      </h3>
+      <div className="overflow-hidden rounded-xl border border-line">
+        <table className="sk-table">
+          <thead>
+            <tr>
+              <th className="w-1/4">Leverandører</th>
+              <th>Taktype og valgt feste</th>
+              <th className="w-56 text-right!">
+                Arbeid pr. panel montert (eks. mva)
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {roofTypes.map((roof) => {
+              const local = localData[roof.id] || {
+                supplierId: "",
+                productId: "",
+                pricePer: "0",
+              };
+              const mountOptions = getMountOptions(local.supplierId);
 
-            return (
-              <tr key={roof.id}>
-                <td className="border p-1">
-                  <select
-                    className="w-full mb-1 p-1 rounded"
-                    value={local.supplierId}
-                    onChange={(e) =>
-                      handleSupplierChange(roof.id, e.target.value)
-                    }
-                  >
-                    <option value="" disabled>
-                      Velg leverandør...
-                    </option>
-                    {suppliersAndProducts.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-
-                <td className="border p-1">
-                  <div className="font-medium mb-1">{roof.name}</div>
-                  {local.supplierId ? (
+              return (
+                <tr key={roof.id}>
+                  <td className="py-2 align-top">
                     <select
-                      className="w-full p-1 rounded"
-                      value={local.productId}
+                      className="h-8 w-full rounded-md border border-line bg-white pl-2 text-sm text-ink hover:border-gray-300"
+                      value={local.supplierId}
                       onChange={(e) =>
-                        handleProductChange(roof.id, e.target.value)
+                        handleSupplierChange(roof.id, e.target.value)
                       }
-                      disabled={!local.supplierId}
                     >
                       <option value="" disabled>
-                        Velg takfeste...
+                        Velg leverandør...
                       </option>
-                      {mountOptions.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
+                      {suppliersAndProducts.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
                         </option>
                       ))}
                     </select>
-                  ) : (
-                    <p className="text-gray-500 text-sm">
-                      Ingen leverandør valgt
-                    </p>
-                  )}
-                </td>
+                  </td>
 
-                <td className="border p-1">
-                  <input
-                    type="number"
-                    step="1"
-                    value={local.pricePer}
-                    onChange={(e) =>
-                      updateLocalData(roof.id, "pricePer", e.target.value)
-                    }
-                    onBlur={() => handleSave(roof.id)}
-                    className="w-full p-1 rounded"
-                  />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <td className="py-2 align-top">
+                    <div className="mb-1 text-xs font-semibold text-ink">
+                      {roof.name}
+                    </div>
+                    {local.supplierId ? (
+                      <select
+                        className="h-8 w-full rounded-md border border-line bg-white pl-2 text-sm text-ink hover:border-gray-300"
+                        value={local.productId}
+                        onChange={(e) =>
+                          handleProductChange(roof.id, e.target.value)
+                        }
+                        disabled={!local.supplierId}
+                      >
+                        <option value="" disabled>
+                          Velg takfeste...
+                        </option>
+                        {mountOptions.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-xs text-muted">
+                        Ingen leverandør valgt
+                      </p>
+                    )}
+                  </td>
+
+                  <td className="py-2 text-right align-top">
+                    <input
+                      type="number"
+                      step="1"
+                      value={local.pricePer}
+                      onChange={(e) =>
+                        updateLocalData(roof.id, "pricePer", e.target.value)
+                      }
+                      onBlur={() => handleSave(roof.id)}
+                      className="w-28 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white"
+                    />
+                    <span className="ml-0.5 text-xs text-muted">kr</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

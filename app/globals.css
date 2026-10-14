@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./soleklart.css";
+@import "./dashboard.css";
 
 button:hover {
   cursor: pointer;

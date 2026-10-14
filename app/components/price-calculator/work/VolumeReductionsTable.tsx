@@ -26,7 +26,7 @@ export default function VolumeReductionsTable({
       try {
         await Promise.all([
           getMountVolumeReductions(installerGroupId).then(
-            setMountVolumeReductions
+            setMountVolumeReductions,
           ),
         ]);
       } catch (error) {
@@ -40,16 +40,16 @@ export default function VolumeReductionsTable({
   }, [installerGroupId]);
 
   const handleSaveVolumeReduction = async (
-    reduction: MountVolumeReductionType
+    reduction: MountVolumeReductionType,
   ) => {
     try {
       const updated = await updateMountVolumeReductions(
         installerGroupId,
-        reduction
+        reduction,
       );
 
       setMountVolumeReductions((prev) =>
-        prev.map((r) => (r.number === updated.number ? updated : r))
+        prev.map((r) => (r.number === updated.number ? updated : r)),
       );
 
       toast.success("Lagret!");
@@ -62,75 +62,81 @@ export default function VolumeReductionsTable({
   if (loading) return <LoadingScreen />;
 
   return (
-    <table className="w-full">
-      <thead>
-        <tr>
-          <th className="w-1/2 text-left">
-            <h2 className="text-xl font-bold mb-4">
-              VOLUMREDUKSJON MONTERING (KOSTNAD PR.PANEL)
-            </h2>
-          </th>
-        </tr>
-        <tr className="bg-gray-100">
-          <th className="border p-2">Antall Paneler</th>
-          <th className="border p-2">Reduksjon %</th>
-        </tr>
-      </thead>
-      <tbody>
-        {mountVolumeReductions.map((r) => {
-          return (
-            <tr key={r.number}>
-              <td className="border p-1 flex flex-row items-center gap-2">
-                <input
-                  type="text"
-                  className="w-10 p-1 rounded"
-                  value={r.amount}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    setMountVolumeReductions((prev) =>
-                      prev.map((x) =>
-                        x.number === r.number ? { ...x, amount: val } : x
-                      )
-                    );
-                  }}
-                  onBlur={() => handleSaveVolumeReduction(r)}
-                />
-                -
-                <input
-                  type="text"
-                  className="w-16 p-1 rounded"
-                  value={r.amount2}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    setMountVolumeReductions((prev) =>
-                      prev.map((x) =>
-                        x.number === r.number ? { ...x, amount2: val } : x
-                      )
-                    );
-                  }}
-                  onBlur={() => handleSaveVolumeReduction(r)}
-                />
-              </td>
-              <td className="border p-1">
-                <input
-                  type="number"
-                  className="w-16 p-1 rounded"
-                  value={r.reduction}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 0;
-                    setMountVolumeReductions((prev) =>
-                      prev.map((x) =>
-                        x.number === r.number ? { ...x, reduction: val } : x
-                      )
-                    );
-                  }}
-                  onBlur={() => handleSaveVolumeReduction(r)}
-                />
-              </td>
+    <div className="flex flex-col gap-3">
+      <h3 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-ink">
+        VOLUMREDUKSJON MONTERING (KOSTNAD PR.PANEL)
+      </h3>
+      <div className="overflow-hidden rounded-xl border border-line">
+        <table className="sk-table">
+          <thead>
+            <tr>
+              <th className="w-1/2">Antall Paneler</th>
+              <th className="text-right!">Reduksjon %</th>
             </tr>
-          );
-        })}
-      </tbody>
-    </table>
+          </thead>
+          <tbody>
+            {mountVolumeReductions.map((r) => {
+              return (
+                <tr key={r.number}>
+                  <td className="py-1.5">
+                    <div className="flex flex-row items-center gap-1.5 tabular-nums">
+                      <input
+                        type="text"
+                        className="w-12 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white"
+                        value={r.amount}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setMountVolumeReductions((prev) =>
+                            prev.map((x) =>
+                              x.number === r.number ? { ...x, amount: val } : x,
+                            ),
+                          );
+                        }}
+                        onBlur={() => handleSaveVolumeReduction(r)}
+                      />
+                      <span className="text-muted">–</span>
+                      <input
+                        type="text"
+                        className="w-16 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white"
+                        value={r.amount2}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setMountVolumeReductions((prev) =>
+                            prev.map((x) =>
+                              x.number === r.number
+                                ? { ...x, amount2: val }
+                                : x,
+                            ),
+                          );
+                        }}
+                        onBlur={() => handleSaveVolumeReduction(r)}
+                      />
+                    </div>
+                  </td>
+                  <td className="py-1.5 text-right">
+                    <input
+                      type="number"
+                      className="w-20 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white"
+                      value={r.reduction}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setMountVolumeReductions((prev) =>
+                          prev.map((x) =>
+                            x.number === r.number
+                              ? { ...x, reduction: val }
+                              : x,
+                          ),
+                        );
+                      }}
+                      onBlur={() => handleSaveVolumeReduction(r)}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

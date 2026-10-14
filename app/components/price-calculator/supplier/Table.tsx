@@ -14,6 +14,15 @@ import { createSupabaseAdminClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 
 interface SupplierTableProps {
   suppliersAndProducts: SupplierWithProducts[] | null;
@@ -81,7 +90,8 @@ export default function SupplierTable({
     getCategories().then(setAllCategories);
   }, []);
 
-  if (!suppliers || suppliers.length === 0) return <p>Ingen supplierdata</p>;
+  if (!suppliers || suppliers.length === 0)
+    return <div className="sk-empty">Ingen supplierdata</div>;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -296,7 +306,7 @@ export default function SupplierTable({
 
   return (
     <>
-      <div className="overflow-auto p-2">
+      <div className="flex flex-col gap-3 overflow-auto">
         {suppliers.map((supplier) => {
           const categories = buildCategoriesFromProducts(
             supplier.products,
@@ -304,47 +314,74 @@ export default function SupplierTable({
           );
 
           return (
-            <div key={supplier.id} className="mb-8">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <p>
-                    {supplier.category.charAt(0).toUpperCase() +
-                      supplier.category.slice(1)}
-                  </p>
-                  <button
-                    onClick={() => toggleSupplier(supplier.id)}
-                    className="text-left text-xl font-bold"
-                  >
-                    {collapsedSuppliers[supplier.id] ? "▼" : "▶"}{" "}
-                    {supplier.name}{" "}
-                  </button>
-                </div>
+            <div
+              key={supplier.id}
+              className="overflow-hidden rounded-xl border border-line bg-surface"
+            >
+              <div
+                className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                  collapsedSuppliers[supplier.id]
+                    ? "border-b border-line bg-gray-50/60"
+                    : ""
+                }`}
+              >
+                <button
+                  onClick={() => toggleSupplier(supplier.id)}
+                  className="group flex min-w-0 items-center gap-3 text-left"
+                >
+                  <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted group-hover:bg-gray-100 group-hover:text-ink">
+                    {collapsedSuppliers[supplier.id] ? (
+                      <ChevronDown size={16} />
+                    ) : (
+                      <ChevronRight size={16} />
+                    )}
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="sk-eyebrow">
+                      {supplier.category.charAt(0).toUpperCase() +
+                        supplier.category.slice(1)}
+                    </span>
+                    <span className="truncate font-display text-[15px] font-semibold text-ink">
+                      {supplier.name}
+                    </span>
+                  </span>
+                  <span className="sk-badge sk-badge-neutral tabular-nums">
+                    {supplier.products.length}
+                  </span>
+                </button>
 
                 <button
                   onClick={() => openModal(supplier.id, supplier.name)}
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  className="sk-btn sk-btn-secondary sk-btn-sm"
                 >
-                  + Legg til produkt
+                  <Plus size={14} />
+                  Legg til produkt
                 </button>
               </div>
 
               {collapsedSuppliers[supplier.id] && (
-                <>
+                <div className="flex flex-col gap-4 p-4">
                   {categories.length === 0 ? (
-                    <p className="text-gray-500 italic mb-4">
+                    <div className="sk-empty py-8">
                       Ingen produkter ennå. Klikk Legg til produkt for å starte.
-                    </p>
+                    </div>
                   ) : (
                     categories.map((cat) => (
-                      <div key={cat.id} className="mb-4">
-                        <h3 className="text-lg font-bold bg-gray-100 p-2">
+                      <div
+                        key={cat.id}
+                        className="overflow-hidden rounded-lg border border-line"
+                      >
+                        <h3 className="border-b border-line bg-gray-50 px-3 py-2 text-xs font-semibold tracking-wide text-ink">
                           {cat.name.toUpperCase()}
                         </h3>
                         {cat.subcategories.length > 0 ? (
                           cat.subcategories.map((subcat) => (
-                            <div key={subcat.id}>
-                              <div className="w-full bg-gray-200 flex justify-between items-center p-2">
-                                <h4 className="font-semibold">
+                            <div
+                              key={subcat.id}
+                              className="border-b border-line last:border-b-0"
+                            >
+                              <div className="flex w-full items-center justify-between border-b border-gray-100 bg-white px-3 py-1.5">
+                                <h4 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                                   {subcat.name.toUpperCase()}
                                 </h4>
                                 <button
@@ -356,9 +393,10 @@ export default function SupplierTable({
                                       subcat.id,
                                     )
                                   }
-                                  className="ml-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                                  className="sk-btn sk-btn-ghost h-7 px-2 text-xs text-brand hover:text-brand-hover"
                                 >
-                                  + Legg til produkt
+                                  <Plus size={13} />
+                                  Legg til produkt
                                 </button>
                               </div>
                               <ProductTable
@@ -382,7 +420,7 @@ export default function SupplierTable({
                       </div>
                     ))
                   )}
-                </>
+                </div>
               )}
             </div>
           );
@@ -392,22 +430,34 @@ export default function SupplierTable({
       {/* Add Product Modal */}
       {modal.isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 flex items-center justify-center z-50"
+          className="sk-overlay"
           onClick={() => setModal({ ...modal, isOpen: !modal.isOpen })}
         >
           <div
-            className="bg-white rounded-lg p-6 w-[500px] max-h-[90vh] overflow-auto"
+            className="sk-modal max-w-[500px]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-bold mb-2">Legg til produkt</h2>
-            <p className="text-sm text-gray-600 mb-4">{modal.supplierName}</p>
+            <div className="flex items-start justify-between gap-3 border-b border-line px-6 py-4">
+              <div>
+                <h2 className="sk-section-title">Legg til produkt</h2>
+                <p className="mt-0.5 text-xs text-muted">
+                  {modal.supplierName}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="sk-icon-btn size-8"
+                aria-label="Lukk"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="px-6 py-5">
               {/* Category Selection */}
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Kategori *
-                </label>
+                <label className="sk-label">Kategori *</label>
                 <select
                   value={formData.categoryId}
                   onChange={(e) =>
@@ -417,7 +467,7 @@ export default function SupplierTable({
                       subcategoryId: "",
                     })
                   }
-                  className="w-full border rounded p-2"
+                  className="sk-input"
                   required
                 >
                   <option value="">Velg kategori...</option>
@@ -434,9 +484,7 @@ export default function SupplierTable({
               {selectedCategory?.subcategories &&
                 selectedCategory.subcategories.length > 0 && (
                   <div className="mb-4">
-                    <label className="block text-sm font-medium mb-1">
-                      Underkategori *
-                    </label>
+                    <label className="sk-label">Underkategori *</label>
                     <select
                       value={formData.subcategoryId}
                       onChange={(e) =>
@@ -445,7 +493,7 @@ export default function SupplierTable({
                           subcategoryId: e.target.value,
                         })
                       }
-                      className="w-full border rounded p-2"
+                      className="sk-input"
                       required={selectedCategory.subcategories.length > 0}
                     >
                       <option value="">Ingen (tilhører hovedkategori)</option>
@@ -460,25 +508,21 @@ export default function SupplierTable({
 
               {/* Product Name */}
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Produktnavn *
-                </label>
+                <label className="sk-label">Produktnavn *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  className="w-full border rounded p-2"
+                  className="sk-input"
                   required
                 />
               </div>
 
               {/* Price */}
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Pris eks. mva *
-                </label>
+                <label className="sk-label">Pris eks. mva *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -486,41 +530,39 @@ export default function SupplierTable({
                   onChange={(e) =>
                     setFormData({ ...formData, price_ex_vat: e.target.value })
                   }
-                  className="w-full border rounded p-2"
+                  className="sk-input"
                   required
                 />
               </div>
 
               {/* File upload */}
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Last opp PDF
-                </label>
+                <label className="sk-label">Last opp PDF</label>
                 <input
                   type="file"
                   accept=".pdf"
                   onChange={handleFileSelect}
-                  className="w-full border rounded p-2"
+                  className="w-full cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50/60 p-2 text-sm text-muted hover:border-gray-400 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink file:shadow-card"
                 />
                 {selectedFile && (
-                  <p className="text-sm text-green-600 mt-1">
-                    ✓ {selectedFile.name}
+                  <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-emerald-700">
+                    <Check size={13} /> {selectedFile.name}
                   </p>
                 )}
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="-mx-6 -mb-5 mt-6 flex justify-end gap-2 border-t border-line bg-gray-50/60 px-6 py-4">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 border rounded hover:bg-gray-100"
+                  className="sk-btn sk-btn-secondary"
                   disabled={uploadingFile}
                 >
                   Avbryt
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300"
+                  className="sk-btn sk-btn-primary"
                   disabled={uploadingFile}
                 >
                   {uploadingFile ? "Laster opp..." : "Legg til"}
@@ -652,39 +694,46 @@ function ProductTable({
   };
 
   return (
-    <table className="w-full border-collapse border border-gray-300">
+    <table className="sk-table">
       <thead>
-        <tr className="bg-gray-100">
-          <th className="border p-1 w-64">Vedlegg</th>
-          <th className="border p-1 max-w-full">Navn</th>
-          <th className="border p-1 w-64">Pris eks. mva</th>
-          <th className="border p-1 w-10">🗑️</th>
+        <tr>
+          <th className="w-32 py-2!">Vedlegg</th>
+          <th className="max-w-full py-2!">Navn</th>
+          <th className="w-48 py-2! text-right!">Pris eks. mva</th>
+          <th className="w-10 py-2!">
+            <span className="sr-only">Slett</span>
+          </th>
         </tr>
       </thead>
       <tbody>
         {products.map((product) => (
           <tr key={product.id}>
-            <td className="border p-1">
+            <td className="py-1.5">
               {!product.attachment ? (
-                <p className="text-gray-400">Ingen PDF</p>
+                <p className="text-xs text-gray-400">Ingen PDF</p>
               ) : (
-                <Link href={product.attachment} target="_blank">
+                <Link
+                  href={product.attachment}
+                  target="_blank"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+                >
+                  <FileText size={13} />
                   Åpne pdf
                 </Link>
               )}
             </td>
-            <td className="border">
+            <td className="py-1.5">
               <input
-                className="w-full p-1"
+                className="w-full bg-transparent p-0 text-sm text-ink disabled:cursor-default disabled:bg-transparent disabled:text-ink"
                 value={product.name}
                 type="text"
                 readOnly
                 disabled
               />
             </td>
-            <td className="border">
+            <td className="whitespace-nowrap py-1.5 text-right">
               <input
-                className="w-full p-1"
+                className="w-28 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white"
                 type="text"
                 value={localPrices[product.id] ?? ""}
                 onChange={(e) => handleChange(product.id, e.target.value)}
@@ -695,13 +744,15 @@ function ProductTable({
                   }
                 }}
               />
+              <span className="ml-0.5 text-xs text-muted">kr</span>
             </td>
-            <td className="border">
+            <td className="px-1! py-1.5 text-center">
               <button
                 onClick={() => onDelete(product.id)}
-                className="w-full aspect-square hover:bg-red-100"
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted hover:bg-red-50 hover:text-red-600"
+                aria-label="Slett"
               >
-                x
+                <Trash2 size={14} />
               </button>
             </td>
           </tr>

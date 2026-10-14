@@ -13,7 +13,19 @@ import { MailTemplate } from "@/lib/types";
 import { toast } from "react-toastify";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { PlusIcon, PencilIcon, TrashIcon, XIcon, CheckIcon } from "lucide-react";
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  XIcon,
+  CheckIcon,
+  MailIcon,
+  Loader2Icon,
+  BoldIcon,
+  ItalicIcon,
+  StrikethroughIcon,
+  ShieldAlertIcon,
+} from "lucide-react";
 
 const TEMPLATE_KEYS = [
   { value: "", label: "Ingen (egendefinert)" },
@@ -31,32 +43,36 @@ const PLACEHOLDER_HELP = [
 
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) return null;
-  const base = "px-2 py-1 text-sm border rounded transition-colors";
-  const active = "bg-blue-600 text-white border-blue-600";
-  const inactive = "bg-white text-gray-700 border-gray-300 hover:bg-gray-100";
+  const base =
+    "inline-flex size-8 items-center justify-center rounded-md transition-colors";
+  const active = "bg-blue-50 text-brand ring-1 ring-inset ring-blue-100";
+  const inactive = "text-body hover:bg-gray-100 hover:text-ink";
 
   return (
-    <div className="flex gap-2 border-b border-gray-200 p-2 bg-gray-50 rounded-t-md">
+    <div className="flex gap-1 border-b border-line bg-gray-50/70 px-2 py-1.5">
       <button
         type="button"
         onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}
+        title="Fet"
         className={`${base} ${editor.isActive("bold") ? active : inactive}`}
       >
-        <strong>B</strong>
+        <BoldIcon size={15} />
       </button>
       <button
         type="button"
         onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run(); }}
+        title="Kursiv"
         className={`${base} ${editor.isActive("italic") ? active : inactive}`}
       >
-        <em>I</em>
+        <ItalicIcon size={15} />
       </button>
       <button
         type="button"
         onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleStrike().run(); }}
+        title="Gjennomstreket"
         className={`${base} ${editor.isActive("strike") ? active : inactive}`}
       >
-        <span className="line-through">S</span>
+        <StrikethroughIcon size={15} />
       </button>
     </div>
   );
@@ -98,7 +114,7 @@ export default function MailTemplatesPage() {
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm m-4 min-h-32 focus:outline-none",
+          "prose prose-sm max-w-none px-4 py-3 min-h-40 text-ink focus:outline-none",
       },
     },
   });
@@ -200,8 +216,11 @@ export default function MailTemplatesPage() {
 
   if (teamRole !== "admin") {
     return (
-      <div className="p-8 text-center text-gray-500">
-        Du har ikke tilgang til denne siden.
+      <div className="sk-page">
+        <div className="sk-empty">
+          <ShieldAlertIcon size={22} className="text-gray-400" />
+          Du har ikke tilgang til denne siden.
+        </div>
       </div>
     );
   }
@@ -209,119 +228,135 @@ export default function MailTemplatesPage() {
   const isFormOpen = showCreate || editingId !== null;
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">E-postmaler</h1>
-          <p className="text-sm text-gray-500 mt-1">
+    <div className="sk-page max-w-5xl space-y-6">
+      <div className="sk-page-header !mb-0 !items-start">
+        <div className="max-w-2xl">
+          <p className="sk-eyebrow mb-1">Admin</p>
+          <h1 className="sk-page-title">E-postmaler</h1>
+          <p className="sk-page-subtitle leading-relaxed">
             Maler brukes i e-postutsending til leads. Bruk{" "}
-            <code className="bg-gray-100 px-1 rounded text-xs">&#123;leadName&#125;</code>,{" "}
-            <code className="bg-gray-100 px-1 rounded text-xs">&#123;installerName&#125;</code>,{" "}
-            <code className="bg-gray-100 px-1 rounded text-xs">&#123;estimateLink&#125;</code> som plassholdere.
+            <code className="sk-kbd !h-auto !px-1.5 !py-0.5 font-mono !text-[11px] !text-ink">&#123;leadName&#125;</code>,{" "}
+            <code className="sk-kbd !h-auto !px-1.5 !py-0.5 font-mono !text-[11px] !text-ink">&#123;installerName&#125;</code>,{" "}
+            <code className="sk-kbd !h-auto !px-1.5 !py-0.5 font-mono !text-[11px] !text-ink">&#123;estimateLink&#125;</code> som plassholdere.
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-        >
+        <button onClick={openCreate} className="sk-btn sk-btn-primary">
           <PlusIcon size={16} />
           Ny mal
         </button>
       </div>
 
       {isFormOpen && (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold mb-4">
-            {editingId ? "Rediger mal" : "Ny mal"}
-          </h2>
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+        <div className="sk-card animate-pop-in overflow-hidden">
+          <div className="sk-card-header">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-brand">
+                {editingId ? <PencilIcon size={16} /> : <PlusIcon size={16} />}
+              </div>
+              <h2 className="sk-section-title">
+                {editingId ? "Rediger mal" : "Ny mal"}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={cancel}
+              className="sk-icon-btn"
+              title="Avbryt"
+            >
+              <XIcon size={16} />
+            </button>
+          </div>
+          <form onSubmit={handleSave}>
+            <div className="space-y-5 p-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="sk-label">Navn på mal</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="f.eks. Prisestimat"
+                    className="sk-input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="sk-label">Mal-nøkkel (valgfritt)</label>
+                  <select
+                    value={form.template_key}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, template_key: e.target.value }))
+                    }
+                    className="sk-input"
+                  >
+                    {TEMPLATE_KEYS.map((k) => (
+                      <option key={k.value} value={k.value}>
+                        {k.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Navn på mal
-                </label>
+                <label className="sk-label">Emne</label>
                 <input
                   type="text"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="f.eks. Prisestimat"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={form.subject}
+                  onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
+                  placeholder="Emne for e-posten"
+                  className="sk-input"
                   required
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mal-nøkkel (valgfritt)
-                </label>
-                <select
-                  value={form.template_key}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, template_key: e.target.value }))
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {TEMPLATE_KEYS.map((k) => (
-                    <option key={k.value} value={k.value}>
-                      {k.label}
-                    </option>
+                <label className="sk-label">Innhold</label>
+                <div className="overflow-hidden rounded-lg border border-line bg-surface transition-[border-color,box-shadow] focus-within:border-brand focus-within:shadow-[0_0_0_3px_rgba(24,105,255,0.18)] hover:border-gray-300">
+                  <MenuBar editor={editor} />
+                  <EditorContent editor={editor} />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-blue-100 bg-brand-soft p-4">
+                <p className="sk-eyebrow mb-2.5 !text-blue-700">
+                  Tilgjengelige plassholdere:
+                </p>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {PLACEHOLDER_HELP.map((ph) => (
+                    <span
+                      key={ph.placeholder}
+                      className="flex items-center gap-1.5 text-xs text-body"
+                    >
+                      <code className="rounded-md border border-blue-100 bg-surface px-1.5 py-0.5 font-mono text-[11px] text-ink">
+                        {ph.placeholder}
+                      </code>
+                      — {ph.description}
+                    </span>
                   ))}
-                </select>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Emne
-              </label>
-              <input
-                type="text"
-                value={form.subject}
-                onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
-                placeholder="Emne for e-posten"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Innhold
-              </label>
-              <div className="border border-gray-300 rounded-lg overflow-hidden">
-                <MenuBar editor={editor} />
-                <EditorContent editor={editor} />
-              </div>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs font-medium text-gray-600 mb-2">Tilgjengelige plassholdere:</p>
-              <div className="flex flex-wrap gap-3">
-                {PLACEHOLDER_HELP.map((ph) => (
-                  <span key={ph.placeholder} className="text-xs text-gray-600">
-                    <code className="bg-white border border-gray-200 px-1.5 py-0.5 rounded">
-                      {ph.placeholder}
-                    </code>{" "}
-                    — {ph.description}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2 justify-end">
+            <div className="flex justify-end gap-2 border-t border-line bg-gray-50/60 px-6 py-4">
               <button
                 type="button"
                 onClick={cancel}
-                className="flex items-center gap-1.5 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                className="sk-btn sk-btn-secondary"
               >
-                <XIcon size={14} />
+                <XIcon size={15} />
                 Avbryt
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:bg-gray-400"
+                className="sk-btn sk-btn-primary"
               >
-                <CheckIcon size={14} />
+                {saving ? (
+                  <Loader2Icon size={15} className="animate-spin" />
+                ) : (
+                  <CheckIcon size={15} />
+                )}
                 {saving ? "Lagrer..." : "Lagre"}
               </button>
             </div>
@@ -330,14 +365,21 @@ export default function MailTemplatesPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Laster maler...</div>
+        <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted">
+          <Loader2Icon size={16} className="animate-spin text-brand" />
+          Laster maler...
+        </div>
       ) : templates.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <p className="text-gray-500">Ingen maler opprettet ennå.</p>
+        <div className="sk-empty">
+          <div className="mb-1 flex size-11 items-center justify-center rounded-xl bg-blue-50 text-brand">
+            <MailIcon size={20} />
+          </div>
+          <p className="font-medium text-ink">Ingen maler opprettet ennå.</p>
           <button
             onClick={openCreate}
-            className="mt-3 text-blue-600 text-sm hover:underline"
+            className="sk-btn sk-btn-secondary sk-btn-sm mt-2"
           >
+            <PlusIcon size={14} />
             Opprett din første mal
           </button>
         </div>
@@ -346,29 +388,38 @@ export default function MailTemplatesPage() {
           {templates.map((t) => (
             <div
               key={t.id}
-              className={`bg-white border rounded-xl p-4 flex items-start justify-between gap-4 ${
-                editingId === t.id ? "border-blue-400 ring-1 ring-blue-300" : "border-gray-200"
+              className={`sk-card group flex items-start justify-between gap-4 p-5 transition-all hover:shadow-pop ${
+                editingId === t.id
+                  ? "!border-brand ring-2 ring-blue-100"
+                  : "hover:border-gray-300"
               }`}
             >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-gray-900">{t.name}</span>
-                  {t.template_key && (
-                    <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded">
-                      {t.template_key}
-                    </span>
-                  )}
+              <div className="flex min-w-0 flex-1 gap-3.5">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-muted transition-colors group-hover:bg-blue-50 group-hover:text-brand">
+                  <MailIcon size={16} />
                 </div>
-                <p className="text-sm text-gray-500 truncate">Emne: {t.subject}</p>
-                <div
-                  className="text-xs text-gray-400 mt-1 line-clamp-2 prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: t.body }}
-                />
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="font-semibold text-ink">{t.name}</span>
+                    {t.template_key && (
+                      <span className="sk-badge sk-badge-brand font-mono">
+                        {t.template_key}
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-sm text-body">
+                    <span className="text-muted">Emne:</span> {t.subject}
+                  </p>
+                  <div
+                    className="prose prose-sm mt-1.5 line-clamp-2 max-w-none text-xs text-muted"
+                    dangerouslySetInnerHTML={{ __html: t.body }}
+                  />
+                </div>
               </div>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex shrink-0 gap-1">
                 <button
                   onClick={() => openEdit(t)}
-                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="sk-icon-btn hover:!bg-blue-50 hover:!text-brand"
                   title="Rediger"
                 >
                   <PencilIcon size={15} />
@@ -376,7 +427,7 @@ export default function MailTemplatesPage() {
                 <button
                   onClick={() => handleDelete(t.id)}
                   disabled={deletingId === t.id}
-                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                  className="sk-icon-btn hover:!bg-red-50 hover:!text-red-600"
                   title="Slett"
                 >
                   <TrashIcon size={15} />

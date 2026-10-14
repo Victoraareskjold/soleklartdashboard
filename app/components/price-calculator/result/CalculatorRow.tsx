@@ -2,6 +2,7 @@ import { Supplier, SupplierWithProducts } from "@/types/price_table";
 import { useMemo } from "react";
 import { CalculatorItem, CalculatorItemUpdate } from "./CalculatorResults";
 import { CategoryWithSubcategories } from "../supplier/Table";
+import { X } from "lucide-react";
 
 interface CalculatorRowProps {
   item: CalculatorItem;
@@ -72,69 +73,73 @@ export default function CalculatorRow({
 
   return (
     <tr>
-      <td className="border p-2 text-center">
+      <td className="px-2! py-1.5 text-center">
         <input
           type="number"
           min="0"
           value={item.quantity}
           onChange={(e) => handleQuantityChange(e.target.value)}
-          className="w-full text-center"
+          className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white text-center! font-semibold"
         />
       </td>
-      <td className="border p-2 flex items-center">
-        <p className="w-42">{item.displayName}</p>
-        <select
-          className="bg-gray-100 p-2 w-full"
-          value={item.productId}
-          onChange={(e) => handleProductChange(e.target.value)}
-          disabled={!item.supplierId || availableProducts.length === 0}
-        >
-          <option value="" disabled>
-            {!item.supplierId
-              ? "Velg leverandør først..."
-              : availableProducts.length === 0
-              ? `Ingen ${displayName.toLowerCase()} tilgjengelig`
-              : `Velg ${displayName.toLowerCase()}...`}
-          </option>
-          {(() => {
-            if (!category) return null;
+      <td className="py-1.5">
+        <div className="flex items-center gap-3">
+          <p className="w-36 shrink-0 truncate text-xs font-semibold text-ink">
+            {item.displayName}
+          </p>
+          <select
+            className="h-8 w-full rounded-md border border-line bg-white pl-2 text-sm text-ink hover:border-gray-300 min-w-0"
+            value={item.productId}
+            onChange={(e) => handleProductChange(e.target.value)}
+            disabled={!item.supplierId || availableProducts.length === 0}
+          >
+            <option value="" disabled>
+              {!item.supplierId
+                ? "Velg leverandør først..."
+                : availableProducts.length === 0
+                  ? `Ingen ${displayName.toLowerCase()} tilgjengelig`
+                  : `Velg ${displayName.toLowerCase()}...`}
+            </option>
+            {(() => {
+              if (!category) return null;
 
-            const grouped: Record<string, typeof availableProducts> = {};
-            for (const product of availableProducts) {
-              const subName = product.subcategory?.name || "";
-              if (!grouped[subName]) grouped[subName] = [];
-              grouped[subName].push(product);
-            }
+              const grouped: Record<string, typeof availableProducts> = {};
+              for (const product of availableProducts) {
+                const subName = product.subcategory?.name || "";
+                if (!grouped[subName]) grouped[subName] = [];
+                grouped[subName].push(product);
+              }
 
-            const sortedGroups = Object.entries(grouped).sort(([a], [b]) => {
-              if (a === "") return -1;
-              if (b === "") return 1;
-              return a.localeCompare(b);
-            });
+              const sortedGroups = Object.entries(grouped).sort(([a], [b]) => {
+                if (a === "") return -1;
+                if (b === "") return 1;
+                return a.localeCompare(b);
+              });
 
-            return sortedGroups.map(([subName, products]) =>
-              subName ? (
-                <optgroup key={subName} label={subName}>
-                  {products.map((product) => (
+              return sortedGroups.map(([subName, products]) =>
+                subName ? (
+                  <optgroup key={subName} label={subName}>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : (
+                  products.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name}
                     </option>
-                  ))}
-                </optgroup>
-              ) : (
-                products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))
-              )
-            );
-          })()}
-        </select>
+                  ))
+                ),
+              );
+            })()}
+          </select>
+        </div>
       </td>
-      <td className="border p-2">
+      <td className="py-1.5">
         <select
-          className="bg-gray-100 p-2 w-full"
+          className="h-8 w-full rounded-md border border-line bg-white pl-2 text-sm text-ink hover:border-gray-300"
           value={item.supplierId}
           onChange={(e) => handleSupplierChange(e.target.value)}
         >
@@ -146,7 +151,7 @@ export default function CalculatorRow({
           ))}
         </select>
       </td>
-      <td className="border p-2 text-right">
+      <td className="whitespace-nowrap py-1.5 text-right font-semibold tabular-nums text-ink">
         {item.quantity > 0
           ? `${(
               (item.mountPricePer !== undefined
@@ -164,12 +169,13 @@ export default function CalculatorRow({
             ).toFixed(2)} kr`
           : "0.00 kr"}
       </td> */}
-      <td className="border p-2 text-center">
+      <td className="px-1! py-1.5 text-center">
         <button
-          className="hover:text-red-800"
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted hover:bg-red-50 hover:text-red-600"
           onClick={() => onUpdate({ _delete: true })}
+          aria-label="Fjern"
         >
-          ✕
+          <X size={14} />
         </button>
       </td>
     </tr>

@@ -6,7 +6,7 @@ import { User } from "@supabase/supabase-js";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { Mail, Phone, LogOut, CheckCircle } from "lucide-react";
+import { Mail, Phone, LogOut, CheckCircle, Loader2 } from "lucide-react";
 import { CLIENT_ROUTES } from "@/constants/routes";
 
 interface UserProfile {
@@ -112,108 +112,145 @@ export default function ProfilePageInner() {
   };
 
   if (loading)
-    return <div className="p-8 text-slate-500">Laster profil...</div>;
+    return (
+      <div className="sk-page">
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Loader2 size={16} className="animate-spin" />
+          Laster profil...
+        </div>
+      </div>
+    );
+
+  const displayName = profile?.name || profile?.email || "";
+  const initials =
+    displayName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((p) => p[0])
+      .filter((_, i, arr) => i === 0 || i === arr.length - 1)
+      .join("")
+      .toUpperCase() || "?";
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="sk-page max-w-5xl">
       {/* Header Seksjon */}
-      <div className="flex justify-between items-start">
+      <div className="sk-page-header">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Min Profil</h1>
-          <p className="text-slate-500 text-sm">
+          <h1 className="sk-page-title">Min Profil</h1>
+          <p className="sk-page-subtitle">
             Administrer din personlige informasjon og integrasjoner
           </p>
         </div>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+          className="sk-btn sk-btn-secondary text-red-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
         >
           <LogOut size={16} />
           Logg ut
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {/* Brukerinfo Kort */}
-        <div className="md:col-span-1 space-y-4">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-slate-400 uppercase font-semibold">
-                  Navn
-                </label>
-                <p className="text-slate-700 font-medium">
-                  {profile?.name || "Ikke satt"}
-                </p>
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 uppercase font-semibold">
-                  E-post
-                </label>
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Mail size={14} />
-                  <p className="text-sm">{profile?.email}</p>
+        <div className="space-y-4 md:col-span-1">
+          <div className="sk-card overflow-hidden">
+            <div className="relative h-20 bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500">
+              <div className="absolute -top-6 right-0 size-24 rounded-full bg-orange-400/40 blur-2xl" />
+            </div>
+            <div className="-mt-8 px-6 pb-6">
+              <span className="inline-flex size-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 font-display text-lg font-semibold text-white ring-4 ring-white shadow-card">
+                {initials}
+              </span>
+              <p className="mt-3 font-display text-base font-semibold text-ink">
+                {profile?.name || "Ikke satt"}
+              </p>
+              <p className="text-xs text-muted">{profile?.email}</p>
+
+              <div className="sk-divider my-5" />
+
+              <dl className="space-y-4">
+                <div>
+                  <dt className="sk-eyebrow">Navn</dt>
+                  <dd className="mt-1 text-sm font-medium text-ink">
+                    {profile?.name || "Ikke satt"}
+                  </dd>
                 </div>
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 uppercase font-semibold">
-                  Telefon
-                </label>
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Phone size={14} />
-                  <p className="text-sm">
-                    {profile?.phone || "Ikke registrert"}
-                  </p>
+                <div>
+                  <dt className="sk-eyebrow">E-post</dt>
+                  <dd className="mt-1 flex items-center gap-2 text-sm text-ink">
+                    <Mail size={14} className="shrink-0 text-muted" />
+                    <span className="truncate">{profile?.email}</span>
+                  </dd>
                 </div>
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 uppercase font-semibold">
-                  Profil Id
-                </label>
-                <p className="text-sm">{user?.id}</p>
-              </div>
+                <div>
+                  <dt className="sk-eyebrow">Telefon</dt>
+                  <dd className="mt-1 flex items-center gap-2 text-sm text-ink">
+                    <Phone size={14} className="shrink-0 text-muted" />
+                    <span>{profile?.phone || "Ikke registrert"}</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="sk-eyebrow">Profil Id</dt>
+                  <dd className="mt-1 break-all rounded-md bg-gray-50 px-2 py-1 font-mono text-[11px] text-body">
+                    {user?.id}
+                  </dd>
+                </div>
+              </dl>
             </div>
           </div>
         </div>
 
         {/* Integrasjoner Seksjon */}
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              E-post integrasjon
-            </h2>
+        <div className="space-y-6 md:col-span-2">
+          <div className="sk-card">
+            <div className="sk-card-header">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex size-9 items-center justify-center rounded-lg bg-brand-soft text-brand">
+                  <Mail size={17} />
+                </span>
+                <h2 className="sk-section-title">E-post integrasjon</h2>
+              </div>
+            </div>
 
-            <div className="space-y-4">
+            <div className="sk-card-body space-y-4">
               {connectedEmails.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-slate-500">Tilkoblede kontoer:</p>
+                  <p className="sk-eyebrow">Tilkoblede kontoer:</p>
                   {connectedEmails.map((email) => (
                     <div
                       key={email}
-                      className="flex items-center justify-between p-3 bg-green-50 border border-green-100 rounded-lg"
+                      className="flex items-center justify-between rounded-lg border border-line bg-surface px-3 py-2.5 transition-colors hover:bg-gray-50"
                     >
-                      <div className="flex items-center gap-2 text-green-700">
-                        <CheckCircle size={16} />
-                        <span className="text-sm font-medium">{email}</span>
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <CheckCircle
+                          size={16}
+                          className="shrink-0 text-emerald-600"
+                        />
+                        <span className="truncate text-sm font-medium text-ink">
+                          {email}
+                        </span>
                       </div>
-                      <span className="text-xs text-green-600 font-bold uppercase tracking-wider text-[10px]">
+                      <span className="sk-badge sk-badge-success">
+                        <span className="size-1.5 rounded-full bg-emerald-500" />
                         Aktiv
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400 italic text-center py-4 bg-slate-50 rounded-lg border border-dashed">
+                <div className="sk-empty py-8">
+                  <Mail size={20} className="text-gray-400" />
                   Ingen e-postkontoer er tilkoblet ennå.
-                </p>
+                </div>
               )}
 
-              <div className="pt-2">
-                <ConnectOutlook />
-                <p className="mt-2 text-[11px] text-slate-400">
+              <div className="flex items-center justify-between gap-4 rounded-lg bg-gray-50 px-4 py-3">
+                <p className="text-xs text-muted">
                   Ved å koble til Outlook kan du sende e-post direkte fra
                   systemet.
                 </p>
+                <ConnectOutlook />
               </div>
             </div>
           </div>

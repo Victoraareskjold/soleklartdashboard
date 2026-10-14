@@ -227,7 +227,7 @@ export default function LeadsTable({
   };
 
   return (
-    <div className="flex gap-x-1 gap-y-12 grid grid-cols-5 p-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3 2xl:grid-cols-5">
       <DragDropContext onDragEnd={onDragEnd}>
         {LEAD_STATUSES.map((status) => {
           const statusLeads = grouped[status.value] || [];
@@ -235,34 +235,56 @@ export default function LeadsTable({
 
           return (
             <Droppable key={status.value} droppableId={status.value.toString()}>
-              {(provided) => (
+              {(provided, snapshot) => (
                 <div
                   {...provided.droppableProps}
                   ref={provided.innerRef}
-                  className="bg-gray-100 min-w-[250px] min-h-164 border flex flex-col justify-between"
+                  className={`flex min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-card border bg-gray-100/70 transition-colors ${
+                    snapshot.isDraggingOver
+                      ? "border-blue-300 bg-blue-50/70"
+                      : "border-line"
+                  }`}
                 >
                   <div
+                    className="h-1 w-full"
                     style={{ backgroundColor: status.color }}
-                    className="p-2 border-b flex items-center justify-between min-h-15"
-                  >
-                    <h2 className="font-semibold text-sm">{status.label}</h2>
-                    <h2 className="font-semibold text-sm">
-                      ({statusLeads.length}){" "}
-                    </h2>
+                  />
+                  <div className="flex min-h-14 items-start justify-between gap-2 px-3 pb-2 pt-3">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <span
+                        className="mt-1 size-2.5 flex-none rounded-full ring-2 ring-white"
+                        style={{ backgroundColor: status.color }}
+                      />
+                      <h2 className="font-sans text-[13px] font-semibold leading-5 text-ink">
+                        {status.label}
+                      </h2>
+                    </div>
+                    <span className="flex-none rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold tabular-nums text-gray-600 shadow-card">
+                      {statusLeads.length}
+                    </span>
                   </div>
-                  <div className="flex-1 p-2 max-h-164 overflow-y-scroll overflow-x-hidden">
+                  <div className="flex max-h-[40rem] flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden px-2 pb-2">
+                    {statusLeads.length === 0 && !snapshot.isDraggingOver && (
+                      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-gray-300 py-8 text-xs text-gray-400">
+                        Ingen avtaler
+                      </div>
+                    )}
                     {statusLeads.map((lead, index) => (
                       <Draggable
                         key={lead.id}
                         draggableId={lead.id}
                         index={index}
                       >
-                        {(provided) => (
+                        {(provided, dragSnapshot) => (
                           <div
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                             ref={provided.innerRef}
-                            className="bg-white rounded shadow p-3 mb-2"
+                            className={`rounded-xl border bg-surface p-3 transition-shadow ${
+                              dragSnapshot.isDragging
+                                ? "rotate-1 border-blue-200 shadow-pop"
+                                : "border-line shadow-card hover:border-gray-300 hover:shadow-md"
+                            }`}
                           >
                             <LeadCard
                               lead={lead}
@@ -273,17 +295,20 @@ export default function LeadsTable({
                         )}
                       </Draggable>
                     ))}
+                    {provided.placeholder}
                   </div>
-                  <div className="p-2 border-t">
-                    <h2 className="font-bold text-sm text-center">
-                      Totalt eks. mva:{" "}
+                  <div className="flex items-center justify-between gap-2 border-t border-line bg-surface/70 px-3 py-2.5">
+                    <span className="text-[11px] font-medium text-muted">
+                      Totalt eks. mva
+                    </span>
+                    <span className="text-sm font-semibold tabular-nums text-ink">
                       {totalForStatus.toLocaleString("nb-NO", {
                         style: "currency",
                         currency: "NOK",
+                        maximumFractionDigits: 0,
                       })}
-                    </h2>
+                    </span>
                   </div>
-                  {provided.placeholder}
                 </div>
               )}
             </Droppable>

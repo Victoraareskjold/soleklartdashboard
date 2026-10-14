@@ -21,6 +21,23 @@ import { useTeam } from "@/context/TeamContext";
 import { toast } from "react-toastify";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import {
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Bold,
+  Inbox,
+  Italic,
+  Loader2,
+  Mail,
+  Paperclip,
+  PenSquare,
+  RefreshCw,
+  Reply,
+  Send,
+  Strikethrough,
+  X,
+} from "lucide-react";
 
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -57,40 +74,47 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
     action();
   };
 
-  const base = "px-2 py-1 text-sm border rounded-md transition-colors";
-  const active = "bg-blue-600 text-white border-blue-600";
-  const inactive = "bg-white text-gray-700 border-gray-300 hover:bg-gray-100";
+  const base =
+    "inline-flex size-8 items-center justify-center rounded-md text-sm transition-colors";
+  const active = "bg-brand-soft text-brand ring-1 ring-inset ring-blue-200";
+  const inactive = "text-muted hover:bg-gray-100 hover:text-ink";
 
   return (
-    <div className="flex gap-2 border-b border-gray-300 p-2 bg-gray-50 rounded-t-md">
+    <div className="flex gap-1 rounded-t-xl border-b border-line bg-gray-50/80 px-2 py-1.5">
       <button
         type="button"
+        title="Bold"
+        aria-label="Bold"
         onMouseDown={() =>
           toggle(() => editor.chain().focus().toggleBold().run())
         }
         className={`${base} ${editor.isActive("bold") ? active : inactive}`}
       >
-        <strong>Bold</strong>
+        <Bold size={15} />
       </button>
 
       <button
         type="button"
+        title="Italic"
+        aria-label="Italic"
         onMouseDown={() =>
           toggle(() => editor.chain().focus().toggleItalic().run())
         }
         className={`${base} ${editor.isActive("italic") ? active : inactive}`}
       >
-        <em>Italic</em>
+        <Italic size={15} />
       </button>
 
       <button
         type="button"
+        title="Strike"
+        aria-label="Strike"
         onMouseDown={() =>
           toggle(() => editor.chain().focus().toggleStrike().run())
         }
         className={`${base} ${editor.isActive("strike") ? active : inactive}`}
       >
-        <span className="line-through">Strike</span>
+        <Strikethrough size={15} />
       </button>
     </div>
   );
@@ -152,7 +176,7 @@ export default function LeadEmailSection({
     editorProps: {
       attributes: {
         class:
-          "prose dark:prose-invert prose-sm sm:prose-base lg:prose-lg xl:prose-2xl m-5 focus:outline-none",
+          "prose prose-sm max-w-none min-h-[200px] px-4 py-3 text-sm text-ink focus:outline-none",
       },
     },
   });
@@ -535,8 +559,9 @@ export default function LeadEmailSection({
 
   if (!leadEmail) {
     return (
-      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-        <p className="text-sm text-yellow-800">
+      <div className="flex items-start gap-3 rounded-card border border-amber-200 bg-amber-50 p-4">
+        <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-600" />
+        <p className="text-sm text-amber-800">
           Denne leaden har ingen e-postadresse registrert. Legg til en
           e-postadresse for å sende og motta e-poster.
         </p>
@@ -546,24 +571,34 @@ export default function LeadEmailSection({
 
   if (loading) {
     return (
-      <div className="p-4 text-center">
-        <p className="text-gray-600">Laster e-poster...</p>
+      <div className="sk-card flex items-center justify-center gap-2 p-10 text-sm text-muted">
+        <Loader2 size={16} className="animate-spin" />
+        <p>Laster e-poster...</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="space-y-4 mx-auto">
+      <div className="flex flex-col gap-4">
         {/* Header with actions */}
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">E-postkorrespondanse</h3>
+        <div className="sk-card flex items-center justify-between gap-3 px-5 py-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand">
+              <Mail size={16} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="sk-section-title">E-postkorrespondanse</h3>
+              <p className="truncate text-xs text-muted">{leadEmail}</p>
+            </div>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={handleSync}
               disabled={syncing}
-              className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm"
+              className="sk-btn sk-btn-secondary"
             >
+              <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
               {syncing ? "Synkroniserer..." : "Synkroniser"}
             </button>
             <button
@@ -576,8 +611,9 @@ export default function LeadEmailSection({
                 setAttachments([]);
                 editor?.commands.clearContent();
               }}
-              className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+              className="sk-btn sk-btn-primary"
             >
+              <PenSquare size={15} />
               Ny e-post
             </button>
           </div>
@@ -585,37 +621,44 @@ export default function LeadEmailSection({
 
         {/* Compose email form */}
         {showCompose && (
-          <div className="bg-white max-w-182 mx-auto border border-gray-300 rounded-md p-4 shadow-sm">
-            <h4 className="font-medium mb-3">
-              {replyToMessageId ? "Svar på e-post" : "Send ny e-post"}
-            </h4>
+          <div className="sk-card animate-pop-in overflow-hidden ring-2 ring-blue-100">
+            <div className="flex items-center justify-between gap-3 border-b border-line bg-brand-soft/60 px-5 py-3">
+              <h4 className="sk-section-title flex items-center gap-2 text-sm">
+                {replyToMessageId ? (
+                  <Reply size={15} className="text-brand" />
+                ) : (
+                  <PenSquare size={15} className="text-brand" />
+                )}
+                {replyToMessageId ? "Svar på e-post" : "Send ny e-post"}
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShowCompose(false)}
+                className="sk-icon-btn size-8"
+                aria-label="Avbryt"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSendEmail} className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Til
-                </label>
+            <form onSubmit={handleSendEmail} className="flex flex-col gap-3 p-5">
+              <div className="grid grid-cols-[56px_minmax(0,1fr)] items-center gap-x-3 gap-y-2">
+                <label className="text-xs font-semibold text-muted">Til</label>
                 <input
                   type="text"
                   value={leadEmail}
                   disabled
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-sm"
+                  className="sk-input"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cc
-                </label>
+                <label className="text-xs font-semibold text-muted">Cc</label>
                 <input
                   type="text"
                   value={cc}
                   onChange={(e) => setCc(e.target.value)}
                   placeholder="Kommaseparerte e-poster"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="sk-input"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="text-xs font-semibold text-muted">
                   Emne
                 </label>
                 <input
@@ -623,26 +666,24 @@ export default function LeadEmailSection({
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="E-postemne"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="sk-input font-medium"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Melding
-                </label>
-                <div className="border border-gray-300 rounded-md">
+                <label className="sk-label">Melding</label>
+                <div className="rounded-xl border border-line bg-surface transition-shadow focus-within:border-brand focus-within:shadow-[0_0_0_3px_rgba(24,105,255,0.18)]">
                   <MenuBar editor={editor} />
                   <EditorContent editor={editor} />
                 </div>
               </div>
 
-              <div className="flex flex-row justify-between items-center">
-                <div>
+              <div className="flex flex-wrap items-start justify-between gap-3 border-t border-line pt-4">
+                <div className="flex min-w-0 flex-1 flex-wrap items-start gap-3">
                   <select
                     value={selectedTemplate}
                     onChange={handleTemplateChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="sk-input w-auto min-w-48"
                   >
                     <option value="">Velg en mal...</option>
                     {mailTemplates.map((template) => (
@@ -651,49 +692,51 @@ export default function LeadEmailSection({
                       </option>
                     ))}
                   </select>
-                </div>
 
-                <div>
-                  <label
-                    htmlFor="email-attachments"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  ></label>
-                  <input
-                    type="file"
-                    id="email-attachments"
-                    name="email-attachments"
-                    multiple
-                    onChange={(e) =>
-                      setAttachments(
-                        e.target.files ? Array.from(e.target.files) : [],
-                      )
-                    }
-                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                  />
-                  {attachments.length > 0 && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      <ul className="list-disc list-inside">
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="email-attachments"
+                      className="sr-only"
+                    ></label>
+                    <input
+                      type="file"
+                      id="email-attachments"
+                      name="email-attachments"
+                      multiple
+                      onChange={(e) =>
+                        setAttachments(
+                          e.target.files ? Array.from(e.target.files) : [],
+                        )
+                      }
+                      className="block w-full cursor-pointer text-sm text-muted file:mr-3 file:h-9 file:cursor-pointer file:rounded-lg file:border file:border-line file:bg-surface file:px-3 file:text-sm file:font-semibold file:text-ink hover:file:bg-gray-50"
+                    />
+                    {attachments.length > 0 && (
+                      <ul className="mt-2 flex flex-wrap gap-1.5">
                         {attachments.map((file, i) => (
-                          <li key={i}>{file.name}</li>
+                          <li key={i} className="sk-badge sk-badge-neutral">
+                            <Paperclip size={11} />
+                            {file.name}
+                          </li>
                         ))}
                       </ul>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setShowCompose(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
+                    className="sk-btn sk-btn-ghost"
                   >
                     Avbryt
                   </button>
                   <button
                     type="submit"
                     disabled={sending}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm"
+                    className="sk-btn sk-btn-primary"
                   >
+                    <Send size={15} />
                     {sending ? "Sender..." : "Send"}
                   </button>
                 </div>
@@ -704,35 +747,37 @@ export default function LeadEmailSection({
 
         {/* Email threads */}
         {emailThreads.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-md">
-            <p className="text-gray-500 mb-2">Ingen e-poster funnet</p>
-            <p className="text-sm text-gray-400">
+          <div className="sk-empty">
+            <Inbox size={24} className="text-gray-400" />
+            <p className="font-medium text-ink">Ingen e-poster funnet</p>
+            <p className="text-xs text-muted">
               Klikk &quot;Synkroniser&quot; for å hente e-poster fra Outlook
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             {emailThreads.map((thread) => (
               <div
                 key={thread.conversationId}
-                className="bg-white max-w-182 mx-auto border border-gray-200 rounded-md shadow-sm overflow-hidden"
+                className="sk-card animate-fade-in overflow-hidden"
               >
                 {/* Thread header */}
-                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate">
+                <div className="border-b border-line bg-gray-50/70 px-5 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="truncate text-sm font-semibold text-ink">
                         {thread.subject}
                       </h4>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="mt-0.5 text-xs text-muted">
                         {thread.emails.length} melding
                         {thread.emails.length > 1 ? "er" : ""}
                       </p>
                     </div>
                     <button
                       onClick={() => handleReply(thread)}
-                      className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                      className="sk-btn sk-btn-secondary sk-btn-sm"
                     >
+                      <Reply size={14} />
                       Svar
                     </button>
                   </div>
@@ -746,20 +791,33 @@ export default function LeadEmailSection({
                       leadEmail?.toLowerCase();
 
                     return (
-                      <div key={email.id} className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
+                      <div key={email.id} className="px-5 py-4">
+                        <div className="mb-3 flex items-start gap-3">
+                          <span
+                            className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ring-1 ring-inset ${
+                              isSentByMe
+                                ? "bg-emerald-50 text-emerald-600 ring-emerald-100"
+                                : "bg-blue-50 text-brand ring-blue-100"
+                            }`}
+                          >
+                            {isSentByMe ? (
+                              <ArrowUpRight size={15} />
+                            ) : (
+                              <ArrowDownLeft size={15} />
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span
-                                className={`px-2 py-0.5 text-xs rounded ${
+                                className={`sk-badge ${
                                   isSentByMe
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-blue-100 text-blue-700"
+                                    ? "sk-badge-success"
+                                    : "sk-badge-brand"
                                 }`}
                               >
                                 {isSentByMe ? "Sendt" : "Mottatt"}
                               </span>
-                              <span className="text-sm font-medium text-gray-900">
+                              <span className="truncate text-sm font-medium text-ink">
                                 {isSentByMe
                                   ? `Til: ${
                                       email.to_addresses?.join(", ") ||
@@ -770,11 +828,11 @@ export default function LeadEmailSection({
                             </div>
                             {email.cc_addresses &&
                               email.cc_addresses?.length > 0 && (
-                                <div className="ml-10 mt-0.5 text-xs text-gray-600">
+                                <div className="mt-0.5 text-xs text-muted">
                                   Cc: {email.cc_addresses.join(", ")}
                                 </div>
                               )}
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="mt-0.5 text-xs tabular-nums text-muted">
                               {new Date(email.received_at || "").toLocaleString(
                                 "nb-NO",
                                 {
@@ -788,9 +846,9 @@ export default function LeadEmailSection({
                             </p>
                           </div>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto pl-11">
                           <div
-                            className="text-sm text-gray-700 break-words [&_p]:mb-3 [&_p:last-child]:mb-0"
+                            className="break-words text-sm leading-relaxed text-body [&_a]:text-brand [&_a]:underline [&_p]:mb-3 [&_p:last-child]:mb-0"
                             dangerouslySetInnerHTML={{
                               __html: (
                                 email.body ||
@@ -801,26 +859,27 @@ export default function LeadEmailSection({
                           />
                         </div>
                         {email.attachments && email.attachments.length > 0 && (
-                          <div className="mt-4">
-                            <h5 className="text-sm font-semibold text-gray-600">
-                              Vedlegg
-                            </h5>
-                            <ul className="mt-2 list-disc list-inside space-y-1">
+                          <div className="mt-4 pl-11">
+                            <h5 className="sk-eyebrow mb-2">Vedlegg</h5>
+                            <ul className="flex flex-wrap gap-2">
                               {email.attachments.map((att) => (
-                                <li key={att.id} className="text-sm">
+                                <li key={att.id}>
                                   <a
                                     href={att.file_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600 hover:underline"
+                                    className="inline-flex max-w-[260px] items-center gap-1.5 rounded-lg border border-line bg-gray-50 px-2.5 py-1 text-xs font-medium text-ink hover:border-blue-200 hover:bg-brand-soft hover:text-brand"
                                   >
-                                    {att.file_name}
+                                    <Paperclip size={12} className="shrink-0" />
+                                    <span className="truncate">
+                                      {att.file_name}
+                                    </span>
                                   </a>
                                 </li>
                               ))}
                             </ul>
                           </div>
-                        )}{" "}
+                        )}
                       </div>
                     );
                   })}

@@ -14,6 +14,7 @@ import MountingTable from "@/app/components/price-calculator/work/MountingTable"
 import VolumeReductionsTable from "@/app/components/price-calculator/work/VolumeReductionsTable";
 import TeamCommissionTable from "@/app/components/price-calculator/work/TeamCommissionTable";
 import { useTeam } from "@/context/TeamContext";
+import { Calculator, Package, SlidersHorizontal } from "lucide-react";
 
 export default function PriceTablePage() {
   const { installerGroupId } = useInstallerGroup();
@@ -94,26 +95,51 @@ export default function PriceTablePage() {
   }
 
   return (
-    <div className="flex gap-2 min-h-screen">
-      <div className="w-full flex flex-col gap-12 mx-auto">
-        {/* Calculator Results Section */}
-        <div className="bg-white shadow-lg rounded-xl p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Priskalkulator
-          </h2>
-          <CalculatorResults
-            suppliers={suppliers}
-            suppliersAndProducts={suppliersAndProducts}
-            solarData={solarData}
-            setSolarData={setSolarData}
-            finished={false}
-            leadId={""}
-          />
+    <div className="sk-page">
+      <div className="sk-page-header">
+        <div>
+          <p className="sk-eyebrow">Prising</p>
+          <h1 className="sk-page-title">Pristabell</h1>
+          <p className="sk-page-subtitle">
+            Priskalkulator, påslag, arbeidskostnader og leverandørprodukter.
+          </p>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-6">
+        {/* Calculator Results Section */}
+        <section className="sk-card">
+          <div className="sk-card-header">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand-soft text-brand">
+                <Calculator size={16} />
+              </span>
+              <h2 className="sk-section-title">Priskalkulator</h2>
+            </div>
+          </div>
+          <div className="sk-card-body">
+            <CalculatorResults
+              suppliers={suppliers}
+              suppliersAndProducts={suppliersAndProducts}
+              solarData={solarData}
+              setSolarData={setSolarData}
+              finished={false}
+              leadId={""}
+            />
+          </div>
+        </section>
 
         {/* Pricing Rules and Installation Tables Section */}
-        <div className="bg-white shadow-lg rounded-xl p-6">
-          <div className="space-y-8">
+        <section className="sk-card">
+          <div className="sk-card-header">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand-soft text-brand">
+                <SlidersHorizontal size={16} />
+              </span>
+              <h2 className="sk-section-title">Påslag og arbeid</h2>
+            </div>
+          </div>
+          <div className="sk-card-body flex flex-col gap-8">
             <SupplierMarkupsTable />
             <ElectricalInstallationTable installerGroupId={installerGroupId} />
             <MountingTable
@@ -123,15 +149,22 @@ export default function PriceTablePage() {
             <VolumeReductionsTable installerGroupId={installerGroupId} />
             <TeamCommissionTable teamId={teamId} />
           </div>
-        </div>
+        </section>
 
         {/* Supplier Table Section */}
-        <div className="bg-white shadow-lg rounded-xl p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Leverandørprodukter
-          </h2>
-          <SupplierTable suppliersAndProducts={suppliersAndProducts} />
-        </div>
+        <section className="sk-card">
+          <div className="sk-card-header">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand-soft text-brand">
+                <Package size={16} />
+              </span>
+              <h2 className="sk-section-title">Leverandørprodukter</h2>
+            </div>
+          </div>
+          <div className="sk-card-body">
+            <SupplierTable suppliersAndProducts={suppliersAndProducts} />
+          </div>
+        </section>
       </div>
     </div>
   );

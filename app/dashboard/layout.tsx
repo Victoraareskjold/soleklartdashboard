@@ -36,11 +36,11 @@ export default function DashboardLayout({
     <TeamProvider>
       <InstallerGroupProvider>
         <RoleProvider>
-          <div className="flex flex-row">
+          <div className="sk-dash flex min-h-screen flex-row">
             <Navbar />
-            <div className="bg-gray-50 min-h-screen w-full flex flex-col ml-64">
-              <div className="p-2">{children}</div>
-            </div>
+            <main className="ml-64 flex min-h-screen w-[calc(100%-16rem)] flex-col">
+              {children}
+            </main>
           </div>
         </RoleProvider>
       </InstallerGroupProvider>

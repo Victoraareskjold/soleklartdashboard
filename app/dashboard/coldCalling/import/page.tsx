@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Upload, Eye, Database, ChevronDown } from "lucide-react";
+import {
+  Upload,
+  Eye,
+  Database,
+  ChevronDown,
+  FileSpreadsheet,
+} from "lucide-react";
 import { getTeam } from "@/lib/api";
 import { useTeam } from "@/context/TeamContext";
 import { toast } from "react-toastify";
@@ -101,145 +107,169 @@ export default function ImportPage() {
   const [sliceAmount, setSliceAmount] = useState(5);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Importer Leads
-          </h1>
-          <p className="text-slate-600">
+    <div className="sk-page max-w-6xl">
+      {/* Header */}
+      <div className="sk-page-header">
+        <div>
+          <p className="sk-eyebrow mb-1">Cold calling</p>
+          <h1 className="sk-page-title">Importer Leads</h1>
+          <p className="sk-page-subtitle">
             Last opp en Excel-fil for å importere nye leads til systemet
           </p>
         </div>
+      </div>
 
-        {/* Upload Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-          <div className="space-y-6">
-            {/* File Input */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-3">
-                Velg fil
-              </label>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={(e) => {
-                    if (e.target.files) setFile(e.target.files[0]);
-                  }}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="flex items-center justify-center w-full px-6 py-4 border-2 border-dashed border-slate-300 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer group"
-                >
-                  <Upload className="w-6 h-6 text-slate-400 group-hover:text-blue-500 mr-3" />
-                  <span className="text-slate-600 group-hover:text-blue-600 font-medium">
-                    {file ? file.name : "Klikk for å velge fil (.xlsx, .xls)"}
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-4">
-              <button
-                onClick={handleUpload}
-                disabled={!file || isUploading}
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg disabled:cursor-not-allowed"
+      {/* Upload Card */}
+      <div className="sk-card mb-6">
+        <div className="sk-card-body space-y-5">
+          {/* File Input */}
+          <div>
+            <label className="sk-label">Velg fil</label>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => {
+                if (e.target.files) setFile(e.target.files[0]);
+              }}
+              className="hidden"
+              id="file-upload"
+            />
+            <label
+              htmlFor="file-upload"
+              className={`group flex w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center transition-colors ${
+                file
+                  ? "border-blue-300 bg-brand-soft"
+                  : "border-gray-300 bg-gray-50/60 hover:border-blue-400 hover:bg-brand-soft"
+              }`}
+            >
+              <span
+                className={`flex size-11 items-center justify-center rounded-xl border bg-surface shadow-card transition-colors ${
+                  file
+                    ? "border-blue-200 text-brand"
+                    : "border-line text-muted group-hover:text-brand"
+                }`}
               >
-                <Eye className="w-5 h-5" />
-                {isUploading ? "Laster..." : "Forhåndsvis"}
-              </button>
-            </div>
+                {file ? <FileSpreadsheet size={20} /> : <Upload size={20} />}
+              </span>
+              <span
+                className={`text-sm font-semibold ${
+                  file ? "text-ink" : "text-body group-hover:text-brand"
+                }`}
+              >
+                {file ? file.name : "Klikk for å velge fil (.xlsx, .xls)"}
+              </span>
+            </label>
+          </div>
 
-            {/* Team Member Selector */}
-            {preview && (
-              <div className="pt-4 border-t border-slate-200">
-                <TeamMemberSelector
-                  team={team}
-                  selectedMember={selectedMember}
-                  onSelectMember={setSelectedMember}
-                />
-              </div>
-            )}
+          {/* Action Buttons */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleUpload}
+              disabled={!file || isUploading}
+              className="sk-btn sk-btn-primary"
+            >
+              <Eye size={16} />
+              {isUploading ? "Laster..." : "Forhåndsvis"}
+            </button>
           </div>
         </div>
 
-        {/* Preview Table */}
+        {/* Team Member Selector */}
         {preview && (
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-900">
-                Forhåndsvisning
-              </h2>
-              <p className="text-slate-600 mt-1">
-                Viser {Math.min(sliceAmount, preview.length)} av{" "}
-                {preview.length} leads
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <div className="max-h-96 overflow-y-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-100 sticky top-0 z-10">
-                    <tr>
-                      {headers.map((header, index) => (
-                        <th
-                          key={index}
-                          className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider border-b-2 border-slate-200"
-                        >
-                          {header}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {preview.slice(0, sliceAmount).map((lead, i) => (
-                      <tr
-                        key={i}
-                        className="hover:bg-slate-50 transition-colors duration-150"
-                      >
-                        {fields.map((field) => (
-                          <td
-                            key={field}
-                            className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap"
-                          >
-                            {lead[field] || "-"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="px-8 py-6 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
-              {sliceAmount < preview.length && (
-                <button
-                  onClick={() => setSliceAmount(sliceAmount + 5)}
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-200"
-                >
-                  <ChevronDown className="w-5 h-5" />
-                  Last inn flere
-                </button>
-              )}
-
-              <button
-                onClick={handleCommit}
-                disabled={!selectedMember || isCommitting}
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg disabled:cursor-not-allowed"
-              >
-                <Database className="w-5 h-5" />
-                {isCommitting ? "Lagrer..." : "Lagre i database"}
-              </button>
+          <div className="border-t border-line px-5 py-4">
+            <label className="sk-label">Lead-innhenter</label>
+            <div className="max-w-xs">
+              <TeamMemberSelector
+                team={team}
+                selectedMember={selectedMember}
+                onSelectMember={setSelectedMember}
+              />
             </div>
           </div>
         )}
       </div>
+
+      {/* Preview Table */}
+      {preview && (
+        <div className="sk-card overflow-hidden">
+          <div className="sk-card-header">
+            <div>
+              <h2 className="sk-section-title">Forhåndsvisning</h2>
+              <p className="mt-0.5 text-xs text-muted">
+                Viser{" "}
+                <span className="font-semibold text-ink tabular-nums">
+                  {Math.min(sliceAmount, preview.length)}
+                </span>{" "}
+                av{" "}
+                <span className="font-semibold text-ink tabular-nums">
+                  {preview.length}
+                </span>{" "}
+                leads
+              </p>
+            </div>
+            <span className="sk-badge sk-badge-brand">
+              {preview.length} leads
+            </span>
+          </div>
+
+          <div className="max-h-96 overflow-auto">
+            <table className="sk-table">
+              <thead>
+                <tr>
+                  {headers.map((header, index) => (
+                    <th key={index}>{header}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {preview.slice(0, sliceAmount).map((lead, i) => (
+                  <tr key={i}>
+                    {fields.map((field) => (
+                      <td
+                        key={field}
+                        className={`whitespace-nowrap ${
+                          field === "name" ? "font-medium text-ink!" : ""
+                        } ${
+                          ["org_nr", "mobile", "phone"].includes(field)
+                            ? "tabular-nums"
+                            : ""
+                        }`}
+                      >
+                        {lead[field] || (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col items-center justify-between gap-3 border-t border-line bg-gray-50/60 px-5 py-4 sm:flex-row">
+            <div>
+              {sliceAmount < preview.length && (
+                <button
+                  onClick={() => setSliceAmount(sliceAmount + 5)}
+                  className="sk-btn sk-btn-ghost sk-btn-sm"
+                >
+                  <ChevronDown size={15} />
+                  Last inn flere
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={handleCommit}
+              disabled={!selectedMember || isCommitting}
+              className="sk-btn sk-btn-primary"
+            >
+              <Database size={16} />
+              {isCommitting ? "Lagrer..." : "Lagre i database"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

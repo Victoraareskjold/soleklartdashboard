@@ -16,6 +16,16 @@ import {
   PieChart,
   Pie,
 } from "recharts";
+import {
+  CheckCircle2,
+  ChevronDown,
+  Loader2,
+  ShieldAlert,
+  Target,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -229,6 +239,19 @@ const MONTHS = [
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+// Brand chart palette
+const CHART = {
+  blue: "#1869ff",
+  orange: "#faa31a",
+  green: "#10874b",
+  gray: "#6b7889",
+  grid: "#eef1f5",
+  tick: "#6b7889",
+};
+
+const TOOLTIP_CLASS =
+  "rounded-xl border border-line bg-white px-3 py-2 text-xs shadow-pop";
+
 function Card({
   title,
   children,
@@ -239,12 +262,8 @@ function Card({
   className?: string;
 }) {
   return (
-    <div
-      className={`bg-white rounded-xl border border-gray-100 shadow-sm p-5 ${className}`}
-    >
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">
-        {title}
-      </h3>
+    <div className={`sk-card p-6 ${className}`}>
+      <h3 className="sk-section-title mb-5">{title}</h3>
       {children}
     </div>
   );
@@ -253,17 +272,34 @@ function Card({
 function StatPill({
   label,
   value,
-  color = "bg-gray-100 text-gray-700",
+  icon: Icon,
+  chip = "bg-blue-50 text-blue-600",
 }: {
   label: string;
   value: string | number;
-  color?: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  chip?: string;
 }) {
   return (
-    <div className={`rounded-lg px-4 py-3 flex flex-col gap-0.5 ${color}`}>
-      <span className="text-xs font-medium opacity-70">{label}</span>
-      <span className="text-xl font-bold">{value}</span>
+    <div className="sk-card flex items-start gap-3.5 p-5 transition-shadow hover:shadow-pop">
+      <div
+        className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${chip}`}
+      >
+        <Icon size={18} strokeWidth={2.2} />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="sk-eyebrow truncate">{label}</span>
+        <span className="font-display text-2xl font-semibold tabular-nums leading-none text-ink">
+          {value}
+        </span>
+      </div>
     </div>
+  );
+}
+
+function EmptyNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="py-8 text-center text-sm text-muted">{children}</p>
   );
 }
 
@@ -367,8 +403,11 @@ export default function AdminDashboard() {
 
   if (teamRole && teamRole !== "admin") {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
-        Kun tilgjengelig for administratorer.
+      <div className="sk-page">
+        <div className="sk-empty">
+          <ShieldAlert size={22} className="text-gray-400" />
+          Kun tilgjengelig for administratorer.
+        </div>
       </div>
     );
   }
@@ -380,44 +419,41 @@ export default function AdminDashboard() {
     {
       name: "Cold calling",
       value: stats?.sourceDistribution?.coldcall ?? 0,
-      color: "#FFDB59",
+      color: CHART.orange,
     },
     {
       name: "Google Ads",
       value: stats?.sourceDistribution?.google ?? 0,
-      color: "#4285F4",
+      color: CHART.blue,
     },
     {
       name: "Facebook Ads",
       value: stats?.sourceDistribution?.facebook ?? 0,
-      color: "#1877F2",
+      color: "#a3c4fb",
     },
     {
       name: "Organic",
       value: stats?.sourceDistribution?.organic ?? 0,
-      color: "#6DFF68",
+      color: CHART.green,
     },
   ].filter((d) => d.value > 0);
 
   return (
-    <div className="p-6 max-w-screen-2xl mx-auto space-y-6">
+    <div className="sk-page space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="sk-page-header !mb-0">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            Pipeline · Flaskehalser · Ytelse
-          </p>
+          <p className="sk-eyebrow mb-1">Admin</p>
+          <h1 className="sk-page-title">Admin Dashboard</h1>
+          <p className="sk-page-subtitle">Pipeline · Flaskehalser · Ytelse</p>
         </div>
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="sk-tabs flex-wrap">
           {DATE_PRESETS.map((p) => (
             <button
               key={p.value}
               onClick={() => setPreset(p.value)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                preset === p.value
-                  ? "bg-white shadow-sm text-gray-900"
-                  : "text-gray-500 hover:text-gray-700"
+              className={`sk-tab !text-xs ${
+                preset === p.value ? "sk-tab-active" : ""
               }`}
             >
               {p.label}
@@ -427,7 +463,8 @@ export default function AdminDashboard() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
+        <div className="flex h-40 items-center justify-center gap-2 text-sm text-muted">
+          <Loader2 size={16} className="animate-spin text-brand" />
           Laster...
         </div>
       )}
@@ -435,33 +472,38 @@ export default function AdminDashboard() {
       {!loading && stats && (
         <>
           {/* Summary pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <StatPill
               label="Totalt leads"
               value={s?.totalLeads ?? 0}
-              color="bg-gray-100 text-gray-800"
+              icon={Users}
+              chip="bg-gray-100 text-gray-600"
             />
             {/* TODO */}
             <StatPill
               label="Kvalifiserte leads"
               value={s?.activeLeads ?? 0}
-              color="bg-blue-50 text-blue-800"
+              icon={Target}
+              chip="bg-blue-50 text-blue-600"
             />
 
             <StatPill
               label="Pipeline-verdi"
               value={`${formatCurrency(s?.pipelineValue ?? 0)} kr`}
-              color="bg-violet-50 text-violet-800"
+              icon={TrendingUp}
+              chip="bg-orange-50 text-orange-600"
             />
             <StatPill
               label="Signert (periode)"
               value={s?.signedInPeriod ?? 0}
-              color="bg-emerald-50 text-emerald-800"
+              icon={CheckCircle2}
+              chip="bg-emerald-50 text-emerald-700"
             />
             <StatPill
               label="Signert verdi"
               value={`${formatCurrency(s?.signedValueInPeriod ?? 0)} kr`}
-              color="bg-green-50 text-green-800"
+              icon={Wallet}
+              chip="bg-emerald-50 text-emerald-700"
             />
           </div>
 
@@ -470,9 +512,7 @@ export default function AdminDashboard() {
             (g) => g.name.toLowerCase() !== "testelektro",
           ).length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-                Breakdown per installatør
-              </h2>
+              <h2 className="sk-section-title">Breakdown per installatør</h2>
               {stats.installerBreakdown
                 .filter((g) => g.name.toLowerCase() !== "testelektro")
                 .map((group) => {
@@ -511,67 +551,60 @@ export default function AdminDashboard() {
                   );
 
                   return (
-                    <div
-                      key={group.id}
-                      className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
-                    >
+                    <div key={group.id} className="sk-card overflow-hidden">
                       {/* Clickable header */}
                       <button
                         onClick={() => toggleGroup(group.id)}
-                        className="w-full flex items-center justify-between px-5 py-3 bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-100"
+                        className="flex w-full items-center justify-between gap-3 border-b border-line px-5 py-3.5 text-left transition-colors hover:bg-gray-50"
                       >
-                        <span className="text-sm font-bold text-gray-800">
-                          {group.name}
+                        <span className="flex items-center gap-2.5">
+                          <span className="size-2 rounded-full bg-brand" />
+                          <span className="font-display text-sm font-semibold text-ink">
+                            {group.name}
+                          </span>
                         </span>
-                        <span className="text-gray-400 text-xs">
-                          {isOpen ? "▲" : "▼"}
-                        </span>
+                        <ChevronDown
+                          size={16}
+                          className={`text-muted transition-transform duration-200 ${
+                            isOpen ? "rotate-180" : ""
+                          }`}
+                        />
                       </button>
 
                       <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
+                        <table className="sk-table">
                           <thead>
-                            <tr className="border-b border-gray-100 text-gray-400 uppercase tracking-wider">
-                              <th className="text-left px-5 py-2 font-semibold w-40">
-                                Segment
-                              </th>
-                              <th className="text-right px-3 py-2 font-semibold">
+                            <tr>
+                              <th className="w-48 !pl-5">Segment</th>
+                              <th className="!text-right">
                                 Kvalifiserte leads
                               </th>
-                              <th className="text-right px-3 py-2 font-semibold">
-                                Tapt
-                              </th>
-                              <th className="text-right px-3 py-2 font-semibold">
-                                Signert
-                              </th>
-                              <th className="text-right px-3 py-2 font-semibold">
-                                Sign. verdi
-                              </th>
-                              <th className="text-right px-5 py-2 font-semibold">
-                                Pipeline
-                              </th>
+                              <th className="!text-right">Tapt</th>
+                              <th className="!text-right">Signert</th>
+                              <th className="!text-right">Sign. verdi</th>
+                              <th className="!pr-5 !text-right">Pipeline</th>
                             </tr>
                           </thead>
                           <tbody>
                             {!isOpen && (
-                              <tr className="border-t border-gray-50">
-                                <td className="px-5 py-2 font-semibold text-gray-700">
+                              <tr>
+                                <td className="!pl-5 font-semibold !text-ink">
                                   Totalt
                                 </td>
-                                <td className="text-right px-3 py-2 text-blue-600 font-medium">
+                                <td className="text-right font-semibold tabular-nums !text-blue-600">
                                   {expandedTotals.qualifiedInPeriod}
                                 </td>
-                                <td className="text-right px-3 py-2 text-indigo-600">
+                                <td className="text-right tabular-nums !text-red-600">
                                   {expandedTotals.lostInPeriod}
                                 </td>
-                                <td className="text-right px-3 py-2 text-emerald-600 font-medium">
+                                <td className="text-right font-semibold tabular-nums !text-emerald-700">
                                   {expandedTotals.signedInPeriod}
                                 </td>
-                                <td className="text-right px-3 py-2 text-emerald-700">
+                                <td className="text-right font-semibold tabular-nums !text-ink">
                                   {formatCurrency(expandedTotals.signedValue)}{" "}
                                   kr
                                 </td>
-                                <td className="text-right px-5 py-2 text-violet-700">
+                                <td className="!pr-5 text-right font-semibold tabular-nums !text-ink">
                                   {formatCurrency(expandedTotals.pipelineValue)}{" "}
                                   kr
                                 </td>
@@ -580,35 +613,32 @@ export default function AdminDashboard() {
                             {isOpen && (
                               <>
                                 {/* Inbound sources (google / facebook / organic) */}
-                                <tr className="bg-gray-50">
+                                <tr className="hover:!bg-transparent">
                                   <td
                                     colSpan={6}
-                                    className="px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-300"
+                                    className="!bg-gray-50/70 !py-1.5 !pl-5 sk-eyebrow"
                                   >
                                     Inbound kilder
                                   </td>
                                 </tr>
                                 {inboundSources.map((row) => (
-                                  <tr
-                                    key={row.key}
-                                    className="border-t border-gray-50 hover:bg-gray-50 transition-colors"
-                                  >
-                                    <td className="px-5 py-2 font-medium text-gray-700">
+                                  <tr key={row.key}>
+                                    <td className="!pl-5 font-medium !text-ink">
                                       {row.label}
                                     </td>
-                                    <td className="text-right px-3 py-2 text-blue-600 font-medium">
+                                    <td className="text-right font-semibold tabular-nums !text-blue-600">
                                       {row.stats.qualifiedInPeriod}
                                     </td>
-                                    <td className="text-right px-3 py-2 text-red-500">
+                                    <td className="text-right tabular-nums !text-red-600">
                                       {row.stats.lostInPeriod}
                                     </td>
-                                    <td className="text-right px-3 py-2 text-emerald-600 font-medium">
+                                    <td className="text-right font-semibold tabular-nums !text-emerald-700">
                                       {row.stats.signedInPeriod}
                                     </td>
-                                    <td className="text-right px-3 py-2 text-emerald-700">
+                                    <td className="text-right tabular-nums">
                                       {formatCurrency(row.stats.signedValue)} kr
                                     </td>
-                                    <td className="text-right px-5 py-2 text-violet-700">
+                                    <td className="!pr-5 text-right tabular-nums">
                                       {formatCurrency(row.stats.pipelineValue)}{" "}
                                       kr
                                     </td>
@@ -617,38 +647,35 @@ export default function AdminDashboard() {
                                 {/* Cold calling — one row per caller (breakdown of the coldcall bucket) */}
                                 {group.callers.length > 0 && (
                                   <>
-                                    <tr className="bg-gray-50">
+                                    <tr className="hover:!bg-transparent">
                                       <td
                                         colSpan={6}
-                                        className="px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-300"
+                                        className="!bg-gray-50/70 !py-1.5 !pl-5 sk-eyebrow"
                                       >
                                         Cold calling — per innhenter
                                       </td>
                                     </tr>
                                     {group.callers.map((caller) => (
-                                      <tr
-                                        key={caller.userId}
-                                        className="border-t border-gray-50 hover:bg-gray-50 transition-colors"
-                                      >
-                                        <td className="px-5 py-2 font-medium text-gray-700">
+                                      <tr key={caller.userId}>
+                                        <td className="!pl-5 font-medium !text-ink">
                                           {caller.name}
                                         </td>
-                                        <td className="text-right px-3 py-2 text-blue-600 font-medium">
+                                        <td className="text-right font-semibold tabular-nums !text-blue-600">
                                           {caller.stats.qualifiedInPeriod}
                                         </td>
-                                        <td className="text-right px-3 py-2 text-red-500">
+                                        <td className="text-right tabular-nums !text-red-600">
                                           {caller.stats.lostInPeriod}
                                         </td>
-                                        <td className="text-right px-3 py-2 text-emerald-600 font-medium">
+                                        <td className="text-right font-semibold tabular-nums !text-emerald-700">
                                           {caller.stats.signedInPeriod}
                                         </td>
-                                        <td className="text-right px-3 py-2 text-emerald-700">
+                                        <td className="text-right tabular-nums">
                                           {formatCurrency(
                                             caller.stats.signedValue,
                                           )}{" "}
                                           kr
                                         </td>
-                                        <td className="text-right px-5 py-2 text-violet-700">
+                                        <td className="!pr-5 text-right tabular-nums">
                                           {formatCurrency(
                                             caller.stats.pipelineValue,
                                           )}{" "}
@@ -674,47 +701,48 @@ export default function AdminDashboard() {
             (() => {
               const pt = stats.pipelineTracking;
               return (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
                   {/* A: Tapte */}
-                  <div className="rounded-xl border border-red-100 bg-red-50 p-4 flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-red-300">
+                  <div className="sk-card relative flex flex-col gap-1.5 overflow-hidden p-5">
+                    <span className="absolute inset-x-0 top-0 h-1 bg-red-500" />
+                    <span className="sk-badge sk-badge-danger self-start">
                       A · Tapte
                     </span>
-                    <span className="text-2xl font-bold text-red-700">
+                    <span className="font-display text-3xl font-semibold tabular-nums text-ink">
                       {pt.lost}
                     </span>
-                    <span className="text-xs text-red-400">
+                    <span className="text-xs leading-relaxed text-muted">
                       {pt.notInterested} ikke interessert
                       <br />
                       {pt.newsletter} nyhetsbrev
                     </span>
                     {pt.lostByDepth && (
-                      <div className="mt-2 pt-2 border-t border-red-100 flex flex-col gap-0.5">
-                        <span className="text-[10px] font-semibold text-red-300 uppercase tracking-wider mb-1">
+                      <div className="mt-2 flex flex-col gap-1 border-t border-line pt-3">
+                        <span className="sk-eyebrow mb-0.5">
                           Hvor langt kom de?
                         </span>
                         {pt.lostByDepth.signed > 0 && (
-                          <span className="text-xs text-red-500">
+                          <span className="text-xs font-medium text-red-600">
                             {pt.lostByDepth.signed} var signert
                           </span>
                         )}
                         {pt.lostByDepth.offer > 0 && (
-                          <span className="text-xs text-red-400">
+                          <span className="text-xs text-body">
                             {pt.lostByDepth.offer} hadde tilbud
                           </span>
                         )}
                         {pt.lostByDepth.dialog > 0 && (
-                          <span className="text-xs text-red-400">
+                          <span className="text-xs text-body">
                             {pt.lostByDepth.dialog} i dialog
                           </span>
                         )}
                         {pt.lostByDepth.pipeline > 0 && (
-                          <span className="text-xs text-red-300">
+                          <span className="text-xs text-muted">
                             {pt.lostByDepth.pipeline} nådde pipeline
                           </span>
                         )}
                         {pt.lostByDepth.coldcall > 0 && (
-                          <span className="text-xs text-red-300">
+                          <span className="text-xs text-muted">
                             {pt.lostByDepth.coldcall} aldri i pipeline
                           </span>
                         )}
@@ -723,53 +751,57 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* B: Aktive i pipeline */}
-                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">
+                  <div className="sk-card relative flex flex-col gap-1.5 overflow-hidden p-5">
+                    <span className="absolute inset-x-0 top-0 h-1 bg-brand" />
+                    <span className="sk-badge sk-badge-brand self-start">
                       B · Aktive
                     </span>
-                    <span className="text-2xl font-bold text-blue-700">
+                    <span className="font-display text-3xl font-semibold tabular-nums text-ink">
                       {pt.activePipeline}
                     </span>
-                    <span className="text-xs text-blue-400">
+                    <span className="text-xs text-muted">
                       Dialog → venter på signering
                     </span>
                   </div>
 
                   {/* C: Signerte */}
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                  <div className="sk-card relative flex flex-col gap-1.5 overflow-hidden p-5">
+                    <span className="absolute inset-x-0 top-0 h-1 bg-emerald-600" />
+                    <span className="sk-badge sk-badge-success self-start">
                       C · Signert
                     </span>
-                    <span className="text-2xl font-bold text-emerald-700">
+                    <span className="font-display text-3xl font-semibold tabular-nums text-ink">
                       {pt.everSigned}
                     </span>
-                    <span className="text-xs text-emerald-400">
+                    <span className="text-xs text-muted">
                       Har hatt signert avtale
                     </span>
                   </div>
 
                   {/* D: Signert men ikke montert */}
-                  <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                  <div className="sk-card relative flex flex-col gap-1.5 overflow-hidden p-5">
+                    <span className="absolute inset-x-0 top-0 h-1 bg-accent" />
+                    <span className="sk-badge sk-badge-warning self-start">
                       D · Ikke montert
                     </span>
-                    <span className="text-2xl font-bold text-amber-700">
+                    <span className="font-display text-3xl font-semibold tabular-nums text-ink">
                       {pt.signedNotMounted}
                     </span>
-                    <span className="text-xs text-amber-400">
+                    <span className="text-xs text-muted">
                       Signert, aldri ferdigmontert
                     </span>
                   </div>
 
                   {/* E: Kommisjon utbetalt */}
-                  <div className="rounded-xl border border-green-100 bg-green-50 p-4 flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-green-300">
+                  <div className="sk-card relative flex flex-col gap-1.5 overflow-hidden p-5">
+                    <span className="absolute inset-x-0 top-0 h-1 bg-emerald-800" />
+                    <span className="sk-badge sk-badge-success self-start">
                       E · Kommisjon
                     </span>
-                    <span className="text-2xl font-bold text-green-700">
+                    <span className="font-display text-3xl font-semibold tabular-nums text-ink">
                       {pt.commissionPaid}
                     </span>
-                    <span className="text-xs text-green-400">
+                    <span className="text-xs text-muted">
                       Kommisjon utbetalt
                     </span>
                   </div>
@@ -782,16 +814,16 @@ export default function AdminDashboard() {
             {/* Cold caller distribution donut */}
             {(() => {
               const CALLER_COLORS = [
-                "#FFDB59",
-                "#69B2FF",
-                "#6DFF68",
-                "#FF8C69",
-                "#C084FC",
-                "#34D399",
-                "#F472B6",
-                "#60A5FA",
-                "#FBBF24",
-                "#A78BFA",
+                CHART.blue,
+                CHART.orange,
+                CHART.green,
+                CHART.gray,
+                "#a3c4fb",
+                "#fdd08a",
+                "#0e2c63",
+                "#7cc4a0",
+                "#c8d1dc",
+                "#b96f00",
               ];
               const callerPieData = stats.coldCallerStats.map((c, i) => ({
                 name: c.name,
@@ -808,24 +840,24 @@ export default function AdminDashboard() {
                   className="lg:col-span-2"
                 >
                   {callerPieData.length === 0 || callerTotal === 0 ? (
-                    <p className="text-sm text-gray-400 py-8 text-center">
-                      Ingen cold calling data i perioden.
-                    </p>
+                    <EmptyNote>Ingen cold calling data i perioden.</EmptyNote>
                   ) : (
-                    <div className="flex flex-col sm:flex-row gap-6 items-center">
+                    <div className="flex flex-col items-center gap-6 sm:flex-row">
                       <ResponsiveContainer width="100%" height={260}>
                         <PieChart>
                           <Pie
                             data={callerPieData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={60}
+                            innerRadius={70}
                             outerRadius={110}
+                            paddingAngle={2}
+                            cornerRadius={4}
                             dataKey="value"
                             labelLine={false}
                           >
                             {callerPieData.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} stroke="none" />
+                              <Cell key={i} fill={entry.color} stroke="#fff" strokeWidth={2} />
                             ))}
                           </Pie>
                           <Tooltip
@@ -833,9 +865,15 @@ export default function AdminDashboard() {
                               if (!active || !payload?.length) return null;
                               const d = payload[0].payload;
                               return (
-                                <div className="bg-white border border-gray-200 rounded-lg shadow p-2 text-xs">
-                                  <p className="font-semibold">{d.name}</p>
-                                  <p>
+                                <div className={TOOLTIP_CLASS}>
+                                  <p className="flex items-center gap-1.5 font-semibold text-ink">
+                                    <span
+                                      className="size-2 rounded-full"
+                                      style={{ background: d.color }}
+                                    />
+                                    {d.name}
+                                  </p>
+                                  <p className="mt-0.5 tabular-nums text-muted">
                                     {d.value} leads (
                                     {Math.round((d.value / callerTotal) * 100)}
                                     %)
@@ -846,32 +884,36 @@ export default function AdminDashboard() {
                           />
                         </PieChart>
                       </ResponsiveContainer>
-                      <div className="flex flex-col gap-2 min-w-[160px]">
+                      <div className="flex min-w-[200px] flex-col gap-1">
                         {callerPieData
                           .slice()
                           .sort((a, b) => b.value - a.value)
                           .map((d) => (
                             <div
                               key={d.name}
-                              className="flex items-center justify-between text-xs gap-4"
+                              className="flex items-center justify-between gap-4 rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-gray-50"
                             >
                               <div className="flex items-center gap-2">
-                                <div
-                                  className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                                <span
+                                  className="size-2.5 shrink-0 rounded-full"
                                   style={{ background: d.color }}
                                 />
-                                <span className="text-gray-600">{d.name}</span>
+                                <span className="text-body">{d.name}</span>
                               </div>
-                              <span className="font-semibold text-gray-800 tabular-nums">
+                              <span className="font-semibold tabular-nums text-ink">
                                 {d.value}{" "}
-                                <span className="font-normal text-gray-400">
+                                <span className="font-normal text-muted">
                                   ({Math.round((d.value / callerTotal) * 100)}%)
                                 </span>
                               </span>
                             </div>
                           ))}
-                        <p className="text-[10px] text-gray-300 mt-1">
-                          Totalt: {callerTotal} leads
+                        <p className="mt-2 border-t border-line px-2 pt-2 text-xs text-muted">
+                          Totalt:{" "}
+                          <span className="font-semibold tabular-nums text-ink">
+                            {callerTotal}
+                          </span>{" "}
+                          leads
                         </p>
                       </div>
                     </div>
@@ -883,9 +925,7 @@ export default function AdminDashboard() {
             {/* Source distribution pie */}
             <Card title="Status-Pipeline fordeling">
               {pieData.length === 0 ? (
-                <p className="text-sm text-gray-400 py-8 text-center">
-                  Ingen leads.
-                </p>
+                <EmptyNote>Ingen leads.</EmptyNote>
               ) : (
                 <div className="flex flex-col gap-4">
                   <ResponsiveContainer width="100%" height={180}>
@@ -894,12 +934,15 @@ export default function AdminDashboard() {
                         data={pieData}
                         cx="50%"
                         cy="50%"
+                        innerRadius={48}
                         outerRadius={80}
+                        paddingAngle={2}
+                        cornerRadius={4}
                         dataKey="value"
                         labelLine={false}
                       >
                         {pieData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} stroke="none" />
+                          <Cell key={i} fill={entry.color} stroke="#fff" strokeWidth={2} />
                         ))}
                       </Pie>
                       <Tooltip
@@ -911,9 +954,15 @@ export default function AdminDashboard() {
                             0,
                           );
                           return (
-                            <div className="bg-white border border-gray-200 rounded-lg shadow p-2 text-xs">
-                              <p className="font-semibold">{d.name}</p>
-                              <p>
+                            <div className={TOOLTIP_CLASS}>
+                              <p className="flex items-center gap-1.5 font-semibold text-ink">
+                                <span
+                                  className="size-2 rounded-full"
+                                  style={{ background: d.color }}
+                                />
+                                {d.name}
+                              </p>
+                              <p className="mt-0.5 tabular-nums text-muted">
                                 {d.value} leads (
                                 {Math.round((d.value / total) * 100)}%)
                               </p>
@@ -924,23 +973,26 @@ export default function AdminDashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                   {/* Legend */}
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-1">
                     {pieData.map((d) => {
                       const total = pieData.reduce((s, x) => s + x.value, 0);
                       return (
                         <div
                           key={d.name}
-                          className="flex items-center justify-between text-xs"
+                          className="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-gray-50"
                         >
                           <div className="flex items-center gap-2">
-                            <div
-                              className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                            <span
+                              className="size-2.5 shrink-0 rounded-full"
                               style={{ background: d.color }}
                             />
-                            <span className="text-gray-600">{d.name}</span>
+                            <span className="text-body">{d.name}</span>
                           </div>
-                          <span className="font-medium text-gray-800">
-                            {d.value} ({Math.round((d.value / total) * 100)}%)
+                          <span className="font-semibold tabular-nums text-ink">
+                            {d.value}{" "}
+                            <span className="font-normal text-muted">
+                              ({Math.round((d.value / total) * 100)}%)
+                            </span>
                           </span>
                         </div>
                       );
@@ -952,41 +1004,45 @@ export default function AdminDashboard() {
           </div>
 
           {/* Row 2: Cold-caller leaderboard + Bottlenecks + Installer groups */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Cold-caller leaderboard */}
             <Card title="Cold-caller ytelse">
               {stats.coldCallerStats.length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">
-                  Ingen data.
-                </p>
+                <EmptyNote>Ingen data.</EmptyNote>
               ) : (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-5">
                   {stats.coldCallerStats.map((caller, i) => (
                     <div
                       key={caller.name + i}
-                      className="flex flex-col gap-1.5"
+                      className="flex flex-col gap-2"
                     >
                       {/* Name row */}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-gray-300 w-4">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={`flex size-6 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${
+                              i === 0
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-gray-100 text-muted"
+                            }`}
+                          >
                             {i + 1}
                           </span>
-                          <span className="text-sm font-medium text-gray-800 truncate max-w-[120px]">
+                          <span className="max-w-[120px] truncate text-sm font-semibold text-ink">
                             {caller.name}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-400">
+                          <span className="tabular-nums text-muted">
                             {caller.called} totalt
                           </span>
                           <span
-                            className={`font-semibold px-1.5 py-0.5 rounded ${
+                            className={`sk-badge tabular-nums ${
                               caller.conversionRate >= 20
-                                ? "bg-green-100 text-green-700"
+                                ? "sk-badge-success"
                                 : caller.conversionRate >= 10
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-50 text-red-600"
+                                  ? "sk-badge-warning"
+                                  : "sk-badge-danger"
                             }`}
                           >
                             {caller.conversionRate}%
@@ -994,23 +1050,23 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       {/* Progress bar: converted / not interested / no answer / not called */}
-                      <div className="flex h-2 rounded-full overflow-hidden bg-gray-100">
+                      <div className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-gray-100">
                         <div
-                          className="bg-green-400 h-full"
+                          className="h-full rounded-full bg-emerald-600"
                           style={{
                             width: `${(caller.converted / caller.assigned) * 100}%`,
                           }}
                           title={`${caller.converted} konvertert`}
                         />
                         <div
-                          className="bg-red-300 h-full"
+                          className="h-full rounded-full bg-red-400"
                           style={{
                             width: `${(caller.notInterested / caller.assigned) * 100}%`,
                           }}
                           title={`${caller.notInterested} ikke interessert`}
                         />
                         <div
-                          className="bg-slate-300 h-full"
+                          className="h-full rounded-full bg-gray-300"
                           style={{
                             width: `${(caller.other / caller.assigned) * 100}%`,
                           }}
@@ -1018,23 +1074,27 @@ export default function AdminDashboard() {
                         />
                       </div>
                       {/* Results row */}
-                      <div className="flex gap-3 text-xs text-gray-400">
-                        <span className="text-green-600">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-muted">
+                        <span className="flex items-center gap-1">
+                          <span className="size-1.5 rounded-full bg-emerald-600" />
                           {caller.converted} konvertert
                         </span>
-                        <span className="text-red-400">
+                        <span className="flex items-center gap-1">
+                          <span className="size-1.5 rounded-full bg-red-400" />
                           {caller.notInterested} ikke int.
                         </span>
-                        <span className="text-yellow-500">
+                        <span className="flex items-center gap-1">
+                          <span className="size-1.5 rounded-full bg-accent" />
                           {caller.noAnswer} ingen svar
                         </span>
-                        <span className="text-slate-400">
+                        <span className="flex items-center gap-1">
+                          <span className="size-1.5 rounded-full bg-gray-300" />
                           {caller.other} annet
                         </span>
                       </div>
                     </div>
                   ))}
-                  <p className="text-xs text-gray-300 mt-1">
+                  <p className="border-t border-line pt-3 text-xs text-muted">
                     % = konvertert av tildelte nummer
                   </p>
                 </div>
@@ -1044,11 +1104,9 @@ export default function AdminDashboard() {
             {/* Cold leads per installer group, ranked by signed rate */}
             <Card title="Kalde leads — per installatørgruppe">
               {(stats.coldInstallerGroupStats ?? []).length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">
-                  Ingen data.
-                </p>
+                <EmptyNote>Ingen data.</EmptyNote>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   {stats.coldInstallerGroupStats.map((g) => {
                     const rate = g.signedRate ?? 0;
                     const maxRate = Math.max(
@@ -1060,20 +1118,20 @@ export default function AdminDashboard() {
                     return (
                       <div key={g.name} className="flex flex-col gap-1.5">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-gray-800 truncate max-w-[140px]">
+                          <span className="max-w-[140px] truncate text-sm font-semibold text-ink">
                             {g.name}
                           </span>
-                          <span className="font-semibold text-emerald-600">
+                          <span className="sk-badge sk-badge-success tabular-nums">
                             {rate}% signert
                           </span>
                         </div>
-                        <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                           <div
-                            className="h-full rounded-full bg-blue-400 transition-all"
+                            className="h-full rounded-full bg-gradient-to-r from-blue-400 to-brand transition-all duration-500"
                             style={{ width: `${(rate / maxRate) * 100}%` }}
                           />
                         </div>
-                        <div className="flex gap-3 text-xs text-gray-400">
+                        <div className="flex gap-3 text-xs tabular-nums text-muted">
                           <span>
                             {g.total} leads · {g.signed} signert
                           </span>
@@ -1091,11 +1149,9 @@ export default function AdminDashboard() {
             {/* Warm leads per installer group, ranked by signed rate */}
             <Card title="Varme leads — per installatørgruppe">
               {(stats.warmInstallerGroupStats ?? []).length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">
-                  Ingen data.
-                </p>
+                <EmptyNote>Ingen data.</EmptyNote>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   {stats.warmInstallerGroupStats.map((g) => {
                     const rate = g.signedRate ?? 0;
                     const maxRate = Math.max(
@@ -1107,20 +1163,20 @@ export default function AdminDashboard() {
                     return (
                       <div key={g.name} className="flex flex-col gap-1.5">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-gray-800 truncate max-w-[140px]">
+                          <span className="max-w-[140px] truncate text-sm font-semibold text-ink">
                             {g.name}
                           </span>
-                          <span className="font-semibold text-emerald-600">
+                          <span className="sk-badge sk-badge-success tabular-nums">
                             {rate}% signert
                           </span>
                         </div>
-                        <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                           <div
-                            className="h-full rounded-full bg-blue-400 transition-all"
+                            className="h-full rounded-full bg-gradient-to-r from-blue-400 to-brand transition-all duration-500"
                             style={{ width: `${(rate / maxRate) * 100}%` }}
                           />
                         </div>
-                        <div className="flex gap-3 text-xs text-gray-400">
+                        <div className="flex gap-3 text-xs tabular-nums text-muted">
                           <span>
                             {g.total} leads · {g.signed} signert
                           </span>
@@ -1139,35 +1195,36 @@ export default function AdminDashboard() {
           {/* Row 3: Inbound / warm leads */}
           <Card title="Varme leads — trafikkkilder">
             {stats.inboundStats.every((s) => s.assigned === 0) ? (
-              <p className="text-sm text-gray-400 py-4 text-center">
-                Ingen inbound leads i perioden.
-              </p>
+              <EmptyNote>Ingen inbound leads i perioden.</EmptyNote>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {stats.inboundStats.map((src) => (
-                  <div key={src.source} className="flex flex-col gap-1.5">
+                  <div
+                    key={src.source}
+                    className="flex flex-col gap-2.5 rounded-xl border border-line bg-gray-50/60 p-4"
+                  >
                     {/* Source header */}
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-gray-800">
+                      <span className="text-sm font-semibold text-ink">
                         {src.label}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="sk-badge sk-badge-neutral tabular-nums">
                         {src.assigned} totalt
                       </span>
                     </div>
                     {/* Progress bar: signert (grønn) / tapt (rød) */}
-                    <div className="flex gap-0.5 h-2 rounded-full overflow-hidden bg-gray-100">
+                    <div className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-gray-200/70">
                       {src.assigned > 0 && (
                         <>
                           <div
-                            className="bg-green-400 h-full"
+                            className="h-full rounded-full bg-emerald-600"
                             style={{
                               width: `${(src.signed / src.assigned) * 100}%`,
                             }}
                             title={`${src.signed} signert`}
                           />
                           <div
-                            className="bg-red-300 h-full"
+                            className="h-full rounded-full bg-red-400"
                             style={{
                               width: `${(src.lost / src.assigned) * 100}%`,
                             }}
@@ -1177,23 +1234,25 @@ export default function AdminDashboard() {
                       )}
                     </div>
                     {/* Results */}
-                    <div className="flex gap-3 text-xs text-gray-400">
-                      <span className="text-gray-600">
-                        {src.assigned} antall
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-muted">
+                      <span className="text-body">{src.assigned} antall</span>
+                      <span className="flex items-center gap-1">
+                        <span className="size-1.5 rounded-full bg-red-400" />
+                        {src.lost} tapt
                       </span>
-                      <span className="text-red-400">{src.lost} tapt</span>
-                      <span className="text-green-600">
+                      <span className="flex items-center gap-1">
+                        <span className="size-1.5 rounded-full bg-emerald-600" />
                         {src.signed} signert
                       </span>
                     </div>
                     {src.assigned === 0 && (
-                      <p className="text-xs text-gray-300">Ingen leads</p>
+                      <p className="text-xs text-muted">Ingen leads</p>
                     )}
                   </div>
                 ))}
               </div>
             )}
-            <p className="text-xs text-gray-300 mt-4">
+            <p className="mt-4 text-xs text-muted">
               Tapt = Ikke interessert + Nyhetsbrev · Kilde bestemt av
               fbclid/gclid i merknaden
             </p>
@@ -1206,26 +1265,26 @@ export default function AdminDashboard() {
                 {
                   key: "facebook" as const,
                   label: "Facebook",
-                  color: "bg-blue-50 text-blue-800",
-                  bar: "bg-blue-400",
+                  color: "bg-[#a3c4fb]",
+                  bar: "bg-[#a3c4fb]",
                 },
                 {
                   key: "google" as const,
                   label: "Google",
-                  color: "bg-sky-50 text-sky-800",
-                  bar: "bg-sky-400",
+                  color: "bg-brand",
+                  bar: "bg-brand",
                 },
                 {
                   key: "organic" as const,
                   label: "Organic",
-                  color: "bg-emerald-50 text-emerald-800",
-                  bar: "bg-emerald-400",
+                  color: "bg-[#10874b]",
+                  bar: "bg-[#10874b]",
                 },
                 {
                   key: "coldcall" as const,
                   label: "Cold calling",
-                  color: "bg-yellow-50 text-yellow-800",
-                  bar: "bg-yellow-400",
+                  color: "bg-accent",
+                  bar: "bg-accent",
                 },
               ];
 
@@ -1278,7 +1337,7 @@ export default function AdminDashboard() {
               return (
                 <Card title="Signert verdi per trafikkilde">
                   {/* Total summary pills */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                  <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
                     {SOURCE_DEF.map((s) => {
                       const d = vbs[s.key];
                       const pct =
@@ -1288,21 +1347,24 @@ export default function AdminDashboard() {
                       return (
                         <div
                           key={s.key}
-                          className={`rounded-lg px-4 py-3 flex flex-col gap-1 ${s.color}`}
+                          className="flex flex-col gap-1.5 rounded-xl border border-line bg-gray-50/60 p-4"
                         >
-                          <span className="text-xs font-semibold opacity-60 uppercase tracking-wider">
+                          <span className="flex items-center gap-1.5 sk-eyebrow">
+                            <span
+                              className={`size-2 rounded-full ${s.color}`}
+                            />
                             {s.label}
                           </span>
-                          <span className="text-lg font-bold">
+                          <span className="font-display text-xl font-semibold tabular-nums text-ink">
                             {formatCurrency(d.signedValue)} kr
                           </span>
-                          <span className="text-xs opacity-70">
+                          <span className="text-xs tabular-nums text-muted">
                             {d.signedCount} salg · {pct}% av total
                           </span>
                           {/* Value bar relative to max source */}
-                          <div className="h-1 rounded-full bg-black/10 mt-1 overflow-hidden">
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-200/70">
                             <div
-                              className={`h-full rounded-full ${s.bar}`}
+                              className={`h-full rounded-full ${s.bar} transition-all duration-500`}
                               style={{
                                 width: `${(d.signedValue / maxValue) * 100}%`,
                               }}
@@ -1314,45 +1376,35 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Total row */}
-                  <div className="flex items-center justify-between px-1 mb-3 text-xs text-gray-400">
-                    <span className="font-semibold text-gray-600">
+                  <div className="mb-4 flex items-center justify-between rounded-xl bg-brand-soft px-4 py-3 text-sm">
+                    <span className="font-semibold text-body">
                       Totalt alle kilder
                     </span>
-                    <span className="font-bold text-gray-800">
+                    <span className="font-semibold tabular-nums text-ink">
                       {formatCurrency(totalValue)} kr · {totalCount} salg
                     </span>
                   </div>
 
                   {/* Per-installer table */}
                   {installerRows.length > 0 && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
+                    <div className="overflow-x-auto rounded-xl border border-line">
+                      <table className="sk-table">
                         <thead>
-                          <tr className="border-b border-gray-100 text-gray-400 uppercase tracking-wider">
-                            <th className="text-left px-0 py-2 font-semibold w-40">
-                              Installatør
-                            </th>
+                          <tr>
+                            <th className="w-48 !pl-4">Installatør</th>
                             {SOURCE_DEF.map((s) => (
-                              <th
-                                key={s.key}
-                                className="text-right px-3 py-2 font-semibold"
-                              >
+                              <th key={s.key} className="!text-right">
                                 {s.label}
                               </th>
                             ))}
-                            <th className="text-right px-0 py-2 font-semibold">
-                              Totalt
-                            </th>
+                            <th className="!pr-4 !text-right">Totalt</th>
                           </tr>
                         </thead>
                         <tbody>
                           {installerRows.map(
                             ({ group, bySource, rowTotal, rowCount }) => (
-                              <tr
-                                key={group.id}
-                                className="border-t border-gray-50 hover:bg-gray-50 transition-colors"
-                              >
-                                <td className="px-0 py-2 font-medium text-gray-700 truncate max-w-[140px]">
+                              <tr key={group.id}>
+                                <td className="max-w-[140px] truncate !pl-4 font-medium !text-ink">
                                   {group.name}
                                 </td>
                                 {SOURCE_DEF.map((s) => {
@@ -1360,33 +1412,35 @@ export default function AdminDashboard() {
                                   return (
                                     <td
                                       key={s.key}
-                                      className="text-right px-3 py-2 text-gray-600"
+                                      className="text-right tabular-nums"
                                     >
                                       {d && d.value > 0 ? (
                                         <>
-                                          <span className="font-medium">
+                                          <span className="font-medium text-ink">
                                             {formatCurrency(d.value)} kr
                                           </span>
-                                          <span className="text-gray-400 ml-1">
+                                          <span className="ml-1 text-muted">
                                             ({d.count})
                                           </span>
                                         </>
                                       ) : (
-                                        <span className="text-gray-200">—</span>
+                                        <span className="text-gray-300">—</span>
                                       )}
                                     </td>
                                   );
                                 })}
-                                <td className="text-right px-0 py-2 font-semibold text-gray-800">
+                                <td className="!pr-4 text-right font-semibold tabular-nums !text-ink">
                                   {rowTotal > 0 ? (
                                     <>
                                       {formatCurrency(rowTotal)} kr
-                                      <span className="text-gray-400 font-normal ml-1">
+                                      <span className="ml-1 font-normal text-muted">
                                         ({rowCount})
                                       </span>
                                     </>
                                   ) : (
-                                    <span className="text-gray-200">—</span>
+                                    <span className="font-normal text-gray-300">
+                                      —
+                                    </span>
                                   )}
                                 </td>
                               </tr>
@@ -1396,7 +1450,7 @@ export default function AdminDashboard() {
                       </table>
                     </div>
                   )}
-                  <p className="text-xs text-gray-300 mt-4">
+                  <p className="mt-4 text-xs text-muted">
                     Kilde bestemt av fbclid/gclid i merknad · Periodefiltrert
                     (samme som tidsvalg over)
                   </p>
@@ -1420,17 +1474,15 @@ export default function AdminDashboard() {
             );
             return (
               <Card title="Signerte avtaler per måned">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-                  <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <div className="sk-tabs">
                     {years.map((y) => (
                       <button
                         key={y}
                         onClick={() => setSignedYear(y)}
                         disabled={signedYearLoading}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                          signedYear === y
-                            ? "bg-white shadow-sm text-gray-900"
-                            : "text-gray-500 hover:text-gray-700"
+                        className={`sk-tab !text-xs tabular-nums disabled:cursor-not-allowed disabled:opacity-50 ${
+                          signedYear === y ? "sk-tab-active" : ""
                         }`}
                       >
                         {y}
@@ -1438,55 +1490,95 @@ export default function AdminDashboard() {
                     ))}
                   </div>
                   <div className="flex gap-5 text-xs">
-                    <span className="text-emerald-600 font-semibold">
-                      {totalCount} salg totalt
+                    <span className="flex items-center gap-1.5 font-medium text-body">
+                      <span
+                        className="size-2.5 rounded-sm"
+                        style={{ background: CHART.blue }}
+                      />
+                      <span className="tabular-nums">
+                        {totalCount} salg totalt
+                      </span>
                     </span>
-                    <span className="text-violet-600 font-semibold">
-                      {formatCurrency(totalValueK * 1000)} kr totalt
+                    <span className="flex items-center gap-1.5 font-medium text-body">
+                      <span
+                        className="size-2.5 rounded-sm"
+                        style={{ background: CHART.orange }}
+                      />
+                      <span className="tabular-nums">
+                        {formatCurrency(totalValueK * 1000)} kr totalt
+                      </span>
                     </span>
                   </div>
                 </div>
                 <div className="relative">
                   {signedYearLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-lg z-10">
-                      <span className="text-sm text-gray-400">Laster...</span>
+                    <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-lg bg-white/70 backdrop-blur-[1px]">
+                      <Loader2 size={16} className="animate-spin text-brand" />
+                      <span className="text-sm text-muted">Laster...</span>
                     </div>
                   )}
-                  <ResponsiveContainer width="100%" height={220}>
+                  <ResponsiveContainer width="100%" height={240}>
                     <BarChart
                       data={signedYearData}
-                      margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                      margin={{ top: 8, right: 4, left: -8, bottom: 0 }}
+                      barGap={4}
+                      barCategoryGap="22%"
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <CartesianGrid
+                        stroke={CHART.grid}
+                        vertical={false}
+                      />
                       <XAxis
                         dataKey="label"
-                        tick={{ fontSize: 11, fill: "#9ca3af" }}
+                        tick={{ fontSize: 11, fill: CHART.tick }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={6}
                       />
                       <YAxis
                         yAxisId="left"
-                        tick={{ fontSize: 11, fill: "#9ca3af" }}
+                        tick={{ fontSize: 11, fill: CHART.tick }}
+                        axisLine={false}
+                        tickLine={false}
                         allowDecimals={false}
                       />
                       <YAxis
                         yAxisId="right"
                         orientation="right"
-                        tick={{ fontSize: 11, fill: "#9ca3af" }}
+                        tick={{ fontSize: 11, fill: CHART.tick }}
+                        axisLine={false}
+                        tickLine={false}
                         tickFormatter={(v) => `${v}k`}
                       />
                       <Tooltip
+                        cursor={{ fill: "#f1f6ff", radius: 6 }}
                         content={({ active, payload, label }) => {
                           if (!active || !payload?.length) return null;
                           return (
-                            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs">
-                              <p className="font-semibold text-gray-800 mb-1">
+                            <div className={TOOLTIP_CLASS}>
+                              <p className="mb-1.5 font-semibold text-ink">
                                 {label}
                               </p>
-                              <p className="text-emerald-600">
-                                Avtaler: {payload[0]?.value}
+                              <p className="flex items-center gap-1.5 tabular-nums text-body">
+                                <span
+                                  className="size-2 rounded-sm"
+                                  style={{ background: CHART.blue }}
+                                />
+                                Avtaler:{" "}
+                                <span className="font-semibold text-ink">
+                                  {payload[0]?.value}
+                                </span>
                               </p>
                               {(payload[1]?.value as number) > 0 && (
-                                <p className="text-violet-600">
-                                  Verdi: {payload[1]?.value}k kr
+                                <p className="mt-0.5 flex items-center gap-1.5 tabular-nums text-body">
+                                  <span
+                                    className="size-2 rounded-sm"
+                                    style={{ background: CHART.orange }}
+                                  />
+                                  Verdi:{" "}
+                                  <span className="font-semibold text-ink">
+                                    {payload[1]?.value}k kr
+                                  </span>
                                 </p>
                               )}
                             </div>
@@ -1497,33 +1589,31 @@ export default function AdminDashboard() {
                         yAxisId="left"
                         dataKey="count"
                         name="Signerte"
-                        fill="#6ee7b7"
-                        radius={[3, 3, 0, 0]}
+                        fill={CHART.blue}
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={22}
                       />
                       <Bar
                         yAxisId="right"
                         dataKey="valueK"
                         name="Verdi (k)"
-                        fill="#c4b5fd"
-                        radius={[3, 3, 0, 0]}
+                        fill={CHART.orange}
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={22}
                       />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex gap-8 mt-4 pt-4 border-t border-gray-100">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                      Totalt antall salg
-                    </span>
-                    <span className="text-2xl font-bold text-emerald-700">
+                <div className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-5 sm:max-w-md">
+                  <div className="flex flex-col gap-1">
+                    <span className="sk-eyebrow">Totalt antall salg</span>
+                    <span className="font-display text-2xl font-semibold tabular-nums text-ink">
                       {totalCount}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                      Total verdi
-                    </span>
-                    <span className="text-2xl font-bold text-violet-700">
+                  <div className="flex flex-col gap-1">
+                    <span className="sk-eyebrow">Total verdi</span>
+                    <span className="font-display text-2xl font-semibold tabular-nums text-ink">
                       {formatCurrency(totalValueK * 1000)} kr
                     </span>
                   </div>

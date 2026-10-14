@@ -20,6 +20,7 @@ import { ElectricalInstallationItem } from "../supplier/Table";
 import { SolarData } from "../../SolarDataView";
 import { supabase } from "@/lib/supabase";
 import { ThreeWayCells } from "../ThreeWayCells";
+import { FileText, Plus, X } from "lucide-react";
 
 interface CalculationSheetProps {
   calculatorState: CalculatorState;
@@ -661,419 +662,468 @@ export default function CalculationSheet({
     url.split("/").pop()?.replace(/^\d+-/, "") ?? "";
 
   return (
-    <div className="mt-8 border rounded-lg bg-white shadow p-4">
-      <h3 className="text-lg font-medium mb-3">PRISOVERSIKT</h3>
-      {finished && (
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-sm text-gray-600">Simulerings-PDF:</span>
-          {simulationPdfUrl ? (
-            <div className="flex items-center gap-1">
-              <a
-                href={simulationPdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline text-sm"
-              >
-                {getFileName(simulationPdfUrl)}
-              </a>
-              <button
-                onClick={handleRemoveSimulationPdf}
-                className="text-red-400 hover:text-red-600 font-bold text-sm"
-                title="Fjern PDF"
-              >
-                ×
-              </button>
-            </div>
-          ) : (
-            <input
-              type="file"
-              className="text-xs"
-              onChange={(e) =>
-                e.target.files && handleSimulationPdfUpload(e.target.files[0])
-              }
-            />
-          )}
-        </div>
-      )}
-      <table className="w-full text-sm">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="p-2 text-left">Navn</th>
-            <th className="p-2 text-left">Antall</th>
-            <th className="p-2 text-right">Kostnad eks. mva</th>
-            <th className="p-2 text-right">Påslag %</th>
-            <th className="p-2 text-right">Total eks. mva</th>
-            {finished && <th className="p-2 text-left">Vedlegg</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {/* ── LEVERANDØRER ── */}
-          <tr>
-            <td colSpan={finished ? 6 : 5}>
-              <h2 className="p-1 font-bold">LEVERANDØRER</h2>
-            </td>
-          </tr>
-          {supplierItems.map((item) => {
-            const defaultMarkup = getCategoryMarkup(item.category || "");
-            const displayValue = `${item.name} - ${item.product}`;
-            return (
-              <tr key={item.id}>
-                <td className="p-2 flex flex-row items-center gap-1">
-                  <textarea
-                    value={getFinalText(item.id, displayValue)}
-                    onChange={(e) =>
-                      setTextOverrides((prev) => ({
-                        ...prev,
-                        [item.id]: e.target.value,
-                      }))
-                    }
-                    className="w-full bg-gray-100 p-1 border border-gray-200"
-                  />
-                  <p>-</p>
-                  <p>{item.supplier}</p>
-                </td>
-                <td className="p-2 text-right">{item.quantity} stk.</td>
-                <ThreeWayCells
-                  itemId={item.id}
-                  defaultCost={item.price}
-                  defaultMarkup={defaultMarkup}
-                  priceOverrides={priceOverrides}
-                  markupOverrides={markupOverrides}
-                  onCostChange={handleCostChange}
-                  onMarkupChange={handleMarkupChange}
-                  onTotalChange={handleTotalChange}
-                  finished={finished}
-                  showAttachment={true}
-                  attachments={attachments}
-                  onRemoveAttachment={handleRemoveAttachment}
-                  onFileUpload={handleFileUpload}
-                />
-              </tr>
-            );
-          })}
-          <tr className="text-gray-600">
-            <td colSpan={finished ? 5 : 4} className="p-2">
-              Total leverandør påslag
-            </td>
-            <td className="p-2 text-right">
-              {totalSupplierMarkup.toFixed(0)} kr
-            </td>
-          </tr>
-
-          {/* ── MONTERING ── */}
-          <tr>
-            <td colSpan={finished ? 6 : 5}>
-              <h2 className="p-1 font-bold">MONTERING</h2>
-            </td>
-          </tr>
-          {mountingItems.map((item) => {
-            const defaultMarkup = getCategoryMarkup(item.category || "");
-            const defaultText = `Paneler og fester for ${solarData?.selectedRoofType ?? ""}`;
-            return (
-              <tr key={item.id}>
-                <td className="p-2">
-                  <textarea
-                    value={getFinalText(item.id, defaultText)}
-                    onChange={(e) =>
-                      setTextOverrides((prev) => ({
-                        ...prev,
-                        [item.id]: e.target.value,
-                      }))
-                    }
-                    className="w-full bg-gray-100 p-1 border border-gray-200"
-                  />
-                </td>
-                <td className="p-2 text-right">{item.quantity} stk.</td>
-                <ThreeWayCells
-                  itemId={item.id}
-                  defaultCost={item.price}
-                  defaultMarkup={defaultMarkup}
-                  showAttachment={true}
-                  priceOverrides={priceOverrides}
-                  markupOverrides={markupOverrides}
-                  onCostChange={handleCostChange}
-                  onMarkupChange={handleMarkupChange}
-                  onTotalChange={handleTotalChange}
-                  finished={finished}
-                  attachments={attachments}
-                  onRemoveAttachment={handleRemoveAttachment}
-                  onFileUpload={handleFileUpload}
-                />
-              </tr>
-            );
-          })}
-          {reductionAmount > 0 && (
-            <tr className="text-gray-600">
-              <td colSpan={finished ? 5 : 4} className="p-2">
-                Volumreduksjon ({reductionPercentage}%)
-              </td>
-              <td className="p-2 text-right">
-                -{reductionAmount.toFixed(0)} kr
-              </td>
-            </tr>
-          )}
-          <tr className="text-gray-600">
-            <td colSpan={finished ? 5 : 4} className="p-2">
-              Total montering påslag
-            </td>
-            <td className="p-2 text-right">
-              {totalMountingMarkup.toFixed(0)} kr
-            </td>
-          </tr>
-
-          {/* ── INSTALLASJON ── */}
-          <tr>
-            <td colSpan={finished ? 6 : 5}>
-              <h2 className="p-1 font-bold">INSTALLASJON</h2>
-            </td>
-          </tr>
-          {søknadTotal > 0 && (
-            <tr>
-              <td className="p-2">Søknad</td>
-              <td className="p-2 text-right">1 stk.</td>
-              <ThreeWayCells
-                itemId="søknad"
-                defaultCost={søknadTotal}
-                defaultMarkup={electricalMarkupDefault}
-                showAttachment={true}
-                priceOverrides={priceOverrides}
-                markupOverrides={markupOverrides}
-                onCostChange={handleCostChange}
-                onMarkupChange={handleMarkupChange}
-                onTotalChange={handleTotalChange}
-                finished={finished}
-                attachments={attachments}
-                onRemoveAttachment={handleRemoveAttachment}
-                onFileUpload={handleFileUpload}
-              />
-            </tr>
-          )}
-          {inverterCount > 0 && (
-            <tr>
-              <td className="p-2">Solcelleanlegg - arbeid per inverter</td>
-              <td className="p-2 text-right">{inverterCount} stk.</td>
-              <ThreeWayCells
-                itemId="solcelle_anlegg"
-                defaultCost={solcelleAnleggBaseTotal * inverterCount}
-                defaultMarkup={electricalMarkupDefault}
-                showAttachment={true}
-                priceOverrides={priceOverrides}
-                markupOverrides={markupOverrides}
-                onCostChange={handleCostChange}
-                onMarkupChange={handleMarkupChange}
-                onTotalChange={handleTotalChange}
-                finished={finished}
-                attachments={attachments}
-                onRemoveAttachment={handleRemoveAttachment}
-                onFileUpload={handleFileUpload}
-              />
-            </tr>
-          )}
-          {batteryCount > 0 && (
-            <tr>
-              <td className="p-2">
-                Batteri{" "}
-                <select
-                  className="ml-2 border rounded p-1"
-                  value={selectedBatteryId || ""}
-                  onChange={(e) => setSelectedBatteryId(e.target.value)}
-                >
-                  <option value="">Arbeidsmetode</option>
-                  {batteryOptions.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({(b.price_per || 0).toFixed(0)} kr)
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td className="p-2 text-right">{batteryCount} stk.</td>
-              <ThreeWayCells
-                itemId="batteri"
-                defaultCost={batteryBasePrice * batteryCount}
-                defaultMarkup={electricalMarkupDefault}
-                showAttachment={true}
-                priceOverrides={priceOverrides}
-                markupOverrides={markupOverrides}
-                onCostChange={handleCostChange}
-                onMarkupChange={handleMarkupChange}
-                onTotalChange={handleTotalChange}
-                finished={finished}
-                attachments={attachments}
-                onRemoveAttachment={handleRemoveAttachment}
-                onFileUpload={handleFileUpload}
-              />
-            </tr>
-          )}
-          {additionalCosts.map((ac, index) => {
-            const selectedItem = additionalCostOptions.find(
-              (i) => i.id === ac.id,
-            );
-            const base = selectedItem?.price_per || 0;
-            const overrideId = `additional_${index}`;
-            return (
-              <tr key={index}>
-                <td>
+    <div className="flex flex-col gap-4">
+      <div className="overflow-hidden rounded-xl border border-line bg-surface">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-gray-50/60 px-3 py-2.5">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+            PRISOVERSIKT
+          </h3>
+          {finished && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted">
+                Simulerings-PDF:
+              </span>
+              {simulationPdfUrl ? (
+                <div className="flex items-center gap-1 rounded-md border border-line bg-white py-0.5 pl-2 pr-0.5">
+                  <FileText size={13} className="text-brand" />
+                  <a
+                    href={simulationPdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="max-w-48 truncate text-xs font-medium text-brand hover:underline"
+                  >
+                    {getFileName(simulationPdfUrl)}
+                  </a>
                   <button
-                    onClick={() => handleRemoveAdditionalCost(index)}
-                    className="pr-2 py-2 text-slate-500 hover:text-red-500 font-bold"
+                    onClick={handleRemoveSimulationPdf}
+                    className="inline-flex size-5 items-center justify-center rounded text-muted hover:bg-red-50 hover:text-red-600"
+                    title="Fjern PDF"
                   >
-                    ×
+                    <X size={12} />
                   </button>
-                  <select
-                    className="border rounded p-1"
-                    value={ac.id}
-                    onChange={(e) =>
-                      handleUpdateAdditionalCost(index, "id", e.target.value)
-                    }
-                  >
-                    <option value="">Velg tilleggskostnad</option>
-                    {additionalCostOptions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} ({(item.price_per || 0).toFixed(0)} kr)
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="p-2">
-                  <input
-                    type="number"
-                    min="1"
-                    value={ac.quantity}
-                    onChange={(e) =>
-                      handleUpdateAdditionalCost(
-                        index,
-                        "quantity",
-                        Number(e.target.value),
-                      )
-                    }
-                    className="w-18 border rounded p-1 text-left"
-                  />
-                </td>
-                <ThreeWayCells
-                  itemId={overrideId}
-                  defaultCost={base * ac.quantity}
-                  defaultMarkup={electricalMarkupDefault}
-                  showAttachment={true}
-                  priceOverrides={priceOverrides}
-                  markupOverrides={markupOverrides}
-                  onCostChange={handleCostChange}
-                  onMarkupChange={handleMarkupChange}
-                  onTotalChange={handleTotalChange}
-                  finished={finished}
-                  attachments={attachments}
-                  onRemoveAttachment={handleRemoveAttachment}
-                  onFileUpload={handleFileUpload}
-                />
-              </tr>
-            );
-          })}
-          <tr>
-            <td colSpan={finished ? 6 : 5}>
-              <button
-                onClick={handleAddAdditionalCost}
-                className="text-red-500 p-2"
-              >
-                Legg til tilleggskostnader
-              </button>
-            </td>
-          </tr>
-          <tr className="text-gray-600">
-            <td colSpan={finished ? 5 : 4} className="p-2">
-              Total installasjon påslag
-            </td>
-            <td className="p-2 text-right">
-              {totalInstallationMarkup.toFixed(0)} kr
-            </td>
-          </tr>
-
-          {/* ── PROVISJON ── */}
-          <tr>
-            <td colSpan={finished ? 6 : 5}>
-              <h2 className="p-1 font-bold">Soleklart Salgsprovisjon</h2>
-            </td>
-          </tr>
-          {commissionAmount > 0 && (
-            <tr>
-              <td className="p-2">
-                Kommisjon ({displayCommissionPercentage.toFixed(0)}%)
-              </td>
-              <td className="p-2 text-right"></td>
-              <td className="p-2 text-right"></td>
-              <td className="p-2 text-right"></td>
-              <td className="p-2 text-right">
+                </div>
+              ) : (
                 <input
-                  className="text-right w-32 bg-gray-100 p-1 border border-gray-200"
-                  value={finalCommissionAmount.toFixed(0)}
+                  type="file"
+                  className="text-xs text-muted file:mr-2 file:cursor-pointer file:rounded-md file:border-0 file:bg-white file:px-2 file:py-1 file:text-xs file:font-medium file:text-ink file:shadow-card hover:file:bg-gray-100"
                   onChange={(e) =>
-                    handleCostChange("team_commission", e.target.value)
+                    e.target.files &&
+                    handleSimulationPdfUpload(e.target.files[0])
                   }
                 />
-                {" kr"}
-              </td>
-              {finished && <td className="p-2"></td>}
-            </tr>
+              )}
+            </div>
           )}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="sk-table">
+            <thead>
+              <tr>
+                <th className="py-2!">Navn</th>
+                <th className="w-20 py-2! text-right!">Antall</th>
+                <th className="w-32 py-2! text-right!">Kostnad eks. mva</th>
+                <th className="w-28 py-2! text-right!">Påslag %</th>
+                <th className="w-36 py-2! text-right!">Total eks. mva</th>
+                {finished && <th className="w-36 py-2!">Vedlegg</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {/* ── LEVERANDØRER ── */}
+              <tr className="hover:bg-transparent!">
+                <td
+                  colSpan={finished ? 6 : 5}
+                  className="border-b border-line! bg-gray-50/70 px-3! pb-1.5! pt-4! text-[11px] font-semibold uppercase tracking-[0.08em] text-muted"
+                >
+                  <h2 className="font-sans! text-inherit">LEVERANDØRER</h2>
+                </td>
+              </tr>
+              {supplierItems.map((item) => {
+                const defaultMarkup = getCategoryMarkup(item.category || "");
+                const displayValue = `${item.name} - ${item.product}`;
+                return (
+                  <tr key={item.id}>
+                    <td className="py-1.5">
+                      <div className="flex flex-row items-center gap-2">
+                        <textarea
+                          value={getFinalText(item.id, displayValue)}
+                          onChange={(e) =>
+                            setTextOverrides((prev) => ({
+                              ...prev,
+                              [item.id]: e.target.value,
+                            }))
+                          }
+                          className="block w-full min-w-0 resize-none rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-ink field-sizing-content hover:border-line hover:bg-white focus:bg-white"
+                        />
+                        <span className="sk-badge sk-badge-neutral shrink-0">
+                          {item.supplier}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap py-1.5 text-right tabular-nums text-body">
+                      {item.quantity} stk.
+                    </td>
+                    <ThreeWayCells
+                      itemId={item.id}
+                      defaultCost={item.price}
+                      defaultMarkup={defaultMarkup}
+                      priceOverrides={priceOverrides}
+                      markupOverrides={markupOverrides}
+                      onCostChange={handleCostChange}
+                      onMarkupChange={handleMarkupChange}
+                      onTotalChange={handleTotalChange}
+                      finished={finished}
+                      showAttachment={true}
+                      attachments={attachments}
+                      onRemoveAttachment={handleRemoveAttachment}
+                      onFileUpload={handleFileUpload}
+                    />
+                  </tr>
+                );
+              })}
+              <tr className="bg-gray-50/40 hover:bg-gray-50/40!">
+                <td
+                  colSpan={finished ? 5 : 4}
+                  className="py-2! text-xs font-medium text-muted"
+                >
+                  Total leverandør påslag
+                </td>
+                <td className="whitespace-nowrap py-2! text-right text-xs font-semibold tabular-nums text-body">
+                  {totalSupplierMarkup.toFixed(0)} kr
+                </td>
+              </tr>
 
-          <tr>
-            <td className="p-2" colSpan={finished ? 6 : 5}></td>
-          </tr>
+              {/* ── MONTERING ── */}
+              <tr className="hover:bg-transparent!">
+                <td
+                  colSpan={finished ? 6 : 5}
+                  className="border-b border-line! bg-gray-50/70 px-3! pb-1.5! pt-4! text-[11px] font-semibold uppercase tracking-[0.08em] text-muted"
+                >
+                  <h2 className="font-sans! text-inherit">MONTERING</h2>
+                </td>
+              </tr>
+              {mountingItems.map((item) => {
+                const defaultMarkup = getCategoryMarkup(item.category || "");
+                const defaultText = `Paneler og fester for ${solarData?.selectedRoofType ?? ""}`;
+                return (
+                  <tr key={item.id}>
+                    <td className="py-1.5">
+                      <textarea
+                        value={getFinalText(item.id, defaultText)}
+                        onChange={(e) =>
+                          setTextOverrides((prev) => ({
+                            ...prev,
+                            [item.id]: e.target.value,
+                          }))
+                        }
+                        className="block w-full min-w-0 resize-none rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-ink field-sizing-content hover:border-line hover:bg-white focus:bg-white"
+                      />
+                    </td>
+                    <td className="whitespace-nowrap py-1.5 text-right tabular-nums text-body">
+                      {item.quantity} stk.
+                    </td>
+                    <ThreeWayCells
+                      itemId={item.id}
+                      defaultCost={item.price}
+                      defaultMarkup={defaultMarkup}
+                      showAttachment={true}
+                      priceOverrides={priceOverrides}
+                      markupOverrides={markupOverrides}
+                      onCostChange={handleCostChange}
+                      onMarkupChange={handleMarkupChange}
+                      onTotalChange={handleTotalChange}
+                      finished={finished}
+                      attachments={attachments}
+                      onRemoveAttachment={handleRemoveAttachment}
+                      onFileUpload={handleFileUpload}
+                    />
+                  </tr>
+                );
+              })}
+              {reductionAmount > 0 && (
+                <tr className="bg-gray-50/40 hover:bg-gray-50/40!">
+                  <td
+                    colSpan={finished ? 5 : 4}
+                    className="py-2! text-xs font-medium text-muted"
+                  >
+                    Volumreduksjon ({reductionPercentage}%)
+                  </td>
+                  <td className="whitespace-nowrap py-2! text-right text-xs font-semibold tabular-nums text-body">
+                    -{reductionAmount.toFixed(0)} kr
+                  </td>
+                </tr>
+              )}
+              <tr className="bg-gray-50/40 hover:bg-gray-50/40!">
+                <td
+                  colSpan={finished ? 5 : 4}
+                  className="py-2! text-xs font-medium text-muted"
+                >
+                  Total montering påslag
+                </td>
+                <td className="whitespace-nowrap py-2! text-right text-xs font-semibold tabular-nums text-body">
+                  {totalMountingMarkup.toFixed(0)} kr
+                </td>
+              </tr>
 
+              {/* ── INSTALLASJON ── */}
+              <tr className="hover:bg-transparent!">
+                <td
+                  colSpan={finished ? 6 : 5}
+                  className="border-b border-line! bg-gray-50/70 px-3! pb-1.5! pt-4! text-[11px] font-semibold uppercase tracking-[0.08em] text-muted"
+                >
+                  <h2 className="font-sans! text-inherit">INSTALLASJON</h2>
+                </td>
+              </tr>
+              {søknadTotal > 0 && (
+                <tr>
+                  <td className="py-1.5 text-ink">Søknad</td>
+                  <td className="whitespace-nowrap py-1.5 text-right tabular-nums text-body">
+                    1 stk.
+                  </td>
+                  <ThreeWayCells
+                    itemId="søknad"
+                    defaultCost={søknadTotal}
+                    defaultMarkup={electricalMarkupDefault}
+                    showAttachment={true}
+                    priceOverrides={priceOverrides}
+                    markupOverrides={markupOverrides}
+                    onCostChange={handleCostChange}
+                    onMarkupChange={handleMarkupChange}
+                    onTotalChange={handleTotalChange}
+                    finished={finished}
+                    attachments={attachments}
+                    onRemoveAttachment={handleRemoveAttachment}
+                    onFileUpload={handleFileUpload}
+                  />
+                </tr>
+              )}
+              {inverterCount > 0 && (
+                <tr>
+                  <td className="py-1.5 text-ink">
+                    Solcelleanlegg - arbeid per inverter
+                  </td>
+                  <td className="whitespace-nowrap py-1.5 text-right tabular-nums text-body">
+                    {inverterCount} stk.
+                  </td>
+                  <ThreeWayCells
+                    itemId="solcelle_anlegg"
+                    defaultCost={solcelleAnleggBaseTotal * inverterCount}
+                    defaultMarkup={electricalMarkupDefault}
+                    showAttachment={true}
+                    priceOverrides={priceOverrides}
+                    markupOverrides={markupOverrides}
+                    onCostChange={handleCostChange}
+                    onMarkupChange={handleMarkupChange}
+                    onTotalChange={handleTotalChange}
+                    finished={finished}
+                    attachments={attachments}
+                    onRemoveAttachment={handleRemoveAttachment}
+                    onFileUpload={handleFileUpload}
+                  />
+                </tr>
+              )}
+              {batteryCount > 0 && (
+                <tr>
+                  <td className="py-1.5 text-ink">
+                    Batteri{" "}
+                    <select
+                      className="ml-2 h-8 rounded-md border border-line bg-white pl-2 text-sm text-ink hover:border-gray-300"
+                      value={selectedBatteryId || ""}
+                      onChange={(e) => setSelectedBatteryId(e.target.value)}
+                    >
+                      <option value="">Arbeidsmetode</option>
+                      {batteryOptions.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({(b.price_per || 0).toFixed(0)} kr)
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="whitespace-nowrap py-1.5 text-right tabular-nums text-body">
+                    {batteryCount} stk.
+                  </td>
+                  <ThreeWayCells
+                    itemId="batteri"
+                    defaultCost={batteryBasePrice * batteryCount}
+                    defaultMarkup={electricalMarkupDefault}
+                    showAttachment={true}
+                    priceOverrides={priceOverrides}
+                    markupOverrides={markupOverrides}
+                    onCostChange={handleCostChange}
+                    onMarkupChange={handleMarkupChange}
+                    onTotalChange={handleTotalChange}
+                    finished={finished}
+                    attachments={attachments}
+                    onRemoveAttachment={handleRemoveAttachment}
+                    onFileUpload={handleFileUpload}
+                  />
+                </tr>
+              )}
+              {additionalCosts.map((ac, index) => {
+                const selectedItem = additionalCostOptions.find(
+                  (i) => i.id === ac.id,
+                );
+                const base = selectedItem?.price_per || 0;
+                const overrideId = `additional_${index}`;
+                return (
+                  <tr key={index}>
+                    <td className="py-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleRemoveAdditionalCost(index)}
+                          className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted hover:bg-red-50 hover:text-red-600"
+                          aria-label="Fjern"
+                        >
+                          <X size={14} />
+                        </button>
+                        <select
+                          className="h-8 rounded-md border border-line bg-white pl-2 text-sm text-ink hover:border-gray-300 min-w-0 flex-1"
+                          value={ac.id}
+                          onChange={(e) =>
+                            handleUpdateAdditionalCost(
+                              index,
+                              "id",
+                              e.target.value,
+                            )
+                          }
+                        >
+                          <option value="">Velg tilleggskostnad</option>
+                          {additionalCostOptions.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name} ({(item.price_per || 0).toFixed(0)}{" "}
+                              kr)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                    <td className="py-1.5 text-right">
+                      <input
+                        type="number"
+                        min="1"
+                        value={ac.quantity}
+                        onChange={(e) =>
+                          handleUpdateAdditionalCost(
+                            index,
+                            "quantity",
+                            Number(e.target.value),
+                          )
+                        }
+                        className="w-16 rounded-md border border-line bg-white px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-gray-300"
+                      />
+                    </td>
+                    <ThreeWayCells
+                      itemId={overrideId}
+                      defaultCost={base * ac.quantity}
+                      defaultMarkup={electricalMarkupDefault}
+                      showAttachment={true}
+                      priceOverrides={priceOverrides}
+                      markupOverrides={markupOverrides}
+                      onCostChange={handleCostChange}
+                      onMarkupChange={handleMarkupChange}
+                      onTotalChange={handleTotalChange}
+                      finished={finished}
+                      attachments={attachments}
+                      onRemoveAttachment={handleRemoveAttachment}
+                      onFileUpload={handleFileUpload}
+                    />
+                  </tr>
+                );
+              })}
+              <tr className="hover:bg-transparent!">
+                <td colSpan={finished ? 6 : 5} className="py-1.5">
+                  <button
+                    onClick={handleAddAdditionalCost}
+                    className="sk-btn sk-btn-ghost h-7 px-2 text-xs text-brand hover:text-brand-hover"
+                  >
+                    <Plus size={14} />
+                    Legg til tilleggskostnader
+                  </button>
+                </td>
+              </tr>
+              <tr className="bg-gray-50/40 hover:bg-gray-50/40!">
+                <td
+                  colSpan={finished ? 5 : 4}
+                  className="py-2! text-xs font-medium text-muted"
+                >
+                  Total installasjon påslag
+                </td>
+                <td className="whitespace-nowrap py-2! text-right text-xs font-semibold tabular-nums text-body">
+                  {totalInstallationMarkup.toFixed(0)} kr
+                </td>
+              </tr>
+
+              {/* ── PROVISJON ── */}
+              <tr className="hover:bg-transparent!">
+                <td
+                  colSpan={finished ? 6 : 5}
+                  className="border-b border-line! bg-gray-50/70 px-3! pb-1.5! pt-4! text-[11px] font-semibold uppercase tracking-[0.08em] text-muted"
+                >
+                  <h2 className="font-sans! text-inherit">Soleklart Salgsprovisjon</h2>
+                </td>
+              </tr>
+              {commissionAmount > 0 && (
+                <tr>
+                  <td className="py-1.5 text-ink">
+                    Kommisjon ({displayCommissionPercentage.toFixed(0)}%)
+                  </td>
+                  <td className="py-1.5 text-right"></td>
+                  <td className="py-1.5 text-right"></td>
+                  <td className="py-1.5 text-right"></td>
+                  <td className="whitespace-nowrap py-1.5 text-right">
+                    <input
+                      className="w-28 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right text-sm tabular-nums text-ink hover:border-line hover:bg-white focus:bg-white font-semibold"
+                      value={finalCommissionAmount.toFixed(0)}
+                      onChange={(e) =>
+                        handleCostChange("team_commission", e.target.value)
+                      }
+                    />
+                    <span className="ml-0.5 text-xs text-muted">kr</span>
+                  </td>
+                  {finished && <td className="py-1.5"></td>}
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="ml-auto w-full max-w-md overflow-hidden rounded-xl border border-line bg-surface shadow-card">
+        <div className="border-b border-line px-4 py-2.5">
+          <p className="sk-eyebrow">Sammendrag</p>
+        </div>
+        <dl className="flex flex-col text-sm tabular-nums">
           {/* ── TOTALER ── */}
           {leadCompany ? (
-            <tr>
-              <td className="p-2 font-semibold">Total kostnad eks. mva</td>
-              <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
-              <td className="p-2 text-right font-semibold">
+            <div className="flex items-baseline justify-between gap-4 bg-brand-soft px-4 py-3.5">
+              <dt className="font-semibold text-ink">Total kostnad eks. mva</dt>
+              <dd className="font-display text-lg font-semibold text-ink">
                 {grandTotal.toFixed(0)} kr
-              </td>
-              {finished && <td className="p-2"></td>}
-            </tr>
+              </dd>
+            </div>
           ) : (
             <>
-              <tr>
-                <td className="p-2 font-semibold">Total kostnad eks. mva</td>
-                <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
-                <td className="p-2 text-right font-semibold">
+              <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                <dt className="text-body">Total kostnad eks. mva</dt>
+                <dd className="font-semibold text-ink">
                   {grandTotal.toFixed(0)} kr
-                </td>
-                {finished && <td className="p-2"></td>}
-              </tr>
-              <tr>
-                <td className="p-2 font-semibold">Total kostnad inkl. mva</td>
-                <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
-                <td className="p-2 text-right font-semibold">
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-4 border-t border-gray-100 px-4 py-2.5">
+                <dt className="font-semibold text-ink">
+                  Total kostnad inkl. mva
+                </dt>
+                <dd className="font-display text-base font-semibold text-ink">
                   {(grandTotal * 1.25).toFixed(0)} kr
-                </td>
-                {finished && <td className="p-2"></td>}
-              </tr>
-              <tr>
-                <td className="p-2" colSpan={finished ? 6 : 5}></td>
-              </tr>
-              <tr>
-                <td className="p-2">Enova støtte</td>
-                <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
-                <td className="p-2 text-right">
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-4 border-t border-gray-100 px-4 py-2.5">
+                <dt className="text-body">Enova støtte</dt>
+                <dd className="font-semibold text-emerald-700">
                   {calculatedEnovaSupport.toFixed(0)} kr
-                </td>
-                {finished && <td className="p-2"></td>}
-              </tr>
-              <tr>
-                <td className="p-2" colSpan={finished ? 6 : 5}></td>
-              </tr>
-              <tr>
-                <td className="p-2">
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-4 border-t border-blue-100 bg-brand-soft px-4 py-3.5">
+                <dt className="text-sm font-semibold text-ink">
                   Total kostnad inkl. mva og Enova-støtte (privat)
-                </td>
-                <td colSpan={finished ? 4 : 3} className="p-2 text-right"></td>
-                <td className="p-2 text-right">
+                </dt>
+                <dd className="shrink-0 font-display text-lg font-semibold text-brand">
                   {(grandTotal * 1.25 - calculatedEnovaSupport).toFixed(0)} kr
-                </td>
-                {finished && <td className="p-2"></td>}
-              </tr>
+                </dd>
+              </div>
             </>
           )}
-        </tbody>
-      </table>
+        </dl>
+      </div>
     </div>
   );
 }

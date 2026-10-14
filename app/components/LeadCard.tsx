@@ -3,6 +3,14 @@ import { LEAD_STATUSES } from "@/constants/leadStatuses";
 import { CLIENT_ROUTES } from "@/constants/routes";
 import { Lead, LeadTask } from "@/lib/types";
 import Link from "next/link";
+import {
+  AlertTriangleIcon,
+  Building2Icon,
+  ClockIcon,
+  HomeIcon,
+  MailIcon,
+  PhoneIcon,
+} from "lucide-react";
 
 interface LeadCardProps {
   lead: Lead;
@@ -48,19 +56,19 @@ const getTaskToDisplay = (tasks: LeadTask[]): LeadTask | null => {
 const SOURCE_CONFIG: Record<string, { label: string; className: string }> = {
   coldcall: {
     label: "Cold calling",
-    className: "bg-blue-50 text-blue-600",
+    className: "bg-blue-50 text-blue-700 ring-blue-100",
   },
   facebook: {
     label: "Facebook",
-    className: "bg-indigo-50 text-indigo-600",
+    className: "bg-violet-50 text-violet-700 ring-violet-100",
   },
   google: {
     label: "Google",
-    className: "bg-green-50 text-green-600",
+    className: "bg-emerald-50 text-emerald-700 ring-emerald-100",
   },
   organic: {
     label: "Organic",
-    className: "bg-gray-100 text-gray-500",
+    className: "bg-gray-100 text-gray-600 ring-gray-200",
   },
 };
 
@@ -69,13 +77,13 @@ function SourceBadge({ lead }: { lead: Lead }) {
   if (!src) return null;
   const cfg = SOURCE_CONFIG[src];
   const label = cfg?.label ?? src;
-  const className = cfg?.className ?? "bg-gray-100 text-gray-500";
+  const className = cfg?.className ?? "bg-gray-100 text-gray-600 ring-gray-200";
   const personName = lead.assigned_user?.name;
   const displayLabel =
     src === "coldcall" && personName ? `Cold calling · ${personName}` : label;
   return (
     <span
-      className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded ${className}`}
+      className={`inline-flex max-w-full truncate rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${className}`}
     >
       {displayLabel}
     </span>
@@ -107,10 +115,20 @@ export default function LeadCard({
     }
   }
 
+  const isOverdue = dueText === "Oppgave forfalt";
+  const hasNoTask = dueText === "Ingen oppgave";
+  const isBusiness = Boolean(lead.company || lead.role);
+  const contactPhone =
+    lead.phone && Number(lead.phone) !== 0
+      ? lead.phone
+      : lead.mobile && Number(lead.mobile) !== 0
+        ? lead.mobile
+        : null;
+
   return (
-    <div className="relative bg-white p-0 rounded">
+    <div className="relative">
       <select
-        className="absolute top-0 right-0 border rounded p-1 text-sm w-18"
+        className="absolute right-0 top-0 h-6 w-[4.5rem] cursor-pointer rounded-md border border-line bg-gray-50 pl-1.5 text-[11px] font-medium text-gray-600 hover:border-gray-300"
         value=""
         onChange={(e) => {
           const newStatus = Number(e.target.value);
@@ -130,48 +148,64 @@ export default function LeadCard({
         ))}
       </select>
 
-      <Link href={`${CLIENT_ROUTES.LEADS}/${lead.id}`}>
-        <div className="pt-7 pb-1 mb-3 border-b border-black flex items-start justify-between gap-2">
-          <p className="font-bold text-blue-600 text-md">
-            {lead.company || lead.person_info || "Mangler navn"} -{" "}
-            {lead.address || "Ingen addresse"}
-          </p>
-          <SourceBadge lead={lead} />
-        </div>
-
-        <div className="flex flex-row justify-between items-center">
-          <div>
-            <p className="text-gray-500 text-xs">
-              {lead.phone && Number(lead.phone) !== 0
-                ? lead.phone
-                : lead.mobile && Number(lead.mobile) !== 0
-                  ? lead.mobile
-                  : "Ingen mobil eller telefon"}
-            </p>
-            <p className="text-gray-500 text-xs">
-              {lead.email || "Ingen email"}
-            </p>
-          </div>
+      <Link href={`${CLIENT_ROUTES.LEADS}/${lead.id}`} className="group block">
+        <div className="flex items-start gap-2 pr-20">
           <img
             src={`/icons/${lead.priority}.png`}
             alt={lead.priority || "Ingen prioritet"}
-            className="w-6 h-6"
+            title={lead.priority || "Ingen prioritet"}
+            className="mt-0.5 size-5 flex-none"
           />
+          <div className="min-w-0">
+            <p className="line-clamp-2 text-sm font-semibold leading-5 text-ink group-hover:text-brand">
+              {lead.company || lead.person_info || "Mangler navn"}
+            </p>
+            <p className="truncate text-xs text-muted">
+              {lead.address || "Ingen addresse"}
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-row justify-between items-center mt-4 text-sm">
-          <div className="flex flex-row gap-2 items-center">
-            <p>{dueText}</p>
-            {dueText === "Oppgave forfalt" && (
-              <img src="/icons/danger.png" alt="danger icon" />
+        <div className="mt-2.5 flex flex-wrap items-center gap-1">
+          <SourceBadge lead={lead} />
+          <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600">
+            {isBusiness ? (
+              <Building2Icon size={11} />
+            ) : (
+              <HomeIcon size={11} />
             )}
-            {dueText === "Ingen oppgave" && (
-              <img src="/icons/danger.png" alt="danger icon" />
-            )}
-          </div>
-          <p className="text-nowrap">
-            {lead.company || lead.role ? "🏭 Næring" : "🏠 Privat"}
+            {isBusiness ? "Næring" : "Privat"}
+          </span>
+        </div>
+
+        <div className="mt-2.5 space-y-1 text-xs text-gray-500">
+          <p className="flex items-center gap-1.5 truncate">
+            <PhoneIcon size={12} className="flex-none text-gray-400" />
+            <span className="truncate">
+              {contactPhone ?? "Ingen mobil eller telefon"}
+            </span>
           </p>
+          <p className="flex items-center gap-1.5">
+            <MailIcon size={12} className="flex-none text-gray-400" />
+            <span className="truncate">{lead.email || "Ingen email"}</span>
+          </p>
+        </div>
+
+        <div
+          className={`mt-3 flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold ${
+            isOverdue
+              ? "bg-red-50 text-red-700"
+              : hasNoTask
+                ? "bg-amber-50 text-amber-700"
+                : "bg-gray-50 text-gray-600"
+          }`}
+        >
+          {isOverdue || hasNoTask ? (
+            <AlertTriangleIcon size={12} className="flex-none" />
+          ) : (
+            <ClockIcon size={12} className="flex-none" />
+          )}
+          {dueText}
         </div>
       </Link>
     </div>

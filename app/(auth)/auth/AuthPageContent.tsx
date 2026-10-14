@@ -3,6 +3,17 @@ import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  Lock,
+  Mail,
+  Sun,
+  User as UserIcon,
+  XCircle,
+} from "lucide-react";
+import { Logo } from "@/app/components/site/Logo";
 
 export default function AuthPageContent() {
   const [name, setName] = useState("");
@@ -105,148 +116,185 @@ export default function AuthPageContent() {
     !isLogin && confirmPassword !== "" && password !== confirmPassword;
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <div className="mb-6 text-center">
-          <div className="w-16 h-16 bg-blue-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <svg
-              className="w-8 h-8 text-blue-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-          </div>
-          <h2 className="text-3xl font-bold text-blue-600">
-            {isLogin ? "Logg inn" : "Opprett konto"}
-          </h2>
+    <div className="sk-dash grid min-h-screen bg-canvas lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+      {/* Merkevarepanel */}
+      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#0b1b33] via-[#0e2c63] to-brand p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        {/* Sol-glød */}
+        <div className="pointer-events-none absolute -right-32 -top-32 size-[520px] rounded-full bg-[radial-gradient(circle,rgba(250,163,26,0.55)_0%,rgba(250,163,26,0.18)_35%,transparent_68%)]" />
+        <div className="pointer-events-none absolute -right-10 -top-10 size-48 rounded-full bg-[radial-gradient(circle,rgba(253,208,138,0.7)_0%,transparent_70%)] blur-xl" />
+        {/* Diskret rutenett */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(255,255,255,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+
+        <div className="relative">
+          <Logo variant="white" height={30} priority />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Navn
-              </label>
-              <input
-                type="text"
-                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-          )}
+        <div className="relative max-w-md">
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur">
+            <Sun size={14} className="text-orange-300" />
+            Soleklart dashbord
+          </p>
+          <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-white">
+            Fra lead til ferdig solcelleanlegg — samlet på ett sted.
+          </h1>
+          <p className="mt-4 text-base leading-relaxed text-white/70">
+            Følg opp kunder, lag tilbud og samarbeid med teamet ditt.
+          </p>
+        </div>
 
-          <div>
-            <label className="block mb-2 font-semibold text-gray-700">
-              E-post
-            </label>
-            <input
-              type="email"
-              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 font-semibold text-gray-700">
-              Passord
-            </label>
-            <input
-              type="password"
-              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            {!isLogin && password.length > 0 && password.length < 6 && (
-              <p className="text-red-500 text-sm mt-1">
-                Passordet må være minst 6 tegn
-              </p>
-            )}
-          </div>
-
-          {!isLogin && (
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Bekreft passord
-              </label>
-              <input
-                type="password"
-                className={`w-full border p-3 rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${
-                  passwordsDontMatch
-                    ? "border-red-500 focus:ring-red-500"
-                    : passwordsMatch
-                    ? "border-green-500 focus:ring-green-500"
-                    : "border-gray-300 focus:ring-indigo-500"
-                }`}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-              {passwordsDontMatch && (
-                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Passordene matcher ikke
-                </p>
-              )}
-              {passwordsMatch && (
-                <p className="text-green-500 text-sm mt-1 flex items-center gap-1">
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Passordene matcher
-                </p>
-              )}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="px-5 py-3 w-full rounded-lg bg-blue-200 text-blue-600 shadow-md font-semibold hover:from-indigo-600 hover:to-violet-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
-            {loading ? "Laster..." : isLogin ? "Logg inn" : "Opprett konto"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-gray-600">
-          {isLogin ? "Ikke registrert ennå?" : "Har du allerede en konto?"}{" "}
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-blue-600 font-semibold hover:text-blue-700 underline"
-          >
-            {isLogin ? "Opprett konto" : "Logg inn"}
-          </button>
+        <p className="relative text-xs text-white/50">
+          © {new Date().getFullYear()} Soleklart
         </p>
-      </div>
+      </aside>
+
+      {/* Skjema */}
+      <main className="flex items-center justify-center px-4 py-12 sm:px-8">
+        <div className="w-full max-w-md animate-pop-in">
+          <div className="mb-8 flex justify-center lg:hidden">
+            <Logo variant="dark" height={28} priority />
+          </div>
+
+          <div className="sk-card p-8 shadow-pop">
+            <div className="mb-7">
+              <h2 className="font-display text-2xl font-semibold tracking-tight">
+                {isLogin ? "Logg inn" : "Opprett konto"}
+              </h2>
+              <p className="mt-1.5 text-sm text-muted">
+                {isLogin
+                  ? "Velkommen tilbake! Logg inn for å fortsette."
+                  : "Fyll inn opplysningene under for å komme i gang."}
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div>
+                  <label className="sk-label">Navn</label>
+                  <div className="relative">
+                    <UserIcon
+                      size={16}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                      type="text"
+                      className="sk-input h-11 pl-9"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="sk-label">E-post</label>
+                <div className="relative">
+                  <Mail
+                    size={16}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="email"
+                    className="sk-input h-11 pl-9"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="sk-label">Passord</label>
+                <div className="relative">
+                  <Lock
+                    size={16}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="password"
+                    className="sk-input h-11 pl-9"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                {!isLogin && password.length > 0 && password.length < 6 && (
+                  <p className="mt-1.5 text-xs font-medium text-red-600">
+                    Passordet må være minst 6 tegn
+                  </p>
+                )}
+              </div>
+
+              {!isLogin && (
+                <div>
+                  <label className="sk-label">Bekreft passord</label>
+                  <div className="relative">
+                    <Lock
+                      size={16}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                      type="password"
+                      className={`sk-input h-11 pl-9 ${
+                        passwordsDontMatch
+                          ? "border-red-400 hover:border-red-400 focus:border-red-500"
+                          : passwordsMatch
+                            ? "border-emerald-400 hover:border-emerald-400 focus:border-emerald-500"
+                            : ""
+                      }`}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  {passwordsDontMatch && (
+                    <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-red-600">
+                      <XCircle size={14} />
+                      Passordene matcher ikke
+                    </p>
+                  )}
+                  {passwordsMatch && (
+                    <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-emerald-600">
+                      <CheckCircle2 size={14} />
+                      Passordene matcher
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="sk-btn sk-btn-primary sk-btn-lg mt-2 w-full"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Laster...
+                  </>
+                ) : (
+                  <>
+                    {isLogin ? "Logg inn" : "Opprett konto"}
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="sk-divider my-6" />
+
+            <p className="text-center text-sm text-muted">
+              {isLogin ? "Ikke registrert ennå?" : "Har du allerede en konto?"}{" "}
+              <button
+                onClick={() => setIsLogin(!isLogin)}
+                className="font-semibold text-brand hover:text-brand-hover hover:underline"
+              >
+                {isLogin ? "Opprett konto" : "Logg inn"}
+              </button>
+            </p>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

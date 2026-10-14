@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 import { Lead, LeadTask, Team } from "@/lib/types";
 import { CLIENT_ROUTES } from "@/constants/routes";
@@ -13,6 +12,16 @@ import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import {
+  Bell,
+  BellOff,
+  CalendarClock,
+  CheckSquare,
+  MessageSquarePlus,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 
 interface Props {
   leadId: string;
@@ -502,29 +511,38 @@ export default function TaskSection({ leadId }: Props) {
   if (!user) return <LoadingScreen />;
 
   return (
-    <div className="">
-      <button
-        onClick={() => setTaskModal(!taskModal)}
-        className="p-2 bg-[#7787FF] text-white rounded-md"
-      >
-        Opprett oppgave
-      </button>
+    <div className="flex flex-col gap-4">
+      <div className="sk-card flex items-center justify-between gap-3 px-5 py-3">
+        <div className="flex items-center gap-2">
+          <h2 className="sk-section-title">Oppgaver</h2>
+          {tasks.length > 0 && (
+            <span className="sk-badge sk-badge-neutral">{tasks.length}</span>
+          )}
+        </div>
+        <button
+          onClick={() => setTaskModal(!taskModal)}
+          className={`sk-btn ${taskModal ? "sk-btn-secondary" : "sk-btn-primary"}`}
+        >
+          {taskModal ? <X size={15} /> : <Plus size={15} />}
+          Opprett oppgave
+        </button>
+      </div>
       {taskModal && (
-        <div className="mt-4 bg-white">
-          <div className="bg-[#7787FF] p-2 text-white">
+        <div className="sk-card animate-pop-in overflow-hidden ring-2 ring-blue-100">
+          <div className="flex items-center gap-2 border-b border-line bg-brand-soft/60 px-5 py-3">
+            <CheckSquare size={16} className="shrink-0 text-brand" />
             <input
+              className="h-8 w-full rounded-md border border-transparent bg-transparent px-2 font-display text-base font-semibold text-ink hover:border-line hover:bg-surface focus:bg-surface"
               value={title || ""}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          <div className="p-2">
-            <div className="mt-2 flex flex-row gap-5">
-              <div className="flex flex-col w-full">
-                <label className="opacity-70 text-sm mb-1">
-                  Aktivitetsdato
-                </label>
+          <div className="p-5">
+            <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_auto]">
+              <div className="flex w-full flex-col">
+                <label className="sk-label">Aktivitetsdato</label>
                 <select
-                  className="w-full p-2 border rounded"
+                  className="sk-input"
                   value={useCustomDate ? "custom" : selectedDate}
                   onChange={(e) => {
                     if (e.target.value === "custom") {
@@ -546,26 +564,12 @@ export default function TaskSection({ leadId }: Props) {
                     </option>
                   ))}
                 </select>
-                {useCustomDate && (
-                  <input
-                    type="date"
-                    className="w-full p-2 border rounded mt-2"
-                    onBlur={(e) => {
-                      if (e.target.value) {
-                        const [year, month, day] = e.target.value.split("-");
-                        setSelectedDate(`${day}.${month}.${year}`);
-                      } else {
-                        setSelectedDate("");
-                      }
-                    }}
-                  />
-                )}
               </div>
-              <div className="flex flex-col w-full">
-                <label className="text-white text-sm mb-1">.</label>
+              <div className="flex w-full flex-col">
+                <label className="sk-label">Tid</label>
                 <select
                   value={selectedTime}
-                  className="w-full p-2 border rounded"
+                  className="sk-input tabular-nums"
                   onChange={(e) => setSelectedTime(e.target.value)}
                 >
                   {timeOptions.map((time) => (
@@ -575,10 +579,8 @@ export default function TaskSection({ leadId }: Props) {
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col w-full">
-                <label className="opacity-70 text-sm mb-1">
-                  Aktivitet tilordnet
-                </label>
+              <div className="flex w-full flex-col [&_select]:w-full">
+                <label className="sk-label">Aktivitet tilordnet</label>
                 <TeamMemberSelector
                   team={team}
                   selectedMember={selectedMember}
@@ -588,28 +590,55 @@ export default function TaskSection({ leadId }: Props) {
                   installerGroupId={installerGroupId}
                 />
               </div>
-              <div>
-                <label className="text-white text-sm mb-1">.</label>
-                <img
-                  src={`${sendMail ? "/icons/bellOn.png" : "/icons/bellOff.png"}`}
-                  className="w-20 cursor-pointer"
-                  onClick={() => setSendMail(!sendMail)}
-                  alt="bell-icon"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => setSendMail(!sendMail)}
+                title={sendMail ? "E-postvarsel på" : "E-postvarsel av"}
+                aria-pressed={sendMail}
+                className={`inline-flex size-9 items-center justify-center rounded-lg border ${
+                  sendMail
+                    ? "border-blue-200 bg-brand-soft text-brand"
+                    : "border-line bg-surface text-muted hover:bg-gray-50 hover:text-ink"
+                }`}
+              >
+                {sendMail ? <Bell size={16} /> : <BellOff size={16} />}
+              </button>
             </div>
+            {useCustomDate && (
+              <input
+                type="date"
+                className="sk-input mt-2 md:max-w-xs"
+                onBlur={(e) => {
+                  if (e.target.value) {
+                    const [year, month, day] = e.target.value.split("-");
+                    setSelectedDate(`${day}.${month}.${year}`);
+                  } else {
+                    setSelectedDate("");
+                  }
+                }}
+              />
+            )}
             <textarea
               placeholder="Legg inn oppgaven din.."
-              className="w-full p-2 border-t mt-4 min-h-64"
+              className="sk-textarea mt-4 min-h-40"
               onChange={(e) => setDescription(e.target.value)}
             />
-            <button
-              onClick={handleCreateTask}
-              className="px-6 py-2 mt-4 bg-[#FF8E4C] rounded-md text-white"
-            >
-              Opprett
-            </button>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={handleCreateTask}
+                className="sk-btn sk-btn-accent"
+              >
+                <Plus size={15} />
+                Opprett
+              </button>
+            </div>
           </div>
+        </div>
+      )}
+      {tasks.length === 0 && !taskModal && (
+        <div className="sk-empty">
+          <CheckSquare size={22} className="text-gray-400" />
+          Ingen oppgave
         </div>
       )}
       {tasks
@@ -618,29 +647,38 @@ export default function TaskSection({ leadId }: Props) {
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
         .map((task, i) => (
-          <div className="mt-4 bg-white" key={i}>
-            <div className="bg-[#7787FF] p-2 text-white flex flex-row items-center justify-between gap-2">
-              <input className="w-full" value={task.title} readOnly />
+          <div className="sk-card animate-fade-in overflow-hidden" key={i}>
+            <div className="flex flex-row items-center justify-between gap-2 border-b border-line px-5 py-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600 ring-1 ring-inset ring-violet-100">
+                  <CheckSquare size={14} />
+                </span>
+                <h3 className="truncate text-sm font-semibold text-ink">
+                  {task.title}
+                </h3>
+              </div>
               <button
                 onClick={() => handleDeleteTask(task.id)}
-                className="py-2 px-4 bg-red-200 hover:bg-red-500 text-red-500 hover:text-white duration-200 rounded-md font-medium items-center flex flex-row gap-1 text-sm"
+                className="sk-btn sk-btn-danger-ghost sk-btn-sm"
               >
+                <Trash2 size={14} />
                 Slett
               </button>
             </div>
-            <div className="p-2">
-              <div className="w-full p-2">
-                <textarea
-                  className="w-full min-h-18 h-full"
-                  readOnly
-                  value={task.description}
-                />
-              </div>
-              <div className="mt-2 flex flex-row gap-2">
-                <div className="flex flex-col w-full">
-                  <label>Aktivitetsdato</label>
+            <div className="p-5">
+              {task.description && (
+                <p className="mb-4 whitespace-pre-wrap text-sm leading-relaxed text-body">
+                  {task.description}
+                </p>
+              )}
+              <div className="grid grid-cols-1 items-end gap-3 rounded-xl bg-gray-50 p-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)]">
+                <div className="flex w-full flex-col">
+                  <label className="sk-label flex items-center gap-1">
+                    <CalendarClock size={12} className="text-muted" />
+                    Aktivitetsdato
+                  </label>
                   <select
-                    className="w-full p-2 border rounded"
+                    className="sk-input"
                     value={
                       customDateTaskId === task.id
                         ? "custom"
@@ -681,7 +719,7 @@ export default function TaskSection({ leadId }: Props) {
                   {customDateTaskId === task.id && (
                     <input
                       type="date"
-                      className="w-full p-2 border rounded mt-2"
+                      className="sk-input mt-2"
                       defaultValue={
                         task.due_date
                           ? new Date(task.due_date).toISOString().split("T")[0]
@@ -699,10 +737,10 @@ export default function TaskSection({ leadId }: Props) {
                     />
                   )}
                 </div>
-                <div className="flex flex-col w-full">
-                  <label className="text-white">.</label>
+                <div className="flex w-full flex-col">
+                  <label className="sk-label">Tid</label>
                   <select
-                    className="w-full p-2 border rounded"
+                    className="sk-input tabular-nums"
                     value={
                       task.due_date
                         ? (() => {
@@ -727,8 +765,8 @@ export default function TaskSection({ leadId }: Props) {
                   </select>
                 </div>
 
-                <div className="flex flex-col w-full">
-                  <label>Aktivitet tilordnet</label>
+                <div className="flex w-full flex-col [&_select]:w-full">
+                  <label className="sk-label">Aktivitet tilordnet</label>
                   <TeamMemberSelector
                     team={team}
                     selectedMember={task.assigned_to}
@@ -744,39 +782,44 @@ export default function TaskSection({ leadId }: Props) {
 
               <button
                 onClick={() => setCommentModal(!commentModal)}
-                className="bg-[#52FF4C] px-6 py-2 text-white mt-3 rounded-md"
+                className="sk-btn sk-btn-secondary sk-btn-sm mt-4"
               >
+                <MessageSquarePlus size={14} />
                 Legg til aktivitet
               </button>
               {/* Legg til kommentar */}
               {commentModal && (
-                <div className="mt-2">
+                <div className="mt-3 animate-fade-in">
                   <textarea
-                    className="w-full p-2 border-t rounded-md mt-4 h-24 border"
+                    className="sk-textarea h-24"
                     value={newComment || ""}
                     onChange={(e) => setNewComment(e.target.value)}
                   />
-                  <button
-                    className="px-4 py-2 bg-green-600 text-white rounded mt-2"
-                    onClick={() => handleAddComment(task.id)}
-                  >
-                    Kommenter
-                  </button>
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      className="sk-btn sk-btn-primary sk-btn-sm"
+                      onClick={() => handleAddComment(task.id)}
+                    >
+                      Kommenter
+                    </button>
+                  </div>
                 </div>
               )}
-              {(taskComments[task.id] || []).map((comment, i) => (
-                <div
-                  key={comment.id + i}
-                  className="w-full p-2 border-t rounded-md mt-4 h-full border"
-                >
-                  <p>{formatDate(new Date(comment.created_at))}</p>
-                  <textarea
-                    className="w-full h-full min-h-18"
-                    readOnly
-                    value={comment.description}
-                  />
-                </div>
-              ))}
+              {(taskComments[task.id] || []).length > 0 && (
+                <ul className="mt-4 flex flex-col gap-2 border-l-2 border-line pl-4">
+                  {(taskComments[task.id] || []).map((comment, i) => (
+                    <li key={comment.id + i} className="relative">
+                      <span className="absolute -left-[21px] top-1.5 size-2 rounded-full bg-gray-300 ring-2 ring-surface" />
+                      <p className="text-xs font-medium tabular-nums text-muted">
+                        {formatDate(new Date(comment.created_at))}
+                      </p>
+                      <p className="mt-0.5 whitespace-pre-wrap text-sm text-body">
+                        {comment.description}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         ))}

@@ -24,7 +24,7 @@ export default function TeamSelector() {
   return (
     <select
       onChange={(e) => setTeamId(e.target.value)}
-      className="bg-white border border-slate-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+      className="h-8 w-full border border-line px-2 text-sm"
       defaultValue=""
     >
       <option value="" disabled>

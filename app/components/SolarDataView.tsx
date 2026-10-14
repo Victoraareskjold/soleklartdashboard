@@ -53,8 +53,10 @@ const Input = ({
   type?: "text" | "number";
 }) => {
   return (
-    <div className="flex flex-col">
-      <label className="text-sm font-medium mb-1">{label}</label>
+    <div className="flex min-w-0 flex-col">
+      <label className="sk-label truncate" title={label}>
+        {label}
+      </label>
       <input
         value={value == 0 ? 0 : value || ""}
         readOnly={readOnly}
@@ -69,7 +71,7 @@ const Input = ({
           }))
         }
         placeholder={label}
-        className="border p-2 w-full rounded-md bg-white disabled:bg-slate-100"
+        className="sk-input tabular-nums disabled:hover:border-line"
         type={type}
       />
     </div>
@@ -83,7 +85,7 @@ export default function SolarDataView({
 }: SolarDataViewProps) {
   return (
     <div>
-      <div className="gap-3 grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7">
         <Input
           label="Årlig produksjon (kWh)"
           value={solarData.yearlyProd}
@@ -141,55 +143,37 @@ export default function SolarDataView({
       </div>
 
       {solarData.checkedRoofData?.length ? (
-        <div className="flex flex-col gap-3 w-full mt-4">
-          {solarData.checkedRoofData?.map((roof, index) => {
-            return (
-              <div key={index} className="p-0 mb-2 w-full">
-                <div className="gap-3 grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7 items-center">
-                  <div className="flex flex-col">
-                    <label>Tak ID</label>
-                    <input
-                      className="border p-2 w-full bg-slate-100"
-                      value={roof.roofId}
-                      readOnly
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label>Paneler</label>
-                    <input
-                      className="border p-2 w-full bg-slate-100"
-                      value={roof.adjustedPanelCount}
-                      readOnly
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label>Maks paneler</label>
-                    <input
-                      className="border p-2 w-full bg-slate-100"
-                      value={roof.maxPanels}
-                      readOnly
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label>Retning</label>
-                    <input
-                      className="border p-2 w-full bg-slate-100"
-                      value={roof.direction}
-                      readOnly
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label>Vinkel</label>
-                    <input
-                      className="border p-2 w-full bg-slate-100"
-                      value={roof.angle?.toFixed?.(0) ?? ""}
-                      readOnly
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="sk-card mt-4 w-full overflow-x-auto">
+          <table className="sk-table">
+            <thead>
+              <tr>
+                <th>Tak ID</th>
+                <th className="!text-right">Paneler</th>
+                <th className="!text-right">Maks paneler</th>
+                <th>Retning</th>
+                <th className="!text-right">Vinkel</th>
+              </tr>
+            </thead>
+            <tbody>
+              {solarData.checkedRoofData?.map((roof, index) => {
+                return (
+                  <tr key={index}>
+                    <td className="font-medium !text-ink">{roof.roofId}</td>
+                    <td className="text-right tabular-nums">
+                      {roof.adjustedPanelCount}
+                    </td>
+                    <td className="text-right tabular-nums">
+                      {roof.maxPanels}
+                    </td>
+                    <td>{roof.direction}</td>
+                    <td className="text-right tabular-nums">
+                      {roof.angle?.toFixed?.(0) ?? ""}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : null}
     </div>

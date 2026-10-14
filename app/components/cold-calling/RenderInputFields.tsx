@@ -71,19 +71,11 @@ const INPUT_FIELDS: InputField[] = [
 
 export default function RenderInputFields({
   lead,
-  index,
   formData,
   onFormDataChange,
   roofTypeOptions,
 }: RenderInputFieldsProps) {
-  const selectedStatus = LeadStatus.find(
-    (s) => String(s.value) === String(formData[lead.id]?.status)
-  );
-
-  const textColor =
-    selectedStatus?.value == null || selectedStatus?.value === 1
-      ? "#000"
-      : "#fff";
+  const currentStatus = String(formData[lead.id]?.status ?? "");
 
   const renderField = (field: InputField) => {
     const value =
@@ -96,7 +88,7 @@ export default function RenderInputFields({
           : field.options || [];
       return (
         <select
-          className="w-full p-1 h-7"
+          className="sk-input h-8 cursor-pointer text-[13px]"
           value={value}
           onChange={(e) => onFormDataChange(lead.id, field.key, e.target.value)}
         >
@@ -113,7 +105,8 @@ export default function RenderInputFields({
     if (field.type === "textarea") {
       return (
         <textarea
-          className="w-full min-h-7! h-7 p-1"
+          className="sk-textarea block h-8 min-h-8 resize-y py-1.5 text-[13px] leading-[1.15rem]"
+          rows={1}
           placeholder={field.placeholder}
           value={value}
           onChange={(e) => onFormDataChange(lead.id, field.key, e.target.value)}
@@ -125,7 +118,9 @@ export default function RenderInputFields({
       <input
         type={field.type || "text"}
         placeholder={field.placeholder}
-        className="w-full p-1"
+        className={`sk-input h-8 text-[13px] ${
+          field.type === "number" ? "tabular-nums" : ""
+        }`}
         value={value}
         onChange={(e) => onFormDataChange(lead.id, field.key, e.target.value)}
       />
@@ -133,34 +128,64 @@ export default function RenderInputFields({
   };
 
   return (
-    <div className="grid grid-cols-9 text-sm items-center">
-      {INPUT_FIELDS.map((field) => (
-        <div
-          key={field.key}
-          className={`${
-            index % 2 == 0 ? "bg-[#82CCEB]" : "bg-[#BFE6F5]"
-          } border`}
-        >
-          {renderField(field)}
-        </div>
-      ))}
-      <div className="border text-sm">
-        <select
-          className="w-full h-7 p-1"
-          value={formData[lead.id]?.status || ""}
-          onChange={(e) => onFormDataChange(lead.id, "status", e.target.value)}
-          style={{
-            backgroundColor: selectedStatus?.color || "white",
-            color: textColor,
-          }}
-        >
-          <option value="">Status</option>
-          {LeadStatus.map((stat) => (
-            <option key={stat.value} value={stat.value}>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-9">
+        {INPUT_FIELDS.map((field) => (
+          <div
+            key={field.key}
+            className={
+              field.type === "textarea" || field.key === "email"
+                ? "col-span-2"
+                : ""
+            }
+          >
+            <label className="mb-1 block text-[11px] font-semibold text-muted">
+              {field.label}
+            </label>
+            {renderField(field)}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="sk-eyebrow mr-1">Status</span>
+        {LeadStatus.map((stat) => {
+          const isActive = currentStatus === String(stat.value);
+          return (
+            <button
+              key={stat.value}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() =>
+                onFormDataChange(
+                  lead.id,
+                  "status",
+                  isActive ? "" : String(stat.value),
+                )
+              }
+              className={`inline-flex h-8 items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-all ${
+                isActive
+                  ? "text-ink shadow-[0_1px_2px_rgba(11,27,51,0.08)]"
+                  : "border-line bg-surface text-body hover:border-gray-300 hover:bg-gray-50 hover:text-ink"
+              }`}
+              style={
+                isActive
+                  ? {
+                      backgroundColor: `${stat.color}26`,
+                      borderColor: stat.color,
+                      boxShadow: `0 0 0 1px ${stat.color}`,
+                    }
+                  : undefined
+              }
+            >
+              <span
+                className="size-2 shrink-0 rounded-full ring-1 ring-black/10"
+                style={{ backgroundColor: stat.color }}
+              />
               {stat.label}
-            </option>
-          ))}
-        </select>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

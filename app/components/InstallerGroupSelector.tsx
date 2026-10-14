@@ -55,14 +55,16 @@ export default function InstallerGroupSelector() {
   if (!teamId) return <TeamSelector />;
   if (!teamRole) return null;
   if (teamRole === "installer") {
-    return <p className="text-xl px-2 py-1">{getInstallerGroupName(groups)}</p>;
+    return <p className="truncate px-1.5 pb-1 text-sm font-semibold capitalize text-ink">
+        {getInstallerGroupName(groups)}
+      </p>;
   }
 
   return (
     <select
       value={installerGroupId ?? ""}
       onChange={(e) => handleSetInstallerGroup(e.target.value)}
-      className="text-xl rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer w-full"
+      className="h-8 w-full cursor-pointer border border-line px-2 text-sm font-semibold capitalize"
     >
       <option value="" disabled>
         Select group

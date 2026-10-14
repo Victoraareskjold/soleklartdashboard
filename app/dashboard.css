@@ -1,0 +1,377 @@
+/* ============================================================================
+   Soleklart dashbord — designsystem
+   ----------------------------------------------------------------------------
+   1. @theme   — Tailwind-paletten mappes til merkevaretokens fra soleklart.css,
+                 slik at eksisterende `gray-*`, `slate-*`, `blue-*`, `indigo-*`
+                 automatisk får Soleklart-profilen.
+   2. base     — basestiler for skjemaelementer, tabeller og rammer, scopet til
+                 .sk-dash (dashbord + innlogging). Utilities overstyrer alltid.
+   3. components — gjenbrukbare klasser: .sk-card, .sk-btn, .sk-input,
+                 .sk-badge, .sk-table, .sk-page-header osv.
+   ========================================================================== */
+
+@theme {
+  --font-sans: var(--font-public-sans), "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-poppins), "Segoe UI", system-ui, sans-serif;
+
+  /* Nøytraler med et snev av blått — samme familie som --grey-* */
+  --color-gray-50: #f7f8fa;
+  --color-gray-100: #eef1f5;
+  --color-gray-200: #e1e6ed;
+  --color-gray-300: #c8d1dc;
+  --color-gray-400: #97a3b4;
+  --color-gray-500: #6b7889;
+  --color-gray-600: #4a5768;
+  --color-gray-700: #33404f;
+  --color-gray-800: #222d3b;
+  --color-gray-900: #16202d;
+  --color-gray-950: #0b1b33;
+
+  --color-slate-50: #f7f8fa;
+  --color-slate-100: #eef1f5;
+  --color-slate-200: #e1e6ed;
+  --color-slate-300: #c8d1dc;
+  --color-slate-400: #97a3b4;
+  --color-slate-500: #6b7889;
+  --color-slate-600: #4a5768;
+  --color-slate-700: #33404f;
+  --color-slate-800: #222d3b;
+  --color-slate-900: #16202d;
+  --color-slate-950: #0b1b33;
+
+  /* Merkevareblå */
+  --color-blue-50: #f1f6ff;
+  --color-blue-100: #dce9fe;
+  --color-blue-200: #c0d7fd;
+  --color-blue-300: #a3c4fb;
+  --color-blue-400: #4a88ff;
+  --color-blue-500: #2f78ff;
+  --color-blue-600: #1869ff;
+  --color-blue-700: #1450c4;
+  --color-blue-800: #0e2c63;
+  --color-blue-900: #0b1b33;
+
+  --color-indigo-50: #f1f6ff;
+  --color-indigo-100: #dce9fe;
+  --color-indigo-200: #c0d7fd;
+  --color-indigo-300: #a3c4fb;
+  --color-indigo-400: #4a88ff;
+  --color-indigo-500: #1869ff;
+  --color-indigo-600: #1869ff;
+  --color-indigo-700: #1450c4;
+  --color-indigo-800: #0e2c63;
+  --color-indigo-900: #0b1b33;
+
+  /* Merkevareoransje */
+  --color-orange-50: #fff9ef;
+  --color-orange-100: #fef0da;
+  --color-orange-200: #fde2b5;
+  --color-orange-300: #fdd08a;
+  --color-orange-400: #fbb94a;
+  --color-orange-500: #faa31a;
+  --color-orange-600: #e08d0c;
+  --color-orange-700: #b96f00;
+
+  /* Semantiske Tailwind-farger: bg-brand, text-ink, border-line osv. */
+  --color-brand: #1869ff;
+  --color-brand-hover: #1450c4;
+  --color-brand-soft: #f1f6ff;
+  --color-accent: #faa31a;
+  --color-accent-soft: #fff9ef;
+  --color-ink: #0b1b33;
+  --color-body: #4a5768;
+  --color-muted: #6b7889;
+  --color-line: #e1e6ed;
+  --color-canvas: #f4f6fa;
+  --color-surface: #ffffff;
+
+  --radius-card: 14px;
+  --shadow-card: 0 1px 2px rgba(11, 27, 51, 0.04), 0 1px 3px rgba(11, 27, 51, 0.06);
+  --shadow-pop: 0 12px 32px -8px rgba(11, 27, 51, 0.18), 0 2px 6px rgba(11, 27, 51, 0.06);
+
+  --animate-fade-in: sk-fade-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-pop-in: sk-pop-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sk-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes sk-pop-in {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────── */
+
+@layer base {
+  /* Tailwind v4 bruker currentColor som standard rammefarge — det gir harde,
+     svarte linjer overalt der det bare står `border`. */
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    border-color: var(--color-line);
+  }
+
+  .sk-dash {
+    font-family: var(--font-sans);
+    color: var(--color-body);
+    background: var(--color-canvas);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "tnum" 0, "cv11" 1;
+  }
+
+  .sk-dash h1,
+  .sk-dash h2,
+  .sk-dash h3 {
+    font-family: var(--font-display);
+    color: var(--color-ink);
+    letter-spacing: -0.01em;
+  }
+
+  .sk-dash :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea) {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    border-radius: 8px;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease,
+      background-color 150ms ease;
+  }
+
+  .sk-dash :where(input, select, textarea)::placeholder {
+    color: var(--color-gray-400);
+  }
+
+  .sk-dash :where(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea):focus {
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px rgba(24, 105, 255, 0.18);
+  }
+
+  .sk-dash :where(input, select, textarea):disabled {
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-500);
+    cursor: not-allowed;
+  }
+
+  .sk-dash :where(select) {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7889' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    padding-right: 30px !important;
+  }
+
+  .sk-dash :where(input[type="checkbox"], input[type="radio"]) {
+    accent-color: var(--color-brand);
+  }
+
+  .sk-dash :where(a) {
+    transition: color 150ms ease, background-color 150ms ease;
+  }
+
+  .sk-dash :where(button) {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      border-color 150ms ease,
+      box-shadow 150ms ease,
+      transform 100ms ease;
+  }
+
+  .sk-dash :where(button:not(:disabled)):active {
+    transform: translateY(0.5px);
+  }
+
+  .sk-dash :where(table) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sk-dash :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* Diskrete scrollbars */
+  .sk-dash * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-300) transparent;
+  }
+}
+
+/* ── Komponentklasser ──────────────────────────────────────────────────── */
+
+@layer components {
+  /* Sideoppsett */
+  .sk-page {
+    @apply mx-auto w-full max-w-[1600px] px-6 py-6 lg:px-8 animate-fade-in;
+  }
+  .sk-page-header {
+    @apply mb-6 flex flex-wrap items-end justify-between gap-4;
+  }
+  .sk-page-title {
+    @apply font-display text-2xl font-semibold tracking-tight text-ink;
+  }
+  .sk-page-subtitle {
+    @apply mt-1 text-sm text-muted;
+  }
+  .sk-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted;
+  }
+  .sk-section-title {
+    @apply font-display text-base font-semibold text-ink;
+  }
+
+  /* Kort */
+  .sk-card {
+    @apply rounded-card border border-line bg-surface shadow-card;
+  }
+  .sk-card-pad {
+    @apply rounded-card border border-line bg-surface p-5 shadow-card;
+  }
+  .sk-card-header {
+    @apply flex items-center justify-between gap-3 border-b border-line px-5 py-4;
+  }
+  .sk-card-body {
+    @apply p-5;
+  }
+
+  /* Knapper */
+  .sk-btn {
+    @apply inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent px-3.5 text-sm font-semibold
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .sk-btn-sm {
+    @apply h-8 px-2.5 text-xs;
+  }
+  .sk-btn-lg {
+    @apply h-11 px-5 text-[15px];
+  }
+  .sk-btn-primary {
+    @apply bg-brand text-white shadow-[0_1px_2px_rgba(11,27,51,0.08),0_4px_12px_-2px_rgba(24,105,255,0.35)] hover:bg-brand-hover;
+  }
+  .sk-btn-secondary {
+    @apply border-line bg-surface text-ink shadow-[0_1px_2px_rgba(11,27,51,0.05)] hover:border-gray-300 hover:bg-gray-50;
+  }
+  .sk-btn-ghost {
+    @apply text-body hover:bg-gray-100 hover:text-ink;
+  }
+  .sk-btn-accent {
+    @apply bg-accent text-ink hover:bg-orange-600;
+  }
+  .sk-btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+  .sk-btn-danger-ghost {
+    @apply text-red-600 hover:bg-red-50;
+  }
+  .sk-icon-btn {
+    @apply inline-flex size-9 items-center justify-center rounded-lg text-muted hover:bg-gray-100 hover:text-ink disabled:opacity-50;
+  }
+
+  /* Skjema */
+  .sk-label {
+    @apply mb-1.5 block text-xs font-semibold text-gray-700;
+  }
+  .sk-input {
+    @apply h-9 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink shadow-[0_1px_1px_rgba(11,27,51,0.03)] hover:border-gray-300;
+  }
+  .sk-textarea {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink hover:border-gray-300;
+  }
+  .sk-hint {
+    @apply mt-1 text-xs text-muted;
+  }
+
+  /* Merkelapper */
+  .sk-badge {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4;
+  }
+  .sk-badge-neutral {
+    @apply bg-gray-100 text-gray-700;
+  }
+  .sk-badge-brand {
+    @apply bg-blue-50 text-blue-700 ring-1 ring-blue-100 ring-inset;
+  }
+  .sk-badge-success {
+    @apply bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 ring-inset;
+  }
+  .sk-badge-warning {
+    @apply bg-amber-50 text-amber-700 ring-1 ring-amber-100 ring-inset;
+  }
+  .sk-badge-danger {
+    @apply bg-red-50 text-red-700 ring-1 ring-red-100 ring-inset;
+  }
+
+  /* Tabeller */
+  .sk-table {
+    @apply w-full border-separate border-spacing-0 text-sm;
+  }
+  .sk-table thead th {
+    @apply sticky top-0 z-10 border-b border-line bg-gray-50/95 px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted backdrop-blur;
+  }
+  .sk-table tbody td {
+    @apply border-b border-gray-100 px-3 py-2.5 text-gray-700;
+  }
+  .sk-table tbody tr {
+    @apply transition-colors hover:bg-blue-50/40;
+  }
+  .sk-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  /* Faner / segmentert kontroll */
+  .sk-tabs {
+    @apply inline-flex items-center gap-1 rounded-xl bg-gray-100 p-1;
+  }
+  .sk-tab {
+    @apply rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-ink;
+  }
+  .sk-tab-active {
+    @apply bg-surface text-ink shadow-card;
+  }
+
+  /* Modal */
+  .sk-overlay {
+    @apply fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 p-4 backdrop-blur-[3px] animate-fade-in;
+  }
+  .sk-modal {
+    @apply max-h-[90vh] w-full overflow-y-auto rounded-2xl border border-line bg-surface shadow-pop animate-pop-in;
+  }
+
+  /* Tom tilstand */
+  .sk-empty {
+    @apply flex flex-col items-center justify-center gap-2 rounded-card border border-dashed border-gray-300 bg-surface/60 px-6 py-12 text-center text-sm text-muted;
+  }
+
+  .sk-divider {
+    @apply h-px w-full bg-line;
+  }
+
+  .sk-kbd {
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-line bg-surface px-1 font-sans text-[10px] font-medium text-muted shadow-[0_1px_0_rgba(11,27,51,0.06)];
+  }
+}
+
+/* ── React Toastify ────────────────────────────────────────────────────── */
+
+:root {
+  --toastify-font-family: var(--font-public-sans), system-ui, sans-serif;
+  --toastify-color-success: #10874b;
+  --toastify-color-error: #c8332b;
+  --toastify-color-info: #1869ff;
+  --toastify-color-warning: #faa31a;
+  --toastify-text-color-light: #0b1b33;
+}
+
+.Toastify__toast {
+  border-radius: 12px !important;
+  border: 1px solid #e1e6ed;
+  box-shadow: 0 12px 32px -8px rgba(11, 27, 51, 0.18) !important;
+  font-size: 14px;
+  font-weight: 500;
+}

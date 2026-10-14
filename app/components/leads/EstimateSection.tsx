@@ -18,6 +18,7 @@ import { CreateEstimateInput, Estimate } from "@/lib/types";
 import { getPanelWp } from "@/utils/getPanelWp";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
 import LoadingScreen from "../LoadingScreen";
+import { ImagePlus, Sparkles } from "lucide-react";
 
 interface EstimateSectionProps {
   solarData: SolarData;
@@ -188,17 +189,22 @@ export default function EstimateSection({
   }
 
   return (
-    <>
-      <div>
-        <label htmlFor="finished" className="mr-2">
+    <div className="flex flex-col gap-4">
+      <div className="sk-card flex items-center justify-between gap-3 px-5 py-3">
+        <h2 className="sk-section-title">Nytt estimat</h2>
+        <label
+          htmlFor="finished"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-gray-50"
+        >
+          <input
+            id="finished"
+            type="checkbox"
+            className="size-4"
+            checked={finished}
+            onChange={(e) => setFinished(e.target.checked)}
+          />
           Ferdigstilt?
         </label>
-        <input
-          id="finished"
-          type="checkbox"
-          checked={finished}
-          onChange={(e) => setFinished(e.target.checked)}
-        />
       </div>
       <CalculatorResults
         suppliers={suppliers}
@@ -211,30 +217,34 @@ export default function EstimateSection({
         finished={finished}
         leadId={leadId}
       />
-      <div className="mt-4">
-        <label
-          htmlFor="estimate-image"
-          className="block text-sm font-medium text-gray-700"
+      <div className="sk-card-pad flex flex-col gap-4">
+        <div>
+          <label
+            htmlFor="estimate-image"
+            className="sk-label flex items-center gap-1.5"
+          >
+            <ImagePlus size={14} className="text-muted" />
+            Last opp bilde (valgfritt)
+          </label>
+          <input
+            type="file"
+            id="estimate-image"
+            name="estimate-image"
+            accept="image/*"
+            onChange={(e) =>
+              setImageFile(e.target.files ? e.target.files[0] : null)
+            }
+            className="block w-full cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50/60 p-2 text-sm text-muted file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand hover:border-gray-400 hover:file:bg-blue-100"
+          />
+        </div>
+        <button
+          className="sk-btn sk-btn-accent sk-btn-lg w-full"
+          onClick={handleCreateEstimate}
         >
-          Last opp bilde (valgfritt)
-        </label>
-        <input
-          type="file"
-          id="estimate-image"
-          name="estimate-image"
-          accept="image/*"
-          onChange={(e) =>
-            setImageFile(e.target.files ? e.target.files[0] : null)
-          }
-          className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
-        />
+          <Sparkles size={16} />
+          Opprett estimat
+        </button>
       </div>
-      <button
-        className="bg-[#FF8E4C] text-white px-6 py-2 rounded-md mt-4 w-full"
-        onClick={handleCreateEstimate}
-      >
-        Opprett estimat
-      </button>
-    </>
+    </div>
   );
 }

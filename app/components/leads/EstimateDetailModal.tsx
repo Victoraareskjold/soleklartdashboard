@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import { FileText, Plus, Trash2, Upload, X } from "lucide-react";
+import { FileText, Lock, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { Estimate } from "@/lib/types";
 import { PriceLineItem, PriceOverview } from "@/types/price_table";
 import { updateEstimate } from "@/lib/api";
@@ -90,20 +90,22 @@ function Field({
   placeholder?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 min-w-0">
-      <span className="text-xs font-medium text-gray-600">{label}</span>
-      <div className="flex items-center gap-1">
+    <label className="flex min-w-0 flex-col gap-1.5">
+      <span className="truncate text-xs font-semibold text-gray-700">
+        {label}
+      </span>
+      <div className="relative flex items-center">
         <input
           type={type}
           step={type === "number" ? "any" : undefined}
-          className="w-full border rounded-md px-2 py-1.5 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-500"
+          className={`sk-input ${type === "number" ? "tabular-nums" : ""} ${suffix ? "pr-14" : ""}`}
           value={value ?? ""}
           placeholder={placeholder}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
         />
         {suffix && (
-          <span className="text-xs text-gray-500 whitespace-nowrap">
+          <span className="pointer-events-none absolute right-3 whitespace-nowrap text-xs text-muted">
             {suffix}
           </span>
         )}
@@ -120,8 +122,8 @@ function SectionHeading({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between border-b pb-1 mb-3">
-      <h3 className="font-semibold text-gray-700">{title}</h3>
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <h3 className="sk-eyebrow">{title}</h3>
       {action}
     </div>
   );
@@ -367,22 +369,28 @@ export default function EstimateDetailModal({
   };
 
   return (
-    <section className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
+    <section className="fixed inset-0 z-[60] flex animate-fade-in items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-ink/40 backdrop-blur-[3px]"
+        onClick={onClose}
+      />
 
-      <div className="relative bg-white w-4/5 h-4/5 rounded-lg shadow-lg flex flex-col">
+      <div className="relative flex h-[88vh] w-full max-w-6xl animate-pop-in flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
         {/* Topplinje */}
-        <div className="flex justify-between items-center gap-4 px-4 py-3 border-b">
+        <div className="flex items-center justify-between gap-4 border-b border-line px-6 py-4">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold truncate">
+            <h2 className="truncate font-display text-lg font-semibold text-ink">
               Detaljert estimat
             </h2>
-            <p className="text-xs text-gray-500 truncate">{estimate.id}</p>
+            <p className="truncate font-mono text-[11px] text-muted">
+              {estimate.id}
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
             {locked ? (
-              <span className="text-sm px-3 py-1.5 rounded-md bg-green-100 text-green-900 font-medium">
+              <span className="sk-badge sk-badge-success px-2.5 py-1 text-xs">
+                <Lock size={12} />
                 Signert{" "}
                 {new Date(estimate.signed_at as string).toLocaleDateString(
                   "nb-NO",
@@ -391,25 +399,29 @@ export default function EstimateDetailModal({
               </span>
             ) : (
               <button
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium disabled:opacity-50"
+                className="sk-btn sk-btn-primary"
                 onClick={handleSave}
                 disabled={saving}
               >
+                <Save size={15} />
                 {saving ? "Lagrer…" : "Lagre og oppdater tilbudet"}
               </button>
             )}
             <button
-              className="px-3 py-1.5 bg-gray-200 rounded-md text-sm"
+              className="sk-icon-btn"
               onClick={onClose}
+              aria-label="Lukk"
+              title="Lukk"
             >
-              Lukk
+              <X size={18} />
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 text-sm space-y-7">
+        <div className="flex-1 space-y-8 overflow-auto bg-gray-50/50 px-6 py-5 text-sm">
           {locked && (
-            <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-md p-3">
+            <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-800">
+              <Lock size={15} className="mt-0.5 shrink-0" />
               Tilbudet er signert. Innholdet er låst slik at den signerte
               versjonen ikke endres. Opprett et nytt estimat for å gjøre
               endringer.
@@ -419,7 +431,7 @@ export default function EstimateDetailModal({
           {/* ── Anleggsdata ─────────────────────────────────────────────── */}
           <div>
             <SectionHeading title="Anlegget" />
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="sk-card-pad grid grid-cols-2 gap-4 md:grid-cols-3">
               <Field
                 label="Antall paneler"
                 type="number"
@@ -541,8 +553,8 @@ export default function EstimateDetailModal({
               />
             </div>
 
-            <div className="flex flex-wrap gap-6 mt-3">
-              <label className="flex items-center gap-2">
+            <div className="mt-3 flex flex-wrap gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 hover:bg-gray-50">
                 <input
                   type="checkbox"
                   checked={Boolean(draft.private)}
@@ -551,11 +563,11 @@ export default function EstimateDetailModal({
                     setDraft((prev) => ({ ...prev, private: e.target.checked }))
                   }
                 />
-                <span className="text-xs font-medium text-gray-600">
+                <span className="text-xs font-semibold text-ink">
                   Næringskunde (vis eks. mva, uten Enova)
                 </span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 hover:bg-gray-50">
                 <input
                   type="checkbox"
                   checked={Boolean(draft.finished)}
@@ -567,7 +579,7 @@ export default function EstimateDetailModal({
                     }))
                   }
                 />
-                <span className="text-xs font-medium text-gray-600">
+                <span className="text-xs font-semibold text-ink">
                   Ferdigstilt tilbud (klart for signering)
                 </span>
               </label>
@@ -579,13 +591,13 @@ export default function EstimateDetailModal({
             draft.checked_roof_data.length > 0 && (
               <div>
                 <SectionHeading title="Takflater" />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                   {draft.checked_roof_data.map((roof, i) => (
                     <div
                       key={`${roof.roof_id}-${i}`}
-                      className="bg-slate-50 rounded-lg p-3 border"
+                      className="sk-card-pad p-4"
                     >
-                      <p className="font-medium text-gray-800 mb-2">
+                      <p className="mb-3 text-sm font-semibold text-ink">
                         Tak {roof.roof_id}
                       </p>
                       <div className="grid grid-cols-2 gap-3">
@@ -649,7 +661,7 @@ export default function EstimateDetailModal({
                   action={
                     !locked && (
                       <button
-                        className="flex items-center gap-1 text-xs font-medium text-blue-700"
+                        className="sk-btn sk-btn-ghost sk-btn-sm text-brand hover:bg-brand-soft hover:text-brand"
                         onClick={() => addLine(key)}
                       >
                         <Plus className="w-3.5 h-3.5" /> Legg til rad
@@ -659,7 +671,7 @@ export default function EstimateDetailModal({
                 />
 
                 {items.length === 0 ? (
-                  <p className="text-sm text-gray-500 bg-slate-50 border rounded-lg p-3">
+                  <p className="rounded-xl border border-dashed border-gray-300 bg-surface p-4 text-center text-sm text-muted">
                     Ingen rader.
                   </p>
                 ) : (
@@ -667,7 +679,7 @@ export default function EstimateDetailModal({
                     {items.map((item, i) => (
                       <div
                         key={`${item.id}-${i}`}
-                        className="bg-slate-50 rounded-lg p-3 border flex flex-col gap-3"
+                        className="sk-card-pad flex flex-col gap-3 p-4"
                       >
                         <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                           <Field
@@ -740,7 +752,7 @@ export default function EstimateDetailModal({
                             }
                           />
                           <div className="flex flex-col gap-1 min-w-0">
-                            <span className="text-xs font-medium text-gray-600">
+                            <span className="text-xs font-semibold text-gray-700">
                               Produktark (valgfritt)
                             </span>
                             {item.attachmentUrl ? (
@@ -749,7 +761,7 @@ export default function EstimateDetailModal({
                                   href={item.attachmentUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-1.5 text-sm text-blue-700 underline truncate"
+                                  className="flex h-9 items-center gap-1.5 truncate rounded-lg bg-brand-soft px-3 text-sm font-medium text-brand hover:bg-blue-100"
                                 >
                                   <FileText className="w-4 h-4 flex-shrink-0" />
                                   <span className="truncate">
@@ -758,7 +770,7 @@ export default function EstimateDetailModal({
                                 </a>
                                 {!locked && (
                                   <button
-                                    className="p-1 text-gray-500 hover:text-red-700"
+                                    className="sk-icon-btn size-8 hover:bg-red-50 hover:text-red-600"
                                     onClick={() =>
                                       updateLine(key, i, {
                                         attachmentUrl: undefined,
@@ -771,11 +783,11 @@ export default function EstimateDetailModal({
                                 )}
                               </div>
                             ) : locked ? (
-                              <span className="text-sm text-gray-500">
+                              <span className="flex h-9 items-center text-sm text-muted">
                                 Ingen fil
                               </span>
                             ) : (
-                              <label className="flex items-center gap-1.5 text-sm text-blue-700 cursor-pointer w-fit">
+                              <label className="sk-btn sk-btn-secondary w-fit cursor-pointer">
                                 <Upload className="w-4 h-4" />
                                 <span>
                                   {uploading === `${key}-${i}`
@@ -797,7 +809,7 @@ export default function EstimateDetailModal({
                           </div>
                           {!locked && (
                             <button
-                              className="p-2 text-red-700 rounded-md bg-red-500/10 h-fit"
+                              className="sk-icon-btn text-red-600 hover:bg-red-50 hover:text-red-700"
                               onClick={() => removeLine(key, i)}
                               aria-label={`Fjern rad fra ${title}`}
                             >
@@ -821,7 +833,7 @@ export default function EstimateDetailModal({
                 action={
                   !locked && (
                     <button
-                      className="flex items-center gap-1 text-xs font-medium text-blue-700"
+                      className="sk-btn sk-btn-ghost sk-btn-sm text-brand hover:bg-brand-soft hover:text-brand"
                       onClick={addAdditionalCost}
                     >
                       <Plus className="w-3.5 h-3.5" /> Legg til tilleggskostnad
@@ -829,7 +841,7 @@ export default function EstimateDetailModal({
                   )
                 }
               />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="sk-card-pad grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field
                   label="Søknad"
                   type="number"
@@ -872,11 +884,11 @@ export default function EstimateDetailModal({
               </div>
 
               {(priceData.installation.additionalCosts ?? []).length > 0 && (
-                <div className="space-y-3 mt-3">
+                <div className="mt-3 space-y-3">
                   {priceData.installation.additionalCosts.map((cost, i) => (
                     <div
                       key={`${cost.id}-${i}`}
-                      className="bg-slate-50 rounded-lg p-3 border grid grid-cols-2 md:grid-cols-[2fr_1fr_1fr_auto] gap-3 items-end"
+                      className="sk-card-pad grid grid-cols-2 items-end gap-3 p-4 md:grid-cols-[2fr_1fr_1fr_auto]"
                     >
                       <Field
                         label="Tilleggskostnad"
@@ -911,7 +923,7 @@ export default function EstimateDetailModal({
                       />
                       {!locked && (
                         <button
-                          className="p-2 text-red-700 rounded-md bg-red-500/10 h-fit"
+                          className="sk-icon-btn text-red-600 hover:bg-red-50 hover:text-red-700"
                           onClick={() => removeAdditionalCost(i)}
                           aria-label="Fjern tilleggskostnad"
                         >
@@ -929,8 +941,8 @@ export default function EstimateDetailModal({
           {!draft.private && Number(draft.kwp || 0) > 0 && (
             <div>
               <SectionHeading title="Enova-støtte" />
-              <div className="bg-green-50 rounded-lg p-3 border border-green-200 space-y-1">
-                <div className="flex justify-between text-gray-700">
+              <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex justify-between tabular-nums text-body">
                   <span>
                     {Math.min(
                       Number(draft.kwp || 0),
@@ -938,21 +950,21 @@ export default function EstimateDetailModal({
                     ).toFixed(2)}{" "}
                     kWp × {nok(ENOVA_RATE_PER_KWP)} kr
                   </span>
-                  <span className="font-semibold text-green-700">
+                  <span className="font-semibold text-emerald-700">
                     -{nok(enovaSupport)} kr
                   </span>
                 </div>
-                <div className="flex justify-between font-medium text-gray-800 border-t border-green-200 pt-1">
+                <div className="flex justify-between border-t border-emerald-200 pt-2 font-semibold text-ink">
                   <span>Pris etter Enova-støtte (inkl. mva)</span>
-                  <span>{nok(effectiveTotalInclVat - enovaSupport)} kr</span>
+                  <span className="tabular-nums">{nok(effectiveTotalInclVat - enovaSupport)} kr</span>
                 </div>
               </div>
             </div>
           )}
 
           {/* ── Totaler ─────────────────────────────────────────────────── */}
-          <div className="bg-gray-800 text-white rounded-lg p-4 space-y-3">
-            <div className="flex justify-between text-gray-300">
+          <div className="space-y-3 rounded-2xl bg-gradient-to-br from-blue-900 to-blue-800 p-5 text-white shadow-pop">
+            <div className="flex justify-between text-white/70">
               <span>Sum av linjene eks. mva</span>
               <span className="font-semibold tabular-nums">
                 {nok(lineTotal)} kr
@@ -961,7 +973,7 @@ export default function EstimateDetailModal({
 
             <div className="flex items-center justify-between gap-4">
               <label
-                className="text-gray-300"
+                className="text-white/70"
                 htmlFor="estimate-commission"
               >
                 Soleklart salgsprovisjon
@@ -971,18 +983,18 @@ export default function EstimateDetailModal({
                   id="estimate-commission"
                   type="number"
                   step="any"
-                  className="border border-gray-600 bg-gray-700 rounded-md px-2 py-1 text-sm w-36 text-right tabular-nums disabled:opacity-60"
+                  className="h-9 w-36 rounded-lg border border-white/15 !bg-white/10 px-3 text-right text-sm tabular-nums !text-white disabled:opacity-60"
                   value={Math.round(Number(commission || 0))}
                   disabled={locked}
                   onChange={(e) =>
                     setCommission(toNumberOrNull(e.target.value) ?? 0)
                   }
                 />
-                <span className="text-xs text-gray-400">kr</span>
+                <span className="text-xs text-white/50">kr</span>
               </div>
             </div>
 
-            <div className="flex justify-between text-gray-300 border-t border-gray-700 pt-2">
+            <div className="flex justify-between border-t border-white/10 pt-3 text-white/70">
               <span>Sum inkl. provisjon</span>
               <span className="font-semibold tabular-nums">
                 {nok(subTotal)} kr
@@ -990,14 +1002,14 @@ export default function EstimateDetailModal({
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-300">
+              <label className="text-xs text-white/60">
                 Manuell tilbudspris eks. mva (tom = bruk summen over)
               </label>
               <div className="flex gap-2">
                 <input
                   type="number"
                   step="any"
-                  className="border border-gray-600 bg-gray-700 rounded-md px-2 py-1.5 text-sm w-48 disabled:opacity-60"
+                  className="h-9 w-48 rounded-lg border border-white/15 !bg-white/10 px-3 text-sm tabular-nums !text-white placeholder:!text-white/40 disabled:opacity-60"
                   value={hasOverride ? Math.round(Number(override)) : ""}
                   placeholder={String(Math.round(subTotal))}
                   disabled={locked}
@@ -1007,7 +1019,7 @@ export default function EstimateDetailModal({
                 />
                 {hasOverride && !locked && (
                   <button
-                    className="text-xs underline text-gray-300"
+                    className="text-xs font-medium text-white/70 underline hover:text-white"
                     onClick={() => setPriceData({ totalOverride: null })}
                   >
                     Fjern overstyring
@@ -1015,20 +1027,20 @@ export default function EstimateDetailModal({
                 )}
               </div>
               {hasOverride && (
-                <p className="text-xs text-amber-300">
+                <p className="text-xs text-orange-300">
                   Overstyrt: {nok(Number(override) - subTotal)} kr i forhold
                   til summen inkl. provisjon.
                 </p>
               )}
             </div>
 
-            <div className="flex justify-between border-t border-gray-600 pt-2">
+            <div className="flex justify-between border-t border-white/15 pt-3">
               <span>Total eks. mva</span>
               <span className="font-semibold tabular-nums">
                 {nok(effectiveTotal)} kr
               </span>
             </div>
-            <div className="flex justify-between text-lg font-bold">
+            <div className="flex items-baseline justify-between font-display text-xl font-semibold">
               <span>Total inkl. mva</span>
               <span className="tabular-nums">
                 {nok(effectiveTotalInclVat)} kr
