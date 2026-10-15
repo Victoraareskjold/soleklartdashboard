@@ -1,24 +1,33 @@
+"use client";
+
+// Nytt estimat på leaden, med ny kalkulator (soleklart-kalkulator).
+// Gammel versjon: docs/backup-gammel-kalkulator/EstimateSection.tsx.bak
+//
+// Flyt ved «Opprett estimat»:
+//   1. kalkyle + låst versjon lagres i kalkulatortjenesten (serveren regner på nytt)
+//   2. estimatet opprettes som før, med price_data i dagens format fra versjonen
+//   3. estimatet kobles til versjonen (estimates.quote_version_id)
 import { useEffect, useState } from "react";
-import CalculatorResults from "../price-calculator/result/CalculatorResults";
-import { SolarData } from "../SolarDataView";
-import {
-  PriceOverview,
-  Supplier,
-  SupplierWithProducts,
-} from "@/types/price_table";
-import {
-  createEstimate,
-  getSuppliers,
-  getSuppliersWithProducts,
-} from "@/lib/api";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
+import { ImagePlus } from "lucide-react";
+import { SolarData } from "../SolarDataView";
 import { supabase } from "@/lib/supabase";
+import { createEstimate } from "@/lib/api";
 import { CreateEstimateInput, Estimate } from "@/lib/types";
-import { getPanelWp } from "@/utils/getPanelWp";
+import { PriceOverview } from "@/types/price_table";
 import { useInstallerGroup } from "@/context/InstallerGroupContext";
-import LoadingScreen from "../LoadingScreen";
-import { ImagePlus, Sparkles } from "lucide-react";
+import {
+  createCalculation,
+  getCalcCatalog,
+  linkEstimate,
+  saveQuoteVersion,
+  type CalcCatalog,
+  type CalcResult,
+} from "@/lib/calcApi";
+import Kalkulator from "../kalkulator/Kalkulator";
+import type { QuoteDraft } from "../kalkulator/quote";
+import s from "../kalkulator/kalkulator.module.css";
 
 interface EstimateSectionProps {
   solarData: SolarData;
@@ -28,165 +37,80 @@ interface EstimateSectionProps {
   leadCompany?: string | null;
 }
 
-export default function EstimateSection({
-  solarData,
-  setSolarData,
-  onEstimateCreated,
-  ownConsumption,
-  leadCompany,
-}: EstimateSectionProps) {
-  const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
-  const [suppliersAndProducts, setSuppliersAndProducts] = useState<
-    SupplierWithProducts[] | null
-  >(null);
-  const [priceOverview, setPriceOverview] = useState<PriceOverview | null>(
-    null,
-  );
-  const [imageFile, setImageFile] = useState<File | null>(null);
+/** Watt per panel fra produktnavnet, f.eks. «Astronergy ASTRO N7s 460Wp» → 460. */
+const wattFromName = (name?: string) => Number(name?.match(/(\d+)\s*W/i)?.[1] ?? 0);
+
+/** Justerer kWp og årsproduksjon hvis panelantall eller paneltype er endret i kalkulatoren. */
+function adjustSolarData(solarData: SolarData, draft: QuoteDraft, result: CalcResult): SolarData {
+  const panelLine = draft.lines.find((l) => l.productKind === "panel");
+  const panels = result.panelCount;
+  const wp = wattFromName(panelLine?.name);
+  if (!panels || !wp) return { ...solarData, totalPanels: panels || solarData.totalPanels };
+
+  const newKwp = (panels * wp) / 1000;
+  const oldKwp = solarData.kwp ?? ((solarData.totalPanels ?? 0) * wattFromName(solarData.selectedPanelType)) / 1000;
+  const yearlyProd = oldKwp > 0 && solarData.yearlyProd ? Math.round((solarData.yearlyProd / oldKwp) * newKwp) : solarData.yearlyProd;
+  return { ...solarData, totalPanels: panels, kwp: Number(newKwp.toFixed(2)), yearlyProd, selectedPanelType: panelLine?.name ?? solarData.selectedPanelType };
+}
+
+export default function EstimateSection({ solarData, onEstimateCreated, leadCompany }: EstimateSectionProps) {
   const params = useParams();
   const leadId = params.leadId as string;
-
-  const [initialSolarData, setInitialSolarData] = useState<SolarData | null>(
-    null,
-  );
+  const { installerGroupId } = useInstallerGroup();
+  const [catalog, setCatalog] = useState<CalcCatalog | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [finished, setFinished] = useState(false);
 
-  const [isStorageReady, setIsStorageReady] = useState(false);
-  const { installerGroupId } = useInstallerGroup();
-
   useEffect(() => {
-    if (
-      solarData.totalPanels! > 0 &&
-      solarData.yearlyProd! > 0 &&
-      !initialSolarData
-    ) {
-      setInitialSolarData(solarData);
-    }
-  }, [solarData, initialSolarData]);
+    if (!installerGroupId) return;
+    getCalcCatalog(installerGroupId)
+      .then((c) => {
+        setCatalog(c);
+        setError(null);
+      })
+      .catch((e: Error) => setError(e.message));
+  }, [installerGroupId]);
 
-  useEffect(() => {
-    getSuppliers().then((data) => {
-      setSuppliers(data);
-    });
-    getSuppliersWithProducts().then((data) => {
-      setSuppliersAndProducts(data);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!installerGroupId) {
-      setIsStorageReady(true);
-      return;
-    }
-
-    const panelSupplierId =
-      localStorage.getItem(`defaultPanelSupplierId_${installerGroupId}`) || "";
-    const panelProductId =
-      localStorage.getItem(`defaultPanelProductId_${installerGroupId}`) || "";
-    const festeId =
-      localStorage.getItem(`defaultFesteSupplierId_${installerGroupId}`) || "";
-    const inverterId =
-      localStorage.getItem(`defaultInverterSupplierId_${installerGroupId}`) ||
-      "";
-
-    setSolarData((prev) => ({
-      ...prev,
-      defaultPanelSupplierId: panelSupplierId,
-      defaultPanelProductId: panelProductId,
-      defaultFesteSupplierId: festeId,
-      defaultInverterSupplierId: inverterId,
-    }));
-
-    setIsStorageReady(true);
-  }, [installerGroupId, setSolarData]);
-
-  const wrappedSetSolarData = (action: React.SetStateAction<SolarData>) => {
-    setSolarData((prevSolarData) => {
-      const newSolarData =
-        typeof action === "function" ? action(prevSolarData) : action;
-
-      if (
-        initialSolarData &&
-        (newSolarData.totalPanels !== prevSolarData.totalPanels ||
-          newSolarData.defaultPanelProductId !==
-            prevSolarData.defaultPanelProductId)
-      ) {
-        const initialPanelWp = getPanelWp(
-          initialSolarData.defaultPanelProductId!,
-        );
-        const initialKwp =
-          (initialSolarData.totalPanels! * initialPanelWp) / 1000;
-
-        const newPanelWp = getPanelWp(newSolarData.defaultPanelProductId!);
-        const newKwp = (newSolarData.totalPanels! * newPanelWp) / 1000;
-
-        if (initialKwp > 0) {
-          const newYearlyProd =
-            (initialSolarData.yearlyProd! / initialKwp) * newKwp;
-          return {
-            ...newSolarData,
-            yearlyProd: Math.round(newYearlyProd),
-            kwp: newKwp,
-          };
-        }
-      }
-
-      return newSolarData;
-    });
+  const uploadImage = async () => {
+    if (!imageFile) return null;
+    const filePath = `${leadId}/${imageFile.name}-${Date.now()}`;
+    const { error: uploadError } = await supabase.storage.from("estimate-images").upload(filePath, imageFile);
+    if (uploadError) throw new Error(`Bildeopplasting feilet: ${uploadError.message}`);
+    return supabase.storage.from("estimate-images").getPublicUrl(filePath).data.publicUrl;
   };
 
-  const handleCreateEstimate = async () => {
-    if (!solarData || !priceOverview) {
-      toast.warn("Mangler data for å opprette estimat.");
-      return;
-    }
+  const handleCreateEstimate = async (draft: QuoteDraft, result: CalcResult) => {
+    if (!installerGroupId) throw new Error("Velg installatør først");
 
-    try {
-      let imageUrl: string | null = null;
-      if (imageFile) {
-        const filePath = `${leadId}/${imageFile.name}-${Date.now()}`;
-        const { error: uploadError } = await supabase.storage
-          .from("estimate-images")
-          .upload(filePath, imageFile);
+    // 1. Kalkyle og låst versjon (serveren regner på nytt)
+    const calculation = await createCalculation({ installerGroupId, leadId, draft });
+    const version = await saveQuoteVersion(calculation.id, { lockVersion: calculation.lockVersion, draft }, crypto.randomUUID());
 
-        if (uploadError) {
-          throw new Error(`Bildeopplasting feilet: ${uploadError.message}`);
-        }
+    // 2. Estimatet, med price_data fra versjonen
+    const imageUrl = await uploadImage();
+    const newEstimate = await createEstimate({
+      lead_id: leadId,
+      solarData: adjustSolarData(solarData, draft, result),
+      price_data: version.priceData as PriceOverview,
+      imageUrl,
+      finished,
+      leadCompany,
+    } as CreateEstimateInput);
 
-        const { data: publicUrlData } = supabase.storage
-          .from("estimate-images")
-          .getPublicUrl(filePath);
+    // 3. Kobling. Feiler den, er estimatet likevel komplett; bare sporingen mangler.
+    await linkEstimate(calculation.id, newEstimate.id, version.quoteVersionId).catch((e: Error) =>
+      toast.warn(`Estimatet er opprettet, men ikke koblet til kalkylen: ${e.message}`),
+    );
 
-        if (!publicUrlData) {
-          throw new Error("Kunne ikke hente offentlig URL for bilde.");
-        }
-        imageUrl = publicUrlData.publicUrl;
-      }
-
-      const newEstimate = await createEstimate({
-        lead_id: leadId,
-        solarData,
-        price_data: priceOverview,
-        imageUrl,
-        finished,
-        leadCompany,
-      } as CreateEstimateInput);
-
-      toast.success("Estimat og prisestimat opprettet!");
-      if (onEstimateCreated) {
-        onEstimateCreated(newEstimate);
-      }
-    } catch (err) {
-      console.error("Kunne ikke opprette estimat:", err);
-      toast.error(
-        err instanceof Error ? err.message : "En ukjent feil oppstod.",
-      );
-    }
+    toast.success("Estimat opprettet!");
+    setImageFile(null);
+    onEstimateCreated?.(newEstimate);
   };
 
-  if (!isStorageReady || !suppliers || !suppliersAndProducts) {
-    return <LoadingScreen />;
-  }
+  if (!installerGroupId) return <div className="sk-card-pad text-sm text-muted">Velg installatør i menyen for å lage estimat.</div>;
+  if (error) return <div className="sk-card-pad text-sm text-red-700">Kalkulatoren kunne ikke lastes: {error}</div>;
+  if (!catalog) return <div className="sk-card-pad text-sm text-muted">Laster kalkulator …</div>;
 
   return (
     <div className="flex flex-col gap-4">
@@ -196,54 +120,36 @@ export default function EstimateSection({
           htmlFor="finished"
           className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-gray-50"
         >
-          <input
-            id="finished"
-            type="checkbox"
-            className="size-4"
-            checked={finished}
-            onChange={(e) => setFinished(e.target.checked)}
-          />
+          <input id="finished" type="checkbox" className="size-4" checked={finished} onChange={(e) => setFinished(e.target.checked)} />
           Ferdigstilt?
         </label>
       </div>
-      <CalculatorResults
-        suppliers={suppliers}
-        suppliersAndProducts={suppliersAndProducts}
-        solarData={solarData}
-        setSolarData={wrappedSetSolarData}
-        setPriceOverview={setPriceOverview}
-        ownConsumption={ownConsumption}
-        leadCompany={leadCompany}
-        finished={finished}
-        leadId={leadId}
-      />
-      <div className="sk-card-pad flex flex-col gap-4">
-        <div>
-          <label
-            htmlFor="estimate-image"
-            className="sk-label flex items-center gap-1.5"
-          >
-            <ImagePlus size={14} className="text-muted" />
-            Last opp bilde (valgfritt)
-          </label>
-          <input
-            type="file"
-            id="estimate-image"
-            name="estimate-image"
-            accept="image/*"
-            onChange={(e) =>
-              setImageFile(e.target.files ? e.target.files[0] : null)
-            }
-            className="block w-full cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50/60 p-2 text-sm text-muted file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand hover:border-gray-400 hover:file:bg-blue-100"
+
+      <div className="sk-card-pad">
+        <label htmlFor="estimate-image" className="sk-label flex items-center gap-1.5">
+          <ImagePlus size={14} className="text-muted" />
+          Bilde til estimatet (valgfritt)
+        </label>
+        <input
+          type="file"
+          id="estimate-image"
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+          className="block w-full cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50/60 p-2 text-sm text-muted file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand hover:border-gray-400 hover:file:bg-blue-100"
+        />
+      </div>
+
+      <div className={s.calc}>
+        <div className={s.main}>
+          <Kalkulator
+            catalog={catalog}
+            leadId={leadId}
+            initialPanels={solarData.totalPanels}
+            initialRoofName={solarData.selectedRoofType}
+            onSave={handleCreateEstimate}
+            saveLabel="Opprett estimat"
           />
         </div>
-        <button
-          className="sk-btn sk-btn-accent sk-btn-lg w-full"
-          onClick={handleCreateEstimate}
-        >
-          <Sparkles size={16} />
-          Opprett estimat
-        </button>
       </div>
     </div>
   );

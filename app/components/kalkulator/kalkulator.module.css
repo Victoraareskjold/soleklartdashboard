@@ -1,0 +1,129 @@
+/* Utseende fra prototypen (soleklart-kalkulator-v1/src/styles.css), avgrenset til denne siden. */
+.calc {
+  --ink: #202820;
+  --muted: #697366;
+  --line: #dfe5da;
+  --green: #263f2d;
+  font-family: Inter, Arial, sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  background: #f3f5f1;
+  min-height: 100%;
+  flex: 1;
+}
+.calc * { box-sizing: border-box; }
+.nav { display: flex; gap: 8px; padding: 12px 30px; background: #fff; border-bottom: 1px solid var(--line); }
+.nav button { border: 0; background: none; color: var(--muted); border-radius: 8px; padding: 9px 13px; font-weight: 600; cursor: pointer; }
+.nav button:hover { background: #f0f4ed; }
+.nav .active { background: #eaf0e4; color: var(--green); }
+.topnote { font-size: 11px; color: var(--muted); padding: 8px 30px; background: #f9faf7; border-bottom: 1px solid var(--line); }
+.main { padding: 26px 30px 50px; }
+.pagehead { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+.pagehead h1 { font-size: 28px; letter-spacing: -0.8px; margin: 0 0 7px; font-weight: 700; }
+.pagehead p { margin: 0; color: var(--muted); line-height: 1.5; }
+.toolbar { display: flex; gap: 12px; align-items: flex-end; margin: 0 0 16px; flex-wrap: wrap; }
+.toolbar label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; }
+.toolbar input, .toolbar select {
+  padding: 9px 10px; border: 1px solid #dbe1d7; background: #fff; border-radius: 6px; color: var(--ink); font: inherit;
+}
+.toolbar input { width: 350px; max-width: 100%; }
+.toolbar select { min-width: 240px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 1150px) { .grid { grid-template-columns: 1fr; } }
+.panel { background: #fff; border: 1px solid var(--line); border-radius: 13px; margin-bottom: 18px; overflow: hidden; }
+.panelhead { padding: 17px 19px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); }
+.panelhead h2 { font-size: 17px; letter-spacing: -0.2px; margin: 0; font-weight: 700; }
+.tablewrap { overflow-x: auto; }
+.calc table { border-collapse: collapse; width: 100%; text-align: left; }
+.calc th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.065em; color: var(--muted);
+  padding: 11px 12px; background: #f9faf7; border-bottom: 1px solid var(--line); font-weight: 600;
+}
+.calc td { padding: 11px 12px; border-bottom: 1px solid #eef1ea; vertical-align: middle; }
+.calc tbody tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.small { font-size: 12px; line-height: 1.5; }
+.muted { color: var(--muted); }
+.productname { font-size: 13px; font-weight: 600; line-height: 1.45; }
+.productmeta { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
+.link { color: #395f45; text-decoration: underline; }
+.pill { display: inline-block; border-radius: 4px; padding: 2px 5px; background: #f1f3ed; color: #627354; font-size: 10px; margin-left: 6px; }
+.manual { background: #fff0d7; color: #925b15; }
+.notice { border-left: 3px solid #dfaa51; background: #fff8e9; padding: 11px 13px; font-size: 12px; line-height: 1.5; margin: 0 0 14px; border-radius: 0 7px 7px 0; }
+.info { border-color: #8aa17b; background: #edf3e9; }
+.error { border-color: #bd4b38; background: #fff0ec; color: #8b3225; }
+.empty { text-align: center; padding: 38px 20px; color: var(--muted); }
+.subhead td { background: #fafbf8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+
+/* Skjemaelementer */
+.input {
+  padding: 8px 9px; border: 1px solid #dbe1d7; background: #fff; border-radius: 6px; color: var(--ink); font: inherit; min-width: 0;
+}
+.input:disabled { opacity: 0.6; }
+.toolbar .input:first-child { width: 350px; max-width: 100%; }
+.inputwrap { display: inline-flex; align-items: center; gap: 5px; }
+.money { width: 110px; text-align: right; }
+.percent { width: 70px; text-align: right; }
+.suffix { font-size: 11px; color: var(--muted); width: 14px; text-align: left; }
+.btn { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; font: inherit; font-weight: 600; }
+.btn:hover:not(:disabled) { background: #f0f4ed; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.primary { background: var(--green); color: #fff; border-color: var(--green); }
+.primary:hover:not(:disabled) { background: #35533e; }
+.ghost { background: transparent; border: 0; padding: 4px 7px; }
+.danger { color: #a13f30; }
+.panelbody { padding: 16px 18px; }
+.panelbody table td { padding: 6px 8px; }
+.panelbody table .input { width: 100%; }
+.rowactions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.inline { display: inline-flex; gap: 6px; align-items: center; }
+.formrow { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.formrow label, .fields label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; }
+.grow { flex: 1; min-width: 200px; }
+.fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.wide { grid-column: 1 / -1; }
+button.pill { border: 0; cursor: pointer; margin-top: 0; }
+
+/* Prisberegning */
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 22px; align-items: start; }
+@media (max-width: 1150px) { .layout { grid-template-columns: 1fr; } }
+@media (min-width: 1250px) { .side { position: sticky; top: 20px; } }
+.tag { font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; background: #eef2e9; color: #45603b; padding: 5px 8px; border-radius: 5px; font-weight: 700; }
+.step { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+.pricing { min-width: 690px; }
+.pricing td:first-child { width: 36%; }
+.pricing td .input { padding: 7px 7px; text-align: right; }
+.quantity { width: 63px; }
+.rowtools { display: flex; gap: 6px; align-items: center; margin-top: 2px; }
+.rowtools .btn { padding: 3px 0; font-size: 11px; font-weight: 600; color: #395f45; }
+.footerbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; background: #fafbf8; border-top: 1px solid var(--line); }
+.summary { background: var(--green); color: #fff; border-radius: 13px; padding: 22px; margin-bottom: 15px; }
+.summarymuted { color: #bdcdbd; }
+.total { font-size: 35px; font-weight: 650; letter-spacing: -1.4px; margin: 9px 0 3px; white-space: nowrap; }
+.summary dl { margin: 23px 0 0; }
+.summary dl div { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; font-size: 12px; }
+.summary dt { color: #c4d2c1; }
+.summary dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.summary dl div:last-child { border-top: 1px solid #536b50; padding-top: 13px; margin-top: 6px; }
+.summary button { width: 100%; margin-top: 18px; background: #e7f2d9; border: 0; color: #223720; border-radius: 8px; padding: 9px 13px; font-weight: 600; cursor: pointer; }
+.summary button:disabled { opacity: 0.5; cursor: default; }
+.side .panel { margin-bottom: 15px; }
+.two { grid-template-columns: 1fr 1fr; }
+.fields .input { width: 100%; }
+.sidenote { padding: 0 4px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.check { flex-direction: row !important; align-items: center; gap: 8px !important; }
+.price { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow: auto; }
+.list .btn { text-align: left; display: flex; justify-content: space-between; align-items: center; font-weight: 400; gap: 15px; }
+.list .btn strong { font-size: 13px; }
+.subtleline { border: 0; border-top: 1px solid var(--line); margin: 17px 0; }
+.dialog { border: 1px solid var(--line); border-radius: 15px; max-width: 720px; width: calc(100% - 28px); padding: 0; box-shadow: 0 25px 90px #14210e33; color: var(--ink); font-family: Inter, Arial, sans-serif; font-size: 14px; }
+.dialog::backdrop { background: #18271c77; }
+.dialoghead { display: flex; justify-content: space-between; align-items: center; padding: 19px 22px; border-bottom: 1px solid var(--line); }
+.dialoghead h2 { font-size: 17px; margin: 0; font-weight: 700; }
+.dialogbody { padding: 20px 22px; }
+.dialogbody .toolbar .input { width: 100%; }
+.dialogfoot { padding: 15px 22px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); }
+.snapshotlines { max-height: 350px; overflow: auto; margin-bottom: 14px; }
+.totalsbox { font-size: 12px; line-height: 1.7; padding: 13px 16px; background: #f5f7f1; border-radius: 7px; }
