@@ -27,6 +27,7 @@ import {
 } from "@/lib/calcApi";
 import Kalkulator from "../kalkulator/Kalkulator";
 import BatteryOfferSetup from "./BatteryOfferSetup";
+import EstimateFacilityInfo from "./EstimateFacilityInfo";
 import { initialSetup, toBatterySection, type BatterySetup } from "./batterySetup";
 import type { QuoteDraft } from "../kalkulator/quote";
 import s from "../kalkulator/kalkulator.module.css";
@@ -61,7 +62,7 @@ function inverterSaleFrom(result: CalcResult): number | null {
   return lines.length ? lines.reduce((sum, l) => sum + l.sale, 0) / 100 : null;
 }
 
-export default function EstimateSection({ solarData, onEstimateCreated, leadCompany }: EstimateSectionProps) {
+export default function EstimateSection({ solarData, onEstimateCreated, leadCompany, ownConsumption }: EstimateSectionProps) {
   const params = useParams();
   const leadId = params.leadId as string;
   const { installerGroupId } = useInstallerGroup();
@@ -72,6 +73,14 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
   const [batterySetup, setBatterySetup] = useState<BatterySetup | null>(null);
   /** Inverterlinjens sum eks. mva. i kroner, fra siste beregning */
   const [inverterSaleEx, setInverterSaleEx] = useState<number | null>(null);
+  /** Siste kalkyle, for «Info om anlegget» */
+  const [latest, setLatest] = useState<{ draft: QuoteDraft; result: CalcResult } | null>(null);
+  /** Manuell årsproduksjon (kWh), null = følg kalkylen */
+  const [prodOverride, setProdOverride] = useState<number | null>(null);
+
+  const adjusted = latest ? adjustSolarData(solarData, latest.draft, latest.result) : solarData;
+  const finalSolarData = (s: SolarData): SolarData => (prodOverride != null ? { ...s, yearlyProd: prodOverride } : s);
+  const originalKwp = solarData.kwp ?? ((solarData.totalPanels ?? 0) * wattFromName(solarData.selectedPanelType)) / 1000;
 
   useEffect(() => {
     if (!installerGroupId) return;
@@ -104,7 +113,7 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
     const inverterEx = inverterSaleFrom(result);
     const newEstimate = await createEstimate({
       lead_id: leadId,
-      solarData: adjustSolarData(solarData, draft, result),
+      solarData: finalSolarData(adjustSolarData(solarData, draft, result)),
       price_data: {
         ...(version.priceData as PriceOverview),
         // Leses av tilbudssiden: klargjøringspris, batterimodeller og priser
@@ -132,9 +141,9 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
   return (
     <div className="flex flex-col gap-3">
       {/* Én kompakt linje i stedet for to kort, så kalkulatoren starter høyere opp */}
-      <div className="sk-card flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
-        <h2 className="sk-section-title mr-auto">Nytt estimat</h2>
-        <label htmlFor="estimate-image" className="flex min-w-0 items-center gap-2 text-sm text-muted">
+      <div className="sk-card grid grid-cols-1 items-center gap-x-4 gap-y-2 px-4 py-2.5 md:grid-cols-[1fr_auto_1fr]">
+        <h2 className="sk-section-title">Nytt estimat</h2>
+        <label htmlFor="estimate-image" className="flex min-w-0 items-center justify-center gap-2 text-sm text-muted">
           <ImagePlus size={14} className="shrink-0" />
           <span className="whitespace-nowrap">Bilde (valgfritt)</span>
           <input
@@ -147,14 +156,25 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
         </label>
         <label
           htmlFor="finished"
-          className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-gray-50"
+          className="inline-flex cursor-pointer items-center gap-2 justify-self-start rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-gray-50 md:justify-self-end"
         >
           <input id="finished" type="checkbox" className="size-4" checked={finished} onChange={(e) => setFinished(e.target.checked)} />
           Ferdigstilt?
         </label>
       </div>
 
-      <div className={`${s.calc} ${s.embedded}`}>
+      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[260px_minmax(0,1fr)]">
+        <EstimateFacilityInfo
+          solarData={adjusted}
+          originalYearlyProd={solarData.yearlyProd}
+          originalKwp={originalKwp}
+          prodOverride={prodOverride}
+          onProdOverride={setProdOverride}
+          ownConsumption={ownConsumption}
+          support={latest ? latest.result.support.amount / 100 : null}
+          business={Boolean(leadCompany)}
+        />
+      <div className={`${s.calc} ${s.embedded} min-w-0`}>
         <Kalkulator
           catalog={catalog}
           leadId={leadId}
@@ -164,8 +184,12 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
           saveLabel="Opprett estimat"
           fullWidth
           editableTotals
-          onResult={(_draft, r) => setInverterSaleEx(r ? inverterSaleFrom(r) : null)}
+          onResult={(d, r) => {
+            setInverterSaleEx(r ? inverterSaleFrom(r) : null);
+            if (r) setLatest({ draft: d, result: r });
+          }}
         />
+      </div>
       </div>
 
       {batterySetup && (

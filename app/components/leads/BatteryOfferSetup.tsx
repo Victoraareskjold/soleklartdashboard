@@ -6,6 +6,7 @@
 import { BatteryCharging, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import {
+  batteryMarkupPercent,
   clearDefaults,
   hybridPriceEx,
   modelsFromCatalog,
@@ -76,6 +77,7 @@ export default function BatteryOfferSetup({ catalog, setup, onChange, inverterSa
       ...setup,
       hybridMode: "formula",
       hybridFactor: 2,
+      installEx: setup.installEx,
       models,
       recommendedModelId: models[0]?.id ?? "",
       recommendedModules: suggestedModules(models[0]),
@@ -101,8 +103,8 @@ export default function BatteryOfferSetup({ catalog, setup, onChange, inverterSa
             type="button"
             className="sk-btn sk-btn-secondary sk-btn-sm"
             onClick={() =>
-              saveDefaults(catalog.installer.id, setup)
-                ? toast.success(`Lagret som standard for ${catalog.installer.name} i denne nettleseren.`)
+              saveDefaults(setup)
+                ? toast.success("Lagret som standard for alle installatører i denne nettleseren. Prisene hentes fortsatt fra hver installatørs katalog.")
                 : toast.error("Kunne ikke lagre i nettleseren.")
             }
           >
@@ -293,7 +295,8 @@ export default function BatteryOfferSetup({ catalog, setup, onChange, inverterSa
             </table>
             <p className="mt-2 text-xs text-muted">
               Modulær: kunden velger antall moduler, og det legges til én BMS per {"«Stk / BMS»"} moduler. Hel enhet: kunden velger antall enheter, uten BMS.
-              Prisene er hentet fra katalogen med avtalt påslag, og kan overstyres her. Kryss av for modellene som skal vises; uten avkryssede modeller vises bare «Klargjør for batteri».
+              Pris / stk og BMS-pris = innkjøp + {batteryMarkupPercent(catalog).toLocaleString("nb-NO")} % påslag for solcellemateriell hos {catalog.installer.name}, og kan overstyres på dette estimatet.
+              «Lagre som standard» lagrer valgene (modeller, oppbygging, antall, klargjøring) for alle installatører, men ikke prisene. Kryss av for modellene som skal vises; uten avkryssede modeller vises bare «Klargjør for batteri».
             </p>
           </div>
         )}

@@ -48,19 +48,30 @@ export interface BatterySetup {
   models: BatteryModelSetup[];
 }
 
-/** Det som lagres som standard i nettleseren (per installatør) */
+/**
+ * Det som lagres som standard i nettleseren. Gjelder ALLE installatører.
+ *
+ * Priser lagres ikke: pris per modul/enhet og BMS kommer alltid fra installatørens katalog
+ * (innkjøp + installatørens påslag for solcellemateriell), og installasjon fra installatørens
+ * avtalte batteriarbeid. Unntak er egne modeller som ikke finnes i katalogen.
+ */
+type ModelDefaults = Partial<Omit<BatteryModelSetup, "id" | "moduleEx" | "baseEx" | "datasheetUrl">>;
 interface SavedDefaults {
   hybridMode: HybridMode;
   hybridFactor: number;
   hybridManualEx: number;
-  installEx: number;
   recommendedModelId: string;
   recommendedModules: number;
-  models: Record<string, Partial<BatteryModelSetup>>;
+  /** Per produkt-id (katalogmodeller) */
+  models: Record<string, ModelDefaults>;
+  /** Egne modeller lagt til for hånd, med pris */
+  customModels?: BatteryModelSetup[];
 }
 
 const BMS_PATTERN = /\b(bms|base|kontrollenhet|styringsenhet|control\s*unit|hvc|high\s*voltage\s*control|power\s*module|effektmodul)\b/i;
-const storageKey = (installerId: string) => `soleklart.batterySetup.${installerId}`;
+const STORAGE_KEY = "soleklart.batterySetup";
+/** Eldre lagring per installatør (før standarden ble felles) */
+const legacyKey = (installerId: string) => `soleklart.batterySetup.${installerId}`;
 
 const round = (n: number) => Math.round(n);
 const brandOf = (p: CalcProduct) => p.name.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
@@ -72,11 +83,12 @@ export function kwhFromName(name: string): number | null {
   return null;
 }
 
-/** Salgspris eks. mva. = innkjøp + avtalt påslag for kategorien */
+/** Installatørens påslag for solcellemateriell, i prosent */
+export const batteryMarkupPercent = (catalog: CalcCatalog) => catalog.markups.solcellemateriell ?? 0;
+
+/** Salgspris eks. mva. = innkjøp + installatørens påslag for solcellemateriell */
 function saleEx(catalog: CalcCatalog, p: CalcProduct): number {
-  const group = categoryOf(catalog, p)?.markupGroup;
-  const markup = group ? (catalog.markups[group] ?? 0) : 0;
-  return round((p.priceOre / 100) * (1 + markup / 100));
+  return round((p.priceOre / 100) * (1 + batteryMarkupPercent(catalog) / 100));
 }
 
 const isBattery = (catalog: CalcCatalog, p: CalcProduct) => p.active && categoryOf(catalog, p)?.productKind === "batteri";
@@ -130,24 +142,33 @@ export function suggestedModules(model: BatteryModelSetup | undefined): number {
 
 function readDefaults(installerId: string): SavedDefaults | null {
   try {
-    const raw = localStorage.getItem(storageKey(installerId));
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(legacyKey(installerId));
     return raw ? (JSON.parse(raw) as SavedDefaults) : null;
   } catch {
     return null;
   }
 }
 
-/** Oppsett for et nytt estimat: katalogen + lagret standard for installatøren. */
+/** Bare ikke-pris-feltene fra lagret standard (eldre lagring kan inneholde priser). */
+function modelDefaults(saved: SavedDefaults | null, id: string): ModelDefaults {
+  const raw = (saved?.models?.[id] ?? {}) as Partial<BatteryModelSetup>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { moduleEx, baseEx, datasheetUrl, id: _id, ...rest } = raw;
+  return rest;
+}
+
+/** Oppsett for et nytt estimat: katalogen (priser for installatøren) + felles lagret standard. */
 export function initialSetup(catalog: CalcCatalog): BatterySetup {
   const saved = readDefaults(catalog.installer.id);
-  const models = modelsFromCatalog(catalog).map((m) => ({ ...m, ...(saved?.models?.[m.id] ?? {}), id: m.id }));
+  const fromCatalog = modelsFromCatalog(catalog).map((m) => ({ ...m, ...modelDefaults(saved, m.id) }));
+  const models = [...fromCatalog, ...(saved?.customModels ?? [])];
   const firstEnabled = models.find((m) => m.enabled) ?? models[0];
   const recommended = models.find((m) => m.id === saved?.recommendedModelId && m.enabled) ?? firstEnabled;
   return {
     hybridMode: saved?.hybridMode ?? "formula",
     hybridFactor: saved?.hybridFactor ?? 2,
     hybridManualEx: saved?.hybridManualEx ?? 12000,
-    installEx: saved?.installEx ?? defaultInstallEx(catalog),
+    installEx: defaultInstallEx(catalog),
     recommendedModelId: recommended?.id ?? "",
     recommendedModules:
       recommended && saved?.recommendedModelId === recommended.id && saved.recommendedModules
@@ -157,18 +178,24 @@ export function initialSetup(catalog: CalcCatalog): BatterySetup {
   };
 }
 
-export function saveDefaults(installerId: string, setup: BatterySetup) {
+export function saveDefaults(setup: BatterySetup) {
+  const isCustom = (m: BatteryModelSetup) => m.id.startsWith("egen-");
   const data: SavedDefaults = {
     hybridMode: setup.hybridMode,
     hybridFactor: setup.hybridFactor,
     hybridManualEx: setup.hybridManualEx,
-    installEx: setup.installEx,
     recommendedModelId: setup.recommendedModelId,
     recommendedModules: setup.recommendedModules,
-    models: Object.fromEntries(setup.models.map(({ id, ...rest }) => [id, rest])),
+    models: Object.fromEntries(
+      setup.models
+        .filter((m) => !isCustom(m))
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .map(({ id, moduleEx, baseEx, datasheetUrl, ...rest }) => [id, rest]),
+    ),
+    customModels: setup.models.filter(isCustom),
   };
   try {
-    localStorage.setItem(storageKey(installerId), JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     return true;
   } catch {
     return false;
@@ -177,7 +204,8 @@ export function saveDefaults(installerId: string, setup: BatterySetup) {
 
 export function clearDefaults(installerId: string) {
   try {
-    localStorage.removeItem(storageKey(installerId));
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(legacyKey(installerId));
   } catch {
     /* ignorer */
   }
