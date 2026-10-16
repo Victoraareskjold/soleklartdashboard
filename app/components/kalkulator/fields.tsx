@@ -97,3 +97,37 @@ export async function saveAndReload(action: () => Promise<unknown>, reload: () =
   if (success) toast.success(success);
   await reload();
 }
+
+/** Lite «?»-merke med forklaring ved peker/fokus. */
+export function Help({ text }: { text: string }) {
+  return (
+    <span className={s.help} tabIndex={0} title={text} aria-label={text} role="img">
+      ?
+    </span>
+  );
+}
+
+/** Desimaltall med valgfri enhet (f.eks. faktor eller kWp). */
+export function NumberField({ value, editable, onSave, label, unit, min = 0, max = 100000 }: SaveFieldProps<number> & { unit?: string; min?: number; max?: number }) {
+  const field = useSaveField(String(value).replace(".", ","), async (text) => {
+    const n = Number(text.trim().replace(",", "."));
+    if (!Number.isFinite(n) || n < min || n > max) throw new Error(`Verdien må være mellom ${fmtPct(min)} og ${fmtPct(max)}`);
+    await onSave(n);
+  });
+  if (!editable) return <>{fmtPct(value)}{unit ? ` ${unit}` : ""}</>;
+  return (
+    <span className={s.inputwrap}>
+      <input
+        aria-label={label}
+        className={`${s.input} ${s.percent}`}
+        inputMode="decimal"
+        value={field.text}
+        disabled={field.saving}
+        onChange={(e) => field.setText(e.target.value)}
+        onBlur={field.save}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      />
+      {unit && <span className={s.suffix}>{unit}</span>}
+    </span>
+  );
+}

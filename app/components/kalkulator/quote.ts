@@ -1,5 +1,16 @@
-// Utkast-modell for kalkulatoren og hvordan den bygges fra katalogen.
-import type { AdjustmentMode, CalcCatalog, CalcInput, CalcMountRate, CalcProduct, CalcWorkType, LineKind, MarkupGroup } from "@/lib/calcApi";
+// Utkast-modell for kalkulatoren, og reglene som gjelder inne i kalkulatoren:
+// kWp fra panellinjene, mengder som følger panelantallet, invertervalg (nett, størrelse, hybrid ved batteri).
+// Prisregning skjer i kalkulator-API-et; her bygges bare utkastet.
+import type {
+  AdjustmentMode,
+  CalcCatalog,
+  CalcMountRate,
+  CalcProduct,
+  CalcWorkType,
+  LineKind,
+  ProductKind,
+  ProductSpecs,
+} from "@/lib/calcApi";
 
 export interface QuoteLine {
   id: string;
@@ -7,15 +18,17 @@ export interface QuoteLine {
   name: string;
   /** Leverandør, taktype eller "Avtalt arbeidspris" */
   detail: string;
-  productKind?: string;
+  productKind?: ProductKind;
   quantity: string;
   unit: string;
-  /** Kroner per enhet, som tekst (kan ha komma) */
+  /** Kroner per enhet eks. mva. (innkjøp / avtalt sats), som tekst */
   baseUnit: string;
   markupPercent: string;
   priceMode: "auto" | "fixed";
   fixedSale: string;
   reductionEligible: boolean;
+  /** Med i grunnlaget for solcellestøtte. undefined = katalogens standard */
+  supportEligible?: boolean;
   sourceId?: string;
   edited?: boolean;
 }
@@ -25,15 +38,28 @@ export interface Adjustment {
   value: string;
 }
 
+export type Grid = "230" | "400";
+
+export interface SupportChoice {
+  /** auto = etter sentrale regler (privat), off = ingen, manual = eget anslag */
+  mode: "auto" | "off" | "manual";
+  amount: string;
+  provider: string;
+}
+
 export interface QuoteDraft {
   projectName: string;
   customerType: "private" | "business";
   roofTypeId: string;
+  grid: Grid;
+  battery: boolean;
+  /** auto = kalkulatoren velger inverter, manual = brukeren har valgt selv */
+  inverterMode: "auto" | "manual";
   lines: QuoteLine[];
   commission: Adjustment;
   reduction: Adjustment;
   vatPercent: string;
-  supportAmount: string;
+  support: SupportChoice;
 }
 
 export type Scenario = "solar" | "battery" | "other";
@@ -41,23 +67,40 @@ export type Scenario = "solar" | "battery" | "other";
 const newId = () => crypto.randomUUID();
 const kr = (ore: number | null | undefined) => (ore == null ? "" : String(ore / 100));
 const pct = (n: number | null | undefined) => (n == null ? "" : String(n));
+const num = (text: string) => Number(String(text).replace(",", "."));
 
-export function markupGroupOf(catalog: CalcCatalog, product: CalcProduct): MarkupGroup | undefined {
-  return catalog.categories.find((c) => c.id === product.categoryId)?.markupGroup;
+// --- Katalogoppslag ---
+
+export const categoryOf = (catalog: CalcCatalog, product: CalcProduct) => catalog.categories.find((c) => c.id === product.categoryId);
+
+/** Hovedkategorien (regler og bytte av produkt skjer innen hovedkategorien) */
+export function topCategoryOf(catalog: CalcCatalog, product: CalcProduct) {
+  const c = categoryOf(catalog, product);
+  return c?.parentId ? catalog.categories.find((x) => x.id === c.parentId) : c;
 }
 
-export function productKindOf(catalog: CalcCatalog, product: CalcProduct) {
-  return catalog.categories.find((c) => c.id === product.categoryId)?.productKind;
+export const productById = (catalog: CalcCatalog, id?: string) => (id ? catalog.products.find((p) => p.id === id) : undefined);
+export const specsOf = (catalog: CalcCatalog, line: QuoteLine): ProductSpecs =>
+  (line.kind === "product" && productById(catalog, line.sourceId)?.specs) || {};
+
+/** Aktive produkter i samme hovedkategori, til «Bytt produkt». */
+export function alternativesFor(catalog: CalcCatalog, line: QuoteLine) {
+  const current = productById(catalog, line.sourceId);
+  if (!current) return [];
+  const top = topCategoryOf(catalog, current)?.id;
+  return catalog.products.filter((p) => (p.active || p.id === current.id) && topCategoryOf(catalog, p)?.id === top);
 }
+
+// --- Linjer ---
 
 export function productLine(catalog: CalcCatalog, product: CalcProduct, quantity = 1): QuoteLine {
-  const group = markupGroupOf(catalog, product);
+  const group = categoryOf(catalog, product)?.markupGroup;
   return {
     id: newId(),
     kind: "product",
     name: product.name,
     detail: product.supplierName,
-    productKind: productKindOf(catalog, product),
+    productKind: categoryOf(catalog, product)?.productKind,
     quantity: String(quantity),
     unit: product.unit,
     baseUnit: kr(product.priceOre),
@@ -67,6 +110,11 @@ export function productLine(catalog: CalcCatalog, product: CalcProduct, quantity
     reductionEligible: false,
     sourceId: product.id,
   };
+}
+
+/** Bytter produkt på en linje, men beholder mengden. Pris og påslag hentes fra katalogen. */
+export function swapProduct(catalog: CalcCatalog, line: QuoteLine, product: CalcProduct): QuoteLine {
+  return { ...productLine(catalog, product, num(line.quantity) || 1), id: line.id, quantity: line.quantity };
 }
 
 export function mountLine(catalog: CalcCatalog, mount: CalcMountRate, quantity: number): QuoteLine {
@@ -117,13 +165,183 @@ export function customLine(catalog: CalcCatalog, kind: LineKind): QuoteLine {
     priceMode: "auto",
     fixedSale: "",
     reductionEligible: kind === "mount",
+    supportEligible: false,
     edited: true,
   };
 }
 
-// Standard solcelleoppsett fra prototypen (LYN-referansen). Hoppes over hvis produktene er borte.
+/** Oppdaterer pris og påslag fra gjeldende katalog på linjer som ikke er justert for hånd. */
+export function refreshPrices(catalog: CalcCatalog, draft: QuoteDraft): { draft: QuoteDraft; changed: number } {
+  let changed = 0;
+  const lines = draft.lines.map((l) => {
+    if (l.edited || !l.sourceId) return l;
+    let fresh: QuoteLine | undefined;
+    if (l.kind === "product") {
+      const p = productById(catalog, l.sourceId);
+      if (p) fresh = productLine(catalog, p);
+    } else if (l.kind === "mount") {
+      const m = catalog.mountRates.find((x) => x.roofTypeId === l.sourceId && x.priceOre != null);
+      if (m) fresh = mountLine(catalog, m, 1);
+    } else {
+      const w = catalog.workTypes.find((x) => x.id === l.sourceId);
+      if (w) fresh = workLine(catalog, w);
+    }
+    if (!fresh || (fresh.baseUnit === l.baseUnit && fresh.markupPercent === l.markupPercent)) return l;
+    changed++;
+    return { ...l, baseUnit: fresh.baseUnit, markupPercent: fresh.markupPercent };
+  });
+  return { draft: { ...draft, lines }, changed };
+}
+
+// --- Anlegg: paneler og kWp ---
+
+export function panelCountOf(lines: QuoteLine[]) {
+  return lines.filter((l) => l.productKind === "panel").reduce((sum, l) => sum + num(l.quantity), 0);
+}
+
+/** Anleggseffekt = Σ paneler × Wp / 1000. null hvis et panel mangler effekt i produktdata. */
+export function kwpOf(catalog: CalcCatalog, lines: QuoteLine[]): number | null {
+  const panels = lines.filter((l) => l.productKind === "panel");
+  if (!panels.length) return 0;
+  let total = 0;
+  for (const l of panels) {
+    const wp = specsOf(catalog, l).wp;
+    if (!wp) return null;
+    total += (num(l.quantity) * wp) / 1000;
+  }
+  return Math.round(total * 1000) / 1000;
+}
+
+/** Linjer som skal følge panelantallet: montering og kategorier med mengderegel «per panel». */
+export function followsPanels(catalog: CalcCatalog, line: QuoteLine) {
+  if (line.kind === "mount") return true;
+  const p = line.kind === "product" ? productById(catalog, line.sourceId) : undefined;
+  return !!p && categoryOf(catalog, p)?.quantityRule === "per_panel";
+}
+
+export function setPanelCount(catalog: CalcCatalog, draft: QuoteDraft, panels: number): QuoteDraft {
+  return {
+    ...draft,
+    lines: draft.lines.map((l) => (l.productKind === "panel" || followsPanels(catalog, l) ? { ...l, quantity: String(panels) } : l)),
+  };
+}
+
+// --- Inverter ---
+
+export interface InverterNeed {
+  kwp: number;
+  targetKw: number;
+  grid: Grid;
+  hybrid: boolean;
+  batteryClass?: "HV" | "LV";
+}
+
+export function inverterNeed(catalog: CalcCatalog, draft: QuoteDraft): InverterNeed | null {
+  const kwp = kwpOf(catalog, draft.lines);
+  if (!kwp) return null;
+  const batteryLine = draft.lines.find((l) => l.productKind === "batteri" && specsOf(catalog, l).batteryClass);
+  return {
+    kwp,
+    targetKw: Math.round((kwp / (catalog.settings.inverterSizingFactor || 1.2)) * 100) / 100,
+    grid: draft.grid,
+    hybrid: draft.battery,
+    batteryClass: batteryLine ? specsOf(catalog, batteryLine).batteryClass : undefined,
+  };
+}
+
+/** Passer inverteren nett, hybridkrav og batteritype? (Størrelse vurderes separat.) */
+export function inverterFits(product: CalcProduct, need: Pick<InverterNeed, "grid" | "hybrid" | "batteryClass" | "kwp">) {
+  const s = product.specs;
+  if (!s.acKw || !s.grid) return false;
+  if (s.grid !== "begge" && s.grid !== need.grid) return false;
+  if (need.hybrid && !s.hybrid) return false;
+  if (need.hybrid && need.batteryClass && s.batteryClass && s.batteryClass !== need.batteryClass) return false;
+  if (s.maxPvKwp && need.kwp > s.maxPvKwp) return false;
+  return true;
+}
+
+export const inverters = (catalog: CalcCatalog) => catalog.products.filter((p) => p.active && categoryOf(catalog, p)?.productKind === "inverter");
+
+/** Kompatible invertere for nedtrekksmenyen, minst først. */
+export function compatibleInverters(catalog: CalcCatalog, need: InverterNeed | null, grid: Grid, hybrid: boolean) {
+  const n = need ?? { kwp: 0, grid, hybrid };
+  return inverters(catalog)
+    .filter((p) => inverterFits(p, n))
+    .sort((a, b) => (a.specs.acKw ?? 0) - (b.specs.acKw ?? 0) || a.priceOre - b.priceOre);
+}
+
+/**
+ * Forslag: minste kompatible 3-fase inverter med AC-effekt ≥ kWp / dimensjoneringsfaktor.
+ * Uten batteri foretrekkes vanlig inverter; med batteri kreves hybrid. Lik størrelse → lavest pris.
+ */
+export function suggestInverter(catalog: CalcCatalog, need: InverterNeed): CalcProduct | null {
+  const candidates = inverters(catalog).filter(
+    (p) => inverterFits(p, need) && p.specs.phases !== 1 && (need.hybrid || !p.specs.hybrid) && (p.specs.acKw ?? 0) >= need.targetKw,
+  );
+  candidates.sort((a, b) => (a.specs.acKw ?? 0) - (b.specs.acKw ?? 0) || a.priceOre - b.priceOre);
+  return candidates[0] ?? null;
+}
+
+export interface RuleResult {
+  draft: QuoteDraft;
+  /** Melding til brukeren om noe kalkulatoren endret eller ikke fant */
+  notice: string | null;
+}
+
+/**
+ * Holder batterivalg og inverter i samsvar med reglene:
+ *  - en batterilinje i kalkylen slår på batteri
+ *  - batteri krever hybridinverter (og riktig batteritype)
+ *  - automatisk modus: inverteren følger forslaget
+ *  - manuelt valg beholdes så lenge det passer nett/hybrid
+ */
+export function applyRules(catalog: CalcCatalog, input: QuoteDraft): RuleResult {
+  let draft = input;
+  const notes: string[] = [];
+
+  if (!draft.battery && draft.lines.some((l) => l.productKind === "batteri")) {
+    draft = { ...draft, battery: true };
+    notes.push("Batteri er lagt til, så det kreves hybridinverter.");
+  }
+
+  const need = inverterNeed(catalog, draft);
+  if (!need) return { draft, notice: notes.join(" ") || null };
+
+  const index = draft.lines.findIndex((l) => l.productKind === "inverter");
+  const current = index >= 0 ? productById(catalog, draft.lines[index].sourceId) : undefined;
+  const suggestion = suggestInverter(catalog, need);
+  const currentFits = current ? inverterFits(current, need) : false;
+
+  const replaceWith = (product: CalcProduct, why: string) => {
+    const lines = [...draft.lines];
+    if (index >= 0) lines[index] = swapProduct(catalog, lines[index], product);
+    else lines.splice(Math.max(1, lines.findIndex((l) => l.productKind === "feste") + 1), 0, productLine(catalog, product));
+    draft = { ...draft, lines };
+    notes.push(why);
+  };
+
+  if (draft.inverterMode === "manual" && current && currentFits) {
+    // Behold brukerens valg
+  } else if (suggestion && suggestion.id !== current?.id) {
+    const reason = draft.inverterMode === "manual" && current
+      ? `${current.name} passer ikke lenger (${need.hybrid ? "krever hybrid" : `${need.grid} V-nett`}). Byttet til ${suggestion.name}.`
+      : current
+        ? `Inverter oppdatert til ${suggestion.name} (${need.kwp.toLocaleString("nb-NO")} kWp ÷ ${catalog.settings.inverterSizingFactor.toLocaleString("nb-NO")} = ${need.targetKw.toLocaleString("nb-NO")} kW).`
+        : `Inverter lagt til: ${suggestion.name}.`;
+    replaceWith(suggestion, reason);
+    if (draft.inverterMode === "manual") draft = { ...draft, inverterMode: "auto" };
+  } else if (!suggestion && (!current || !currentFits)) {
+    notes.push(
+      `Ingen kompatibel ${need.hybrid ? "hybridinverter" : "inverter"} for ${need.grid} V på minst ${need.targetKw.toLocaleString("nb-NO")} kW i katalogen. Velg inverter manuelt.`,
+    );
+  }
+
+  return { draft, notice: notes.join(" ") || null };
+}
+
+// --- Nytt utkast ---
+
 const DEFAULT_PANEL = "17d47b70-dd41-4e8d-8c28-4e9d12cc26d6";
-const DEFAULT_INVERTER = "157158c5-6142-4846-ac81-2dfe6cf4463d";
 const DEFAULT_EXTRAS = [
   "1557c4ef-2e78-41ef-904c-8113d8ba76cd", // stillas
   "9527d041-bf67-4e6c-afc3-4662f88f9441", // frakt standardpall
@@ -136,70 +354,60 @@ export function defaultRoofTypeId(catalog: CalcCatalog) {
   return (priced.find((m) => m.roofTypeName === DEFAULT_ROOF_NAME) ?? priced[0])?.roofTypeId ?? "";
 }
 
-export function newDraft(catalog: CalcCatalog, scenario: Scenario, panels = 36, roofTypeId = defaultRoofTypeId(catalog)): QuoteDraft {
-  const draft: QuoteDraft = {
-    projectName: scenario === "solar" ? "Nytt solcelleanlegg" : scenario === "battery" ? "Nytt batteritilbud" : "Ny kalkyle",
+export function emptyDraft(catalog: CalcCatalog, name: string, roofTypeId = defaultRoofTypeId(catalog)): QuoteDraft {
+  return {
+    projectName: name,
     customerType: "private",
     roofTypeId,
+    grid: "230",
+    battery: false,
+    inverterMode: "auto",
     lines: [],
     commission: { mode: "auto", value: "" },
     reduction: { mode: "auto", value: "" },
     vatPercent: String(catalog.settings.vatPercent),
-    supportAmount: "0",
+    support: { mode: "auto", amount: "0", provider: "" },
   };
-  if (scenario !== "solar") return draft;
+}
 
-  const byId = (id: string) => catalog.products.find((p) => p.id === id);
-  const panel = byId(DEFAULT_PANEL) ?? catalog.products.find((p) => productKindOf(catalog, p) === "panel");
+export function newDraft(catalog: CalcCatalog, scenario: Scenario, panels = 36, roofTypeId = defaultRoofTypeId(catalog)): QuoteDraft {
+  const draft = emptyDraft(
+    catalog,
+    scenario === "solar" ? "Nytt solcelleanlegg" : scenario === "battery" ? "Nytt batteritilbud" : "Ny kalkyle",
+    roofTypeId,
+  );
+  if (scenario !== "solar") return { ...draft, battery: scenario === "battery" };
+
+  const active = (id: string) => catalog.products.find((p) => p.id === id && p.active);
+  const panel = active(DEFAULT_PANEL) ?? catalog.products.find((p) => p.active && categoryOf(catalog, p)?.productKind === "panel");
   if (panel) draft.lines.push(productLine(catalog, panel, panels));
 
   const mount = catalog.mountRates.find((m) => m.roofTypeId === roofTypeId && m.priceOre != null);
-  const kit = mount?.productId ? byId(mount.productId) : undefined;
+  const kit = mount?.productId ? catalog.products.find((p) => p.id === mount.productId) : undefined;
   if (kit) draft.lines.push(productLine(catalog, kit, panels));
 
-  const inverter = byId(DEFAULT_INVERTER);
-  if (inverter) draft.lines.push(productLine(catalog, inverter));
   for (const id of DEFAULT_EXTRAS) {
-    const p = byId(id);
+    const p = active(id);
     if (p) draft.lines.push(productLine(catalog, p));
   }
   if (mount) draft.lines.push(mountLine(catalog, mount, panels));
 
   catalog.workTypes
-    .filter((w) => (w.group === "søknad" || w.group === "solcelleanlegg") && w.priceOre != null)
+    .filter((w) => w.active && (w.group === "søknad" || w.group === "solcelleanlegg") && w.priceOre != null)
     .forEach((w) => draft.lines.push(workLine(catalog, w)));
-  return draft;
+
+  // Inverter etter forslag (nett, størrelse)
+  return applyRules(catalog, draft).draft;
 }
 
-export function panelCountOf(lines: QuoteLine[]) {
-  return lines.filter((l) => l.productKind === "panel").reduce((sum, l) => sum + Number(l.quantity.replace(",", ".")), 0);
-}
-
-export function toEngineInput(catalog: CalcCatalog, draft: QuoteDraft): CalcInput {
-  const adj = (a: Adjustment) => (a.mode === "auto" ? { mode: a.mode } : { mode: a.mode, value: a.value });
+/** Utkast lagret før denne versjonen mangler nye felt. */
+export function normalizeDraft(catalog: CalcCatalog, raw: unknown): QuoteDraft {
+  const d = (raw ?? {}) as Partial<QuoteDraft> & { supportAmount?: string };
+  const base = emptyDraft(catalog, d.projectName ?? "Kalkyle", d.roofTypeId);
   return {
-    currency: "NOK",
-    panelCount: panelCountOf(draft.lines),
-    lines: draft.lines.map((l) => ({
-      id: l.id,
-      name: l.name,
-      kind: l.kind,
-      productKind: l.productKind,
-      quantity: l.quantity,
-      unit: l.unit,
-      baseUnit: l.baseUnit,
-      markupPercent: l.markupPercent,
-      priceMode: l.priceMode,
-      fixedSale: l.priceMode === "fixed" ? l.fixedSale : undefined,
-      reductionEligible: l.reductionEligible,
-      meta: l.sourceId ? { sourceId: l.sourceId } : undefined,
-    })),
-    commission: adj(draft.commission),
-    commissionTiers: catalog.commissionTiers,
-    noPanelCommissionPercent: catalog.settings.noPanelCommissionPercent,
-    reduction: adj(draft.reduction),
-    reductionTiers: catalog.volumeTiers,
-    vatPercent: draft.vatPercent,
-    supportAmount: draft.supportAmount || "0",
-  };
+    ...base,
+    ...d,
+    lines: d.lines ?? [],
+    support: d.support ?? { mode: Number(d.supportAmount ?? 0) > 0 ? "manual" : "auto", amount: d.supportAmount ?? "0", provider: "" },
+  } as QuoteDraft;
 }

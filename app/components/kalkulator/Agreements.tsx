@@ -1,10 +1,10 @@
 "use client";
 
+// Prisavtaler per installatør: påslag, arbeid, montering og volumreduksjon.
 import { useState } from "react";
 import { toast } from "react-toastify";
 import {
   createWorkType,
-  setCommissionSettings,
   setMarkup,
   setMountRate,
   setVolumeTiers,
@@ -12,20 +12,10 @@ import {
   updateWorkType,
   type CalcCatalog,
   type CalcWorkType,
-  type MarkupGroup,
 } from "@/lib/calcApi";
-import { MoneyField, PercentField } from "./fields";
+import { Help, MoneyField, PercentField } from "./fields";
 import { TierEditor, tierProblems } from "./TierEditor";
 import s from "./kalkulator.module.css";
-
-const MARKUP_LABELS: Record<MarkupGroup, string> = {
-  solcellemateriell: "Solcellemateriell",
-  frakt: "Frakt",
-  stillase: "Stillase",
-  ballastein: "Ballastein",
-  elektro: "Elektrisk installasjon",
-  montering: "Montering",
-};
 
 export const WORK_GROUP_LABELS: Record<CalcWorkType["group"], string> = {
   søknad: "Søknad",
@@ -34,22 +24,29 @@ export const WORK_GROUP_LABELS: Record<CalcWorkType["group"], string> = {
   tillegg: "Tilleggskostnader",
 };
 
-const UNITS = ["jobb", "system", "inverter", "panel", "m", "hull", "km", "time"];
+const UNITS = ["jobb", "system", "inverter", "panel", "m", "hull", "km", "time", "stk"];
 
 export function Agreements({ catalog, reload }: { catalog: CalcCatalog; reload: () => Promise<void> }) {
   const edit = catalog.canEdit;
   const installerId = catalog.installer.id;
-  const markupEntries = (Object.keys(MARKUP_LABELS) as MarkupGroup[]).map((g) => [g, catalog.markups[g] ?? null] as const);
-  const missingMarkups = markupEntries.filter(([, v]) => v == null).length;
+  const missingMarkups = catalog.markupGroups.filter((g) => catalog.markups[g.code] == null);
   const volumeProblems = tierProblems(catalog.volumeTiers);
-  const festeProducts = catalog.products.filter((p) => catalog.categories.find((c) => c.id === p.categoryId)?.productKind === "feste");
+  const festeProducts = catalog.products.filter((p) => p.active && catalog.categories.find((c) => c.id === p.categoryId)?.productKind === "feste");
   const after = <T,>(p: Promise<T>) => p.then(reload);
 
   return (
-    <>
+    <div className={s.container}>
+      <div className={s.pagehead}>
+        <div>
+          <h1>Prisavtaler · {catalog.installer.name}</h1>
+          <p>Avtalte satser for installatøren. Endringer gjelder nye kalkyler; lagrede utkast og tilbud beholder sine priser.</p>
+        </div>
+      </div>
       {!edit && <div className={`${s.notice} ${s.info}`}>Du kan se satsene, men bare admin kan endre dem.</div>}
-      {missingMarkups > 0 && (
-        <div className={s.notice}>{catalog.installer.name} mangler {missingMarkups} påslag. Kalkyler kan ikke lages før de er satt.</div>
+      {missingMarkups.length > 0 && (
+        <div className={s.notice}>
+          Mangler påslag for: {missingMarkups.map((g) => g.name).join(", ")}. Produkter i disse gruppene får ikke påslag før det er satt.
+        </div>
       )}
       {volumeProblems.length > 0 && <div className={s.notice}>Volumreduksjon: {volumeProblems.join(" · ")}.</div>}
 
@@ -57,21 +54,16 @@ export function Agreements({ catalog, reload }: { catalog: CalcCatalog; reload: 
         <div>
           <section className={s.panel}>
             <div className={s.panelhead}>
-              <h2>Påslag per kategori</h2>
+              <h2>Påslag per påslagsgruppe</h2>
+              <Help text="Påslaget legges på innkjøpspris/avtalt sats. Hvilken gruppe et produkt hører til, settes på kategorien i Produktkatalog." />
             </div>
             <table>
               <tbody>
-                {markupEntries.map(([group, percent]) => (
-                  <tr key={group}>
-                    <td>{MARKUP_LABELS[group]}</td>
+                {catalog.markupGroups.map((g) => (
+                  <tr key={g.code}>
+                    <td>{g.name}</td>
                     <td className={s.num}>
-                      <PercentField
-                        label={`Påslag ${MARKUP_LABELS[group]}`}
-                        value={percent}
-                        editable={edit}
-                        max={1000}
-                        onSave={(v) => after(setMarkup(installerId, group, v))}
-                      />
+                      <PercentField label={`Påslag ${g.name}`} value={catalog.markups[g.code] ?? null} editable={edit} max={1000} onSave={(v) => after(setMarkup(installerId, g.code, v))} />
                     </td>
                   </tr>
                 ))}
@@ -85,8 +77,8 @@ export function Agreements({ catalog, reload }: { catalog: CalcCatalog; reload: 
         <div>
           <section className={s.panel}>
             <div className={s.panelhead}>
-              <h2>Montering</h2>
-              <span className={`${s.small} ${s.muted}`}>per panel · {catalog.mountRates.filter((m) => m.priceOre != null).length} av {catalog.mountRates.length} taktyper</span>
+              <h2>Montering per panel</h2>
+              <span className={`${s.small} ${s.muted}`}>{catalog.mountRates.filter((m) => m.priceOre != null).length} av {catalog.mountRates.length} taktyper avtalt</span>
             </div>
             <div className={s.tablewrap}>
               <table>
@@ -94,7 +86,7 @@ export function Agreements({ catalog, reload }: { catalog: CalcCatalog; reload: 
                   <tr>
                     <th>Taktype</th>
                     <th>Festesystem</th>
-                    <th className={s.num}>Pris</th>
+                    <th className={s.num}>Pris eks. mva.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -114,9 +106,7 @@ export function Agreements({ catalog, reload }: { catalog: CalcCatalog; reload: 
                           >
                             <option value="">Ikke valgt</option>
                             {festeProducts.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
+                              <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                           </select>
                         ) : (
@@ -141,31 +131,31 @@ export function Agreements({ catalog, reload }: { catalog: CalcCatalog; reload: 
           <section className={s.panel}>
             <div className={s.panelhead}>
               <h2>Volumreduksjon på montering</h2>
+              <Help text="Trekkes fra monteringsgrunnlaget før påslag, etter antall paneler." />
             </div>
-            <TierEditor
-              tiers={catalog.volumeTiers}
-              editable={edit}
-              onSave={(tiers) => after(setVolumeTiers(installerId, tiers)).then(() => toast.success("Volumtrinn lagret"))}
-            />
+            <TierEditor tiers={catalog.volumeTiers} editable={edit} onSave={(tiers) => after(setVolumeTiers(installerId, tiers)).then(() => toast.success("Volumtrinn lagret"))} />
           </section>
-
-          <CommissionPanel catalog={catalog} reload={reload} />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
 function WorkPanel({ catalog, reload }: { catalog: CalcCatalog; reload: () => Promise<void> }) {
   const edit = catalog.canEdit;
   const [adding, setAdding] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const groups = Object.keys(WORK_GROUP_LABELS) as CalcWorkType["group"][];
-  const after = <T,>(p: Promise<T>) => p.then(reload);
+  const after = <T,>(p: Promise<T>) => p.then(reload).catch((e: Error) => toast.error(e.message));
+  const hiddenCount = catalog.workTypes.filter((w) => !w.active).length;
 
   return (
     <section className={s.panel}>
       <div className={s.panelhead}>
-        <h2>Arbeidspriser</h2>
+        <div>
+          <h2>Arbeidspriser</h2>
+          <span className={`${s.small} ${s.muted}`}>Arbeidstypene er felles; satsen gjelder {catalog.installer.name}.</span>
+        </div>
         {edit && (
           <button className={s.btn} onClick={() => setAdding(!adding)}>
             + Felles arbeidstype
@@ -179,40 +169,36 @@ function WorkPanel({ catalog, reload }: { catalog: CalcCatalog; reload: () => Pr
             <tr>
               <th>Arbeid</th>
               <th>Enhet</th>
-              <th className={s.num}>Grunnlag eks. mva.</th>
+              <th title="Med i grunnlaget for solcellestøtte">Støtte</th>
+              <th className={s.num}>Sats eks. mva.</th>
+              {edit && <th />}
             </tr>
           </thead>
           <tbody>
             {groups.map((group) => {
-              const items = catalog.workTypes.filter((w) => w.group === group);
+              const items = catalog.workTypes.filter((w) => w.group === group && (w.active || showHidden));
               if (!items.length) return null;
               return [
                 <tr key={group} className={s.subhead}>
-                  <td colSpan={3}>{WORK_GROUP_LABELS[group]}</td>
+                  <td colSpan={edit ? 5 : 4}>{WORK_GROUP_LABELS[group]}</td>
                 </tr>,
                 ...items.map((w) => (
-                  <tr key={w.id}>
-                    <td className={s.small}>{w.name}</td>
+                  <tr key={w.id} className={w.active ? "" : s.hiddenrow}>
+                    <td className={s.small}>
+                      {w.name}
+                      {!w.active && <span className={s.pill}> skjult</span>}
+                    </td>
                     <td className={s.small}>
                       {edit ? (
-                        <span className={s.inline}>
-                          <select
-                            className={s.input}
-                            value={w.unit}
-                            aria-label={`Enhet ${w.name}`}
-                            onChange={(e) => after(updateWorkType(w.id, { unit: e.target.value, unitConfirmed: true })).catch((err) => toast.error(err.message))}
-                          >
+                        <span className={s.inputwrap}>
+                          <select className={s.input} value={w.unit} aria-label={`Enhet ${w.name}`} onChange={(e) => after(updateWorkType(w.id, { unit: e.target.value, unitConfirmed: true }))}>
                             {[...new Set([w.unit, ...UNITS])].map((u) => (
                               <option key={u}>{u}</option>
                             ))}
                           </select>
                           {!w.unitConfirmed && (
-                            <button
-                              className={`${s.pill} ${s.manual}`}
-                              title="Enheten ble gjettet ved import. Klikk for å bekrefte."
-                              onClick={() => after(updateWorkType(w.id, { unitConfirmed: true }))}
-                            >
-                              bekreft
+                            <button className={`${s.btn} ${s.small2}`} title="Enheten ble gjettet ved import. Klikk når den er riktig." onClick={() => after(updateWorkType(w.id, { unitConfirmed: true }))}>
+                              Bekreft
                             </button>
                           )}
                         </span>
@@ -223,6 +209,15 @@ function WorkPanel({ catalog, reload }: { catalog: CalcCatalog; reload: () => Pr
                         </>
                       )}
                     </td>
+                    <td className={s.small}>
+                      {edit ? (
+                        <input type="checkbox" aria-label={`Med i støttegrunnlag: ${w.name}`} checked={w.supportEligible} onChange={(e) => after(updateWorkType(w.id, { supportEligible: e.target.checked }))} />
+                      ) : w.supportEligible ? (
+                        "Med"
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td className={s.num}>
                       <MoneyField
                         label={`Arbeidspris ${w.name}`}
@@ -231,6 +226,17 @@ function WorkPanel({ catalog, reload }: { catalog: CalcCatalog; reload: () => Pr
                         onSave={(ore) => after(setWorkRate(catalog.installer.id, w.id, ore == null ? null : ore / 100))}
                       />
                     </td>
+                    {edit && (
+                      <td className={s.rowactions2}>
+                        <button
+                          className={`${s.btn} ${s.small2} ${w.active ? s.danger : ""}`}
+                          title={w.active ? "Skjuler arbeidstypen for alle installatører. Satsene slettes ikke." : "Vis arbeidstypen igjen"}
+                          onClick={() => after(updateWorkType(w.id, { active: !w.active }))}
+                        >
+                          {w.active ? "Skjul" : "Vis igjen"}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )),
               ];
@@ -238,6 +244,13 @@ function WorkPanel({ catalog, reload }: { catalog: CalcCatalog; reload: () => Pr
           </tbody>
         </table>
       </div>
+      {hiddenCount > 0 && (
+        <div className={s.footerbar}>
+          <label className={s.check}>
+            <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} /> Vis skjulte arbeidstyper ({hiddenCount})
+          </label>
+        </div>
+      )}
     </section>
   );
 }
@@ -286,57 +299,5 @@ function NewWorkType({ onDone }: { onDone: () => void }) {
         Legg til
       </button>
     </div>
-  );
-}
-
-function CommissionPanel({ catalog, reload }: { catalog: CalcCatalog; reload: () => Promise<void> }) {
-  const edit = catalog.canEdit;
-  const save = (patch: Partial<Parameters<typeof setCommissionSettings>[0]>) =>
-    setCommissionSettings({
-      commissionTiers: catalog.commissionTiers,
-      noPanelCommissionPercent: catalog.settings.noPanelCommissionPercent,
-      vatPercent: catalog.settings.vatPercent,
-      ...patch,
-    }).then(reload);
-
-  return (
-    <section className={s.panel}>
-      <div className={s.panelhead}>
-        <h2>Soleklart-provisjon</h2>
-        <span className={`${s.small} ${s.muted}`}>gjelder alle installatører</span>
-      </div>
-      <TierEditor
-        tiers={catalog.commissionTiers}
-        editable={edit}
-        minStart={1}
-        onSave={(tiers) => save({ commissionTiers: tiers }).then(() => toast.success("Provisjon lagret"))}
-      />
-      <table>
-        <tbody>
-          <tr>
-            <td className={s.small}>Uten paneler (batteri, lader o.l.)</td>
-            <td className={s.num}>
-              <PercentField
-                label="Provisjon uten paneler"
-                value={catalog.settings.noPanelCommissionPercent}
-                editable={edit}
-                onSave={(v) => (v == null ? Promise.reject(new Error("Må fylles inn")) : save({ noPanelCommissionPercent: v }))}
-              />
-            </td>
-          </tr>
-          <tr>
-            <td className={s.small}>Mva.</td>
-            <td className={s.num}>
-              <PercentField
-                label="Mva."
-                value={catalog.settings.vatPercent}
-                editable={edit}
-                onSave={(v) => (v == null ? Promise.reject(new Error("Må fylles inn")) : save({ vatPercent: v }))}
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
   );
 }

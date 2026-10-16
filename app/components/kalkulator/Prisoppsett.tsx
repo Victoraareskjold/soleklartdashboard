@@ -7,9 +7,10 @@ import { getCalcCatalog, type CalcCatalog } from "@/lib/calcApi";
 import { Agreements } from "./Agreements";
 import { Catalog } from "./Catalog";
 import Kalkulator from "./Kalkulator";
+import { Rules } from "./Rules";
 import s from "./kalkulator.module.css";
 
-type Tab = "calculator" | "catalog" | "agreements";
+type Tab = "calculator" | "catalog" | "agreements" | "rules";
 
 /** installerGroupId kommer fra dashboardet (installatørvelgeren i menyen, eller leaden). */
 export default function Prisoppsett({ installerGroupId }: { installerGroupId: string | null }) {
@@ -41,6 +42,7 @@ export default function Prisoppsett({ installerGroupId }: { installerGroupId: st
             ["calculator", "Prisberegning"],
             ["catalog", "Produktkatalog"],
             ["agreements", "Prisavtaler"],
+            ["rules", "Beregningsregler"],
           ] as const
         ).map(([id, label]) => (
           <button key={id} className={tab === id ? s.active : ""} onClick={() => setTab(id)}>
@@ -61,19 +63,10 @@ export default function Prisoppsett({ installerGroupId }: { installerGroupId: st
           </div>
         )}
 
-        {tab === "agreements" && (
-          <>
-            <div className={s.pagehead}>
-              <div>
-                <h1>Prisavtaler · {catalog?.installer.name ?? "…"}</h1>
-                <p>Avtalte satser per installatør. Endringer gjelder nye kalkyler; lagrede tilbud beholder sine priser.</p>
-              </div>
-            </div>
-            {loading ? <div className={s.empty}>Laster …</div> : <Agreements catalog={catalog} reload={reload} />}
-          </>
-        )}
-
-        {tab === "catalog" && (catalog ? <Catalog catalog={catalog} reload={reload} /> : <div className={s.empty}>Laster …</div>)}
+        {tab !== "calculator" && loading && installerGroupId && <div className={s.empty}>Laster …</div>}
+        {!loading && tab === "agreements" && <Agreements catalog={catalog} reload={reload} />}
+        {!loading && tab === "catalog" && <Catalog catalog={catalog} reload={reload} />}
+        {!loading && tab === "rules" && <Rules catalog={catalog} reload={reload} />}
       </div>
     </div>
   );

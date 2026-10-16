@@ -16,7 +16,32 @@ async function calcRequest<T>(path: string, method = "GET", body?: unknown, head
   return data as T;
 }
 
-export type MarkupGroup = "solcellemateriell" | "frakt" | "stillase" | "ballastein" | "elektro" | "montering";
+/** Kode for påslagsgruppe, f.eks. "solcellemateriell" eller "dc-ladere". Gruppene ligger i catalog.markupGroups. */
+export type MarkupGroup = string;
+
+export interface CalcMarkupGroup {
+  code: string;
+  name: string;
+  sortOrder: number;
+}
+
+/** Rolle i beregningen. panel teller i kWp/panelantall, inverter velges automatisk, batteri krever hybrid. */
+export type ProductKind = "panel" | "feste" | "inverter" | "batteri" | "frakt" | "stillase" | "ballastein" | "annet";
+
+/** Tekniske produktdata. derived = hentet fra produktnavnet ved import og ikke kontrollert ennå. */
+export interface ProductSpecs {
+  wp?: number;
+  acKw?: number;
+  maxPvKwp?: number;
+  grid?: "230" | "400" | "begge";
+  phases?: 1 | 3;
+  hybrid?: boolean;
+  batteryClass?: "HV" | "LV";
+  capacityKwh?: number;
+  powerKw?: number;
+  derived?: boolean;
+  [key: string]: unknown;
+}
 
 export interface CalcInstaller {
   id: string;
@@ -28,8 +53,12 @@ export interface CalcCategory {
   id: string;
   parentId: string | null;
   name: string;
-  productKind: string;
+  productKind: ProductKind;
   markupGroup: MarkupGroup;
+  /** per_panel = mengden følger panelantallet */
+  quantityRule: "manual" | "per_panel";
+  /** Regnes med i grunnlaget for solcellestøtte */
+  supportEligible: boolean;
   sortOrder: number;
 }
 
@@ -40,8 +69,10 @@ export interface CalcProduct {
   priceOre: number;
   priceUpdatedAt: string;
   attachmentUrl: string | null;
-  specs: Record<string, unknown>;
+  specs: ProductSpecs;
   categoryId: string;
+  /** false = skjult fra nye kalkyler */
+  active: boolean;
   supplierId: string;
   supplierName: string;
 }
@@ -52,6 +83,8 @@ export interface CalcWorkType {
   name: string;
   unit: string;
   unitConfirmed: boolean;
+  active: boolean;
+  supportEligible: boolean;
   priceOre: number | null; // null = ingen avtalt sats for installatøren
 }
 
@@ -73,6 +106,21 @@ export interface CalcTier {
 export interface CalcSupplier {
   id: string;
   name: string;
+  active: boolean;
+}
+
+export interface CalcSettings {
+  noPanelCommissionPercent: number;
+  vatPercent: number;
+  /** Måleffekt for inverter = kWp / faktor */
+  inverterSizingFactor: number;
+  supportName: string;
+  supportEnabled: boolean;
+  supportPercent: number;
+  supportPerKwpOre: number;
+  supportMaxKwp: number;
+  supportMaxOre: number;
+  mountSupportEligible: boolean;
 }
 
 export interface CalcCatalog {
@@ -80,6 +128,7 @@ export interface CalcCatalog {
   teamId: string;
   /** Om brukeren er admin og kan endre priser. */
   canEdit: boolean;
+  markupGroups: CalcMarkupGroup[];
   suppliers: CalcSupplier[];
   categories: CalcCategory[];
   products: CalcProduct[];
@@ -88,7 +137,7 @@ export interface CalcCatalog {
   mountRates: CalcMountRate[];
   volumeTiers: CalcTier[];
   commissionTiers: CalcTier[];
-  settings: { noPanelCommissionPercent: number; vatPercent: number };
+  settings: CalcSettings;
 }
 
 export const getCalcInstallers = () =>
@@ -121,15 +170,43 @@ export const setMountRate = (installerId: string, roofTypeId: string, productId:
 export const setVolumeTiers = (installerId: string, tiers: CalcTier[]) =>
   put(`${inst(installerId)}/volume-tiers`, { tiers });
 
-export const setCommissionSettings = (body: {
+/** Sentrale regler. Bare feltene som sendes, endres. Kroner for beløp. */
+export const updateSettings = (body: Partial<{
   commissionTiers: CalcTier[];
   noPanelCommissionPercent: number;
   vatPercent: number;
-}) => put("/api/settings", body);
+  inverterSizingFactor: number;
+  supportName: string;
+  supportEnabled: boolean;
+  supportPercent: number;
+  supportPerKwp: number;
+  supportMaxKwp: number;
+  supportMax: number;
+  mountSupportEligible: boolean;
+}>) => put("/api/settings", body);
+
+export const createSupplier = (name: string) => calcRequest<{ id: string; name: string }>("/api/suppliers", "POST", { name });
+export const updateSupplier = (id: string, changes: Partial<{ name: string; active: boolean }>) =>
+  patch(`/api/suppliers/${encodeURIComponent(id)}`, changes);
+
+export const createMarkupGroup = (name: string) => calcRequest<{ code: string; name: string }>("/api/markup-groups", "POST", { name });
+export const renameMarkupGroup = (code: string, name: string) => put("/api/markup-groups", { code, name });
+
+export interface CategoryInput {
+  name: string;
+  parentId?: string | null;
+  productKind: ProductKind;
+  markupGroup: MarkupGroup;
+  quantityRule: "manual" | "per_panel";
+  supportEligible: boolean;
+}
+export const createCategory = (category: CategoryInput) => calcRequest<{ id: string }>("/api/categories", "POST", category);
+export const updateCategory = (id: string, changes: Partial<Omit<CategoryInput, "parentId">>) =>
+  patch(`/api/categories/${encodeURIComponent(id)}`, changes);
 
 export const updateProduct = (
   id: string,
-  changes: Partial<{ name: string; unit: string; price: Kroner; attachmentUrl: string | null; supplierId: string; categoryId: string; active: boolean }>,
+  changes: Partial<{ name: string; unit: string; price: Kroner; attachmentUrl: string | null; supplierId: string; categoryId: string; active: boolean; specs: ProductSpecs }>,
 ) => patch(`/api/products/${encodeURIComponent(id)}`, changes);
 
 export const createProduct = (product: {
@@ -139,12 +216,13 @@ export const createProduct = (product: {
   unit: string;
   price: Kroner;
   attachmentUrl?: string | null;
+  specs?: ProductSpecs;
 }) => calcRequest<{ id: string }>("/api/products", "POST", product);
 
 export const createWorkType = (workType: { group: CalcWorkType["group"]; name: string; unit: string }) =>
   calcRequest<{ id: string }>("/api/work-types", "POST", workType);
 
-export const updateWorkType = (id: string, changes: Partial<{ name: string; unit: string; unitConfirmed: boolean; active: boolean }>) =>
+export const updateWorkType = (id: string, changes: Partial<{ name: string; unit: string; unitConfirmed: boolean; active: boolean; supportEligible: boolean }>) =>
   patch(`/api/work-types/${encodeURIComponent(id)}`, changes);
 
 /** "1 234,50" / "1234.5" → tall i kroner, eller null hvis tomt. Kaster ved ugyldig verdi. */
@@ -210,9 +288,23 @@ export interface CalcResult {
     supplierCost: number;
     installerRemaining: number;
   };
+  support: {
+    mode: "none" | "manual" | "auto";
+    provider: string | null;
+    amount: number;
+    eligibleBaseIncVat: number | null;
+    byPercent: number | null;
+    byKwp: number | null;
+    cap: number | null;
+    kwp: number | null;
+  };
   warnings: { code: string; message: string; blocking: boolean }[];
   ready: boolean;
 }
+
+/** Forhåndsvisning av et utkast med samme regler som ved lagring. */
+export const previewDraft = (installerGroupId: string, draft: unknown) =>
+  calcRequest<{ kwp: number; result: CalcResult }>("/api/preview", "POST", { installerGroupId, draft });
 
 export const calculatePreview = (input: CalcInput) => calcRequest<CalcResult>("/api/calculate", "POST", input);
 
@@ -240,6 +332,26 @@ export interface CalcCalculation {
 
 export const createCalculation = (body: { installerGroupId: string; leadId?: string | null; estimateId?: string | null; draft: unknown }) =>
   calcRequest<CalcCalculation>("/api/calculations", "POST", body);
+
+export interface CalcDraftSummary {
+  id: string;
+  title: string;
+  customerType: "private" | "business";
+  leadId: string | null;
+  estimateId: string | null;
+  createdByName: string | null;
+  updatedByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  latestVersion: number | null;
+}
+
+/** Utkast for en installatør (alle med tilgang til installatøren ser dem). */
+export const listCalculations = (installerGroupId: string) =>
+  calcRequest<{ calculations: CalcDraftSummary[] }>(`/api/calculations?installerGroupId=${encodeURIComponent(installerGroupId)}`).then((r) => r.calculations);
+
+export const updateCalculation = (id: string, body: { lockVersion: number; draft: unknown }) =>
+  calcRequest<CalcCalculation>(`/api/calculations/${encodeURIComponent(id)}`, "PUT", body);
 
 export const getCalculation = (id: string) => calcRequest<CalcCalculation>(`/api/calculations/${encodeURIComponent(id)}`);
 
