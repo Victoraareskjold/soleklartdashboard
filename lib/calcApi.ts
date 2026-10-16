@@ -366,3 +366,17 @@ export const saveQuoteVersion = (calculationId: string, body: { lockVersion: num
 /** Kobler et nyopprettet estimat til kalkylen og versjonen (skriver price_data + quote_version_id). */
 export const linkEstimate = (calculationId: string, estimateId: string, quoteVersionId: string) =>
   calcRequest<{ ok: true }>(`/api/calculations/${encodeURIComponent(calculationId)}/link-estimate`, "POST", { estimateId, quoteVersionId });
+
+/** En låst tilbudsversjon med motorens resultat (kostnad, påslag og salg per linje). */
+export interface CalcQuoteVersion {
+  id: string;
+  calculationId: string;
+  version: number;
+  estimateId: string | null;
+  createdAt: string;
+  result: CalcResult & {
+    lines: (CalcResult["lines"][number] & { baseUnit: number; markupPercent: number; meta?: Record<string, unknown> })[];
+  };
+}
+
+export const getQuoteVersion = (id: string) => calcRequest<CalcQuoteVersion>(`/api/quote-versions/${encodeURIComponent(id)}`);

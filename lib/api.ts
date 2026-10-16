@@ -180,6 +180,10 @@ export const updateEstimate = async (estimateId: string, data: unknown) => {
   return apiRequest<Estimate>(`/api/estimates/${estimateId}`, "PATCH", data);
 };
 
+export const deleteEstimate = async (estimateId: string) => {
+  return apiRequest<{ ok: true }>(`/api/estimates/${estimateId}`, "DELETE");
+};
+
 // Lead Notes
 export const getLeadNotes = async (leadId: string) => {
   return apiRequest<Note[]>(`/api/leadNotes?lead_id=${leadId}`);

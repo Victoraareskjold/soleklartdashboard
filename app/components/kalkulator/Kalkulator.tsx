@@ -68,10 +68,16 @@ interface KalkulatorProps {
   /** Overstyrer lagring (f.eks. «Opprett estimat» på leaden). Ellers lagres et utkast. */
   onSave?: (draft: QuoteDraft, result: CalcResult) => Promise<void>;
   saveLabel?: string;
+  /** Bruk hele bredden (estimat på leaden) i stedet for maks 1240 px */
+  fullWidth?: boolean;
+  /** Estimat: Sum og Kundepris kan skrives inn direkte per linje (blir fast salgsbeløp) */
+  editableTotals?: boolean;
+  /** Kalles hver gang kalkylen er regnet på nytt */
+  onResult?: (draft: QuoteDraft, result: CalcResult | null) => void;
 }
 
 /** Installatøren bestemmes av dashboardet (catalog er hentet for den). */
-export default function Kalkulator({ catalog, leadId = null, initialPanels, initialRoofName, onSave, saveLabel }: KalkulatorProps) {
+export default function Kalkulator({ catalog, leadId = null, initialPanels, initialRoofName, onSave, saveLabel, fullWidth = false, editableTotals = false, onResult }: KalkulatorProps) {
   const startDraft = () => {
     const roofId = catalog.mountRates.find((m) => m.priceOre != null && m.roofTypeName === initialRoofName)?.roofTypeId;
     return newDraft(catalog, "solar", initialPanels && initialPanels > 0 ? initialPanels : 36, roofId);
@@ -114,6 +120,16 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
       clearTimeout(timer);
     };
   }, [draftJson, catalog]);
+
+  // Gi beskjed oppover (f.eks. inverterpris til batterioppsettet på estimatet)
+  const onResultRef = useRef(onResult);
+  useEffect(() => {
+    onResultRef.current = onResult;
+  });
+  useEffect(() => {
+    onResultRef.current?.(draft, result);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
 
   /** Endrer utkastet. rules = kjør regler for batteri/inverter etterpå og vis eventuell melding. */
   const change = (fn: (d: QuoteDraft) => QuoteDraft, rules = false) => {
@@ -158,6 +174,16 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
   /** Linjens andel av kundeprisen (inkl. kommisjon, og mva. for privat) */
   const customerShare = (sale: number) =>
     t && t.subtotal > 0 ? Math.round((sale / t.subtotal) * (isPrivate ? t.totalIncVat : t.totalExVat)) : 0;
+  /**
+   * Motsatt vei: ønsket kundepris for en linje → salgsbeløp før Soleklart (eks. mva.).
+   * Bruker dagens forhold mellom kundepris og sum. Eksakt med prosentkommisjon;
+   * ved fast kronebeløp i kommisjon kan resultatet avvike med noen kroner.
+   */
+  const saleFromCustomer = (customerOre: number) => {
+    if (!t || t.subtotal <= 0) return null;
+    const ratio = (isPrivate ? t.totalIncVat : t.totalExVat) / t.subtotal;
+    return ratio > 0 ? Math.round(customerOre / ratio) : null;
+  };
 
   // --- Lagring ---
   const saveDraft = async () => {
@@ -197,7 +223,7 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
   const status = saved ? (dirty ? "Utkast · ulagrede endringer" : `Utkast lagret ${saved.savedAt.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })}`) : "Ikke lagret";
 
   return (
-    <div className={s.container}>
+    <div className={`${s.container} ${fullWidth ? s.full : ""}`}>
       <div className={s.pagehead}>
         <div>
           <h1>Prisberegning</h1>
@@ -370,6 +396,8 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
                             sale={resultLine(l.id)?.sale}
                             customer={resultLine(l.id) ? customerShare(resultLine(l.id)!.sale) : undefined}
                             isAuto={l.productKind === "inverter" && draft.inverterMode === "auto"}
+                            editable={editableTotals}
+                            saleFromCustomer={saleFromCustomer}
                             onChange={(patch) => updateLine(l.id, patch, l.productKind === "panel")}
                             onSwap={(p) =>
                               change(
@@ -539,6 +567,8 @@ function LineRow({
   sale,
   customer,
   isAuto,
+  editable = false,
+  saleFromCustomer,
   onChange,
   onSwap,
   onDetails,
@@ -550,6 +580,8 @@ function LineRow({
   sale?: number;
   customer?: number;
   isAuto: boolean;
+  editable?: boolean;
+  saleFromCustomer?: (customerOre: number) => number | null;
   onChange: (patch: Partial<QuoteLine>) => void;
   onSwap: (product: CalcProduct) => void;
   onDetails: () => void;
@@ -564,6 +596,12 @@ function LineRow({
   }
   const label = (p: CalcProduct) =>
     isInverter ? `${p.name} · ${p.specs.acKw ?? "?"} kW${p.specs.hybrid ? " hybrid" : ""}` : p.name;
+
+  /** Fast salgsbeløp for linjen (kr eks. mva., før Soleklart) */
+  const setFixedSale = (saleOre: number) => onChange({ priceMode: "fixed", fixedSale: String(Math.max(0, saleOre) / 100) });
+  /** Grunnlag eller påslag endret: et overstyrt beløp skal da regnes automatisk igjen */
+  const priceInput = (patch: Partial<QuoteLine>) =>
+    onChange(editable && l.priceMode === "fixed" ? { ...patch, priceMode: "auto" } : patch);
 
   return (
     <tr>
@@ -583,13 +621,33 @@ function LineRow({
               <option key={p.id} value={p.id}>{label(p)}</option>
             ))}
           </select>
+        ) : editable ? (
+          <input
+            className={`${s.input} ${s.productselect}`}
+            aria-label="Navn på post"
+            value={l.name}
+            placeholder="Uten navn"
+            onChange={(e) => onChange({ name: e.target.value })}
+          />
         ) : (
           <div className={s.productname}>{l.name || "Uten navn"}</div>
         )}
         <div className={s.productmeta}>
           {l.detail} · per {l.unit}
           {isInverter && <span className={`${s.pill} ${isAuto ? "" : s.manual}`}>{isAuto ? "automatisk forslag" : "manuelt valgt"}</span>}
-          {l.priceMode === "fixed" && <span className={`${s.pill} ${s.manual}`}>fast salgsbeløp</span>}
+          {l.priceMode === "fixed" &&
+            (editable ? (
+              <button
+                type="button"
+                className={`${s.pill} ${s.manual} ${s.pillbtn}`}
+                title="Klikk for å regne beløpet automatisk igjen (grunnlag + påslag)"
+                onClick={() => onChange({ priceMode: "auto" })}
+              >
+                fast salgsbeløp ✕
+              </button>
+            ) : (
+              <span className={`${s.pill} ${s.manual}`}>fast salgsbeløp</span>
+            ))}
           {l.edited && <span className={`${s.pill} ${s.manual}`}>justert</span>}
         </div>
       </td>
@@ -597,16 +655,43 @@ function LineRow({
         <input className={`${s.input} ${s.quantity}`} inputMode="decimal" aria-label={`Mengde ${l.name}`} value={l.quantity} onChange={(e) => onChange({ quantity: e.target.value })} />
       </td>
       <td className={s.num}>
-        <input className={`${s.input} ${s.money}`} inputMode="decimal" aria-label={`Grunnlag ${l.name}`} value={l.baseUnit} onChange={(e) => onChange({ baseUnit: e.target.value })} />
+        <input className={`${s.input} ${s.money}`} inputMode="decimal" aria-label={`Grunnlag ${l.name}`} value={l.baseUnit} onChange={(e) => priceInput({ baseUnit: e.target.value })} />
       </td>
       <td className={s.num}>
         <span className={s.inputwrap}>
-          <input className={`${s.input} ${s.percent}`} inputMode="decimal" aria-label={`Påslag ${l.name}`} value={l.markupPercent} onChange={(e) => onChange({ markupPercent: e.target.value })} />
+          <input className={`${s.input} ${s.percent}`} inputMode="decimal" aria-label={`Påslag ${l.name}`} value={l.markupPercent} onChange={(e) => priceInput({ markupPercent: e.target.value })} />
           <span className={s.suffix}>%</span>
         </span>
       </td>
-      <td className={`${s.num} ${s.computed}`}>{sale == null ? "—" : money(sale)}</td>
-      <td className={`${s.num} ${s.computed}`}>{customer == null ? "—" : money(customer)}</td>
+      {editable ? (
+        <>
+          <td className={s.num}>
+            <MoneyCommit
+              ore={sale}
+              label={`Sum ${l.name}`}
+              title="Skriv inn ønsket sum eks. mva. før Soleklart. Linjen får da fast salgsbeløp."
+              onCommit={setFixedSale}
+            />
+          </td>
+          <td className={s.num}>
+            <MoneyCommit
+              ore={customer}
+              label={`Kundepris ${l.name}`}
+              title="Skriv inn ønsket kundepris for linjen. Sum regnes tilbake og linjen får fast salgsbeløp."
+              onCommit={(ore) => {
+                const target = saleFromCustomer?.(ore);
+                if (target == null) return toast.info("Kundeprisen kan ikke regnes tilbake før kalkylen har en sum.");
+                setFixedSale(target);
+              }}
+            />
+          </td>
+        </>
+      ) : (
+        <>
+          <td className={`${s.num} ${s.computed}`}>{sale == null ? "—" : money(sale)}</td>
+          <td className={`${s.num} ${s.computed}`}>{customer == null ? "—" : money(customer)}</td>
+        </>
+      )}
       <td className={s.rowactions2}>
         <button className={`${s.btn} ${s.small2}`} onClick={onDetails} title="Endre navn, enhet, fast salgsbeløp, støttegrunnlag">
           Detaljer
@@ -616,6 +701,38 @@ function LineRow({
         </button>
       </td>
     </tr>
+  );
+}
+
+/** Beløp i øre vist som hele kroner. Lagres når feltet forlates eller Enter trykkes. */
+function MoneyCommit({ ore, onCommit, label, title }: { ore?: number; onCommit: (ore: number) => void; label: string; title?: string }) {
+  const shown = ore == null ? "" : String(Math.round(ore / 100));
+  const [text, setText] = useState(shown);
+  const [focused, setFocused] = useState(false);
+  const commit = () => {
+    setFocused(false);
+    const kr = Number(text.replace(/\s/g, "").replace(",", "."));
+    if (text.trim() === "" || !Number.isFinite(kr) || kr < 0) return setText(shown);
+    if (String(Math.round(kr)) !== shown) onCommit(Math.round(kr * 100));
+  };
+  return (
+    <span className={s.inputwrap}>
+      <input
+        className={`${s.input} ${s.editnum}`}
+        inputMode="decimal"
+        aria-label={label}
+        title={title}
+        value={focused ? text : ore == null ? "—" : new Intl.NumberFormat("nb-NO").format(Math.round(ore / 100))}
+        onFocus={() => {
+          setText(shown);
+          setFocused(true);
+        }}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      />
+      <span className={s.suffix}>kr</span>
+    </span>
   );
 }
 

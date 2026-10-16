@@ -26,6 +26,8 @@ import {
   type CalcResult,
 } from "@/lib/calcApi";
 import Kalkulator from "../kalkulator/Kalkulator";
+import BatteryOfferSetup from "./BatteryOfferSetup";
+import { initialSetup, toBatterySection, type BatterySetup } from "./batterySetup";
 import type { QuoteDraft } from "../kalkulator/quote";
 import s from "../kalkulator/kalkulator.module.css";
 
@@ -53,6 +55,12 @@ function adjustSolarData(solarData: SolarData, draft: QuoteDraft, result: CalcRe
   return { ...solarData, totalPanels: panels, kwp: Number(newKwp.toFixed(2)), yearlyProd, selectedPanelType: panelLine?.name ?? solarData.selectedPanelType };
 }
 
+/** Sum eks. mva. (kr) for inverterlinjene i kalkylen, null hvis ingen inverter. */
+function inverterSaleFrom(result: CalcResult): number | null {
+  const lines = result.lines.filter((l) => l.productKind === "inverter");
+  return lines.length ? lines.reduce((sum, l) => sum + l.sale, 0) / 100 : null;
+}
+
 export default function EstimateSection({ solarData, onEstimateCreated, leadCompany }: EstimateSectionProps) {
   const params = useParams();
   const leadId = params.leadId as string;
@@ -61,12 +69,16 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
   const [error, setError] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [finished, setFinished] = useState(false);
+  const [batterySetup, setBatterySetup] = useState<BatterySetup | null>(null);
+  /** Inverterlinjens sum eks. mva. i kroner, fra siste beregning */
+  const [inverterSaleEx, setInverterSaleEx] = useState<number | null>(null);
 
   useEffect(() => {
     if (!installerGroupId) return;
     getCalcCatalog(installerGroupId)
       .then((c) => {
         setCatalog(c);
+        setBatterySetup(initialSetup(c));
         setError(null);
       })
       .catch((e: Error) => setError(e.message));
@@ -89,10 +101,15 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
 
     // 2. Estimatet, med price_data fra versjonen
     const imageUrl = await uploadImage();
+    const inverterEx = inverterSaleFrom(result);
     const newEstimate = await createEstimate({
       lead_id: leadId,
       solarData: adjustSolarData(solarData, draft, result),
-      price_data: version.priceData as PriceOverview,
+      price_data: {
+        ...(version.priceData as PriceOverview),
+        // Leses av tilbudssiden: klargjøringspris, batterimodeller og priser
+        ...(batterySetup ? { batterySection: toBatterySection(batterySetup, inverterEx) } : {}),
+      } as PriceOverview,
       imageUrl,
       finished,
       leadCompany,
@@ -113,9 +130,21 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
   if (!catalog) return <div className="sk-card-pad text-sm text-muted">Laster kalkulator …</div>;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="sk-card flex items-center justify-between gap-3 px-5 py-3">
-        <h2 className="sk-section-title">Nytt estimat</h2>
+    <div className="flex flex-col gap-3">
+      {/* Én kompakt linje i stedet for to kort, så kalkulatoren starter høyere opp */}
+      <div className="sk-card flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
+        <h2 className="sk-section-title mr-auto">Nytt estimat</h2>
+        <label htmlFor="estimate-image" className="flex min-w-0 items-center gap-2 text-sm text-muted">
+          <ImagePlus size={14} className="shrink-0" />
+          <span className="whitespace-nowrap">Bilde (valgfritt)</span>
+          <input
+            type="file"
+            id="estimate-image"
+            accept="image/*"
+            onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+            className="max-w-[260px] cursor-pointer text-xs text-muted file:mr-2 file:cursor-pointer file:rounded-md file:border-0 file:bg-brand-soft file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-brand hover:file:bg-blue-100"
+          />
+        </label>
         <label
           htmlFor="finished"
           className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-gray-50"
@@ -125,32 +154,29 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
         </label>
       </div>
 
-      <div className="sk-card-pad">
-        <label htmlFor="estimate-image" className="sk-label flex items-center gap-1.5">
-          <ImagePlus size={14} className="text-muted" />
-          Bilde til estimatet (valgfritt)
-        </label>
-        <input
-          type="file"
-          id="estimate-image"
-          accept="image/*"
-          onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
-          className="block w-full cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50/60 p-2 text-sm text-muted file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand hover:border-gray-400 hover:file:bg-blue-100"
+      <div className={`${s.calc} ${s.embedded}`}>
+        <Kalkulator
+          catalog={catalog}
+          leadId={leadId}
+          initialPanels={solarData.totalPanels}
+          initialRoofName={solarData.selectedRoofType}
+          onSave={handleCreateEstimate}
+          saveLabel="Opprett estimat"
+          fullWidth
+          editableTotals
+          onResult={(_draft, r) => setInverterSaleEx(r ? inverterSaleFrom(r) : null)}
         />
       </div>
 
-      <div className={s.calc}>
-        <div className={s.main}>
-          <Kalkulator
-            catalog={catalog}
-            leadId={leadId}
-            initialPanels={solarData.totalPanels}
-            initialRoofName={solarData.selectedRoofType}
-            onSave={handleCreateEstimate}
-            saveLabel="Opprett estimat"
-          />
-        </div>
-      </div>
+      {batterySetup && (
+        <BatteryOfferSetup
+          catalog={catalog}
+          setup={batterySetup}
+          onChange={setBatterySetup}
+          inverterSaleEx={inverterSaleEx}
+          business={Boolean(leadCompany)}
+        />
+      )}
     </div>
   );
 }

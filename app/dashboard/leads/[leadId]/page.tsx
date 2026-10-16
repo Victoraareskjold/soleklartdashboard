@@ -11,6 +11,7 @@ import {
   updateLead,
   getLeadNotes,
   getStoredLeadEmails,
+  deleteEstimate,
 } from "@/lib/api";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -508,15 +509,16 @@ export default function LeadPage() {
     if (!estimateId) return;
     if (!window.confirm("Er du sikker på at du vil slette?")) return;
     try {
-      const res = await fetch(`/api/estimates/${estimateId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Kunne ikke slette estimat");
+      await deleteEstimate(estimateId);
       setEstimates((prev) => prev?.filter((t) => t.id !== estimateId));
       toast.success("Estimat slettet!");
     } catch (err) {
       console.error(err);
-      toast.error("Noe gikk galt ved sletting");
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Noe gikk galt ved sletting",
+      );
     }
   };
 
@@ -553,13 +555,16 @@ export default function LeadPage() {
       : dueText === "Ingen oppgave"
         ? "sk-badge-neutral"
         : "sk-badge-warning";
+  // Estimatet trenger hele bredden: sidekolonnene skjules mens det lages.
+  // Klikk på en annen fane for å få dem tilbake.
+  const estimateMode = activeRoute === "Estimat";
   const tabIcons: Record<string, typeof File> = {
     Aktivitet: Activity,
     ...Object.fromEntries(sideMenuRoutes.map((r) => [r.label, r.icon])),
   };
 
   return (
-    <div className="sk-page">
+    <div className={`sk-page ${estimateMode ? "!max-w-none" : ""}`}>
       {/* Header */}
       <header className="sk-card mb-5 overflow-hidden">
         <div className="flex flex-wrap items-start justify-between gap-4 p-5">
@@ -692,9 +697,17 @@ export default function LeadPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[300px_minmax(0,1fr)_290px] 2xl:grid-cols-[340px_minmax(0,1fr)_320px]">
+      <div
+        className={
+          estimateMode
+            ? "grid grid-cols-1 gap-5"
+            : "grid grid-cols-1 gap-5 xl:grid-cols-[300px_minmax(0,1fr)_290px] 2xl:grid-cols-[340px_minmax(0,1fr)_320px]"
+        }
+      >
         {/* Left column — contact & technical info */}
-        <aside className="flex min-w-0 flex-col gap-5">
+        <aside
+          className={`flex min-w-0 flex-col gap-5 ${estimateMode ? "hidden" : ""}`}
+        >
           <div className="sk-card">
             <div className="sk-card-header py-3">
               <h3 className="sk-section-title text-sm">Person info</h3>
@@ -936,7 +949,9 @@ export default function LeadPage() {
         </section>
 
         {/* Right section */}
-        <aside className="flex min-w-0 flex-col gap-5">
+        <aside
+          className={`flex min-w-0 flex-col gap-5 ${estimateMode ? "hidden" : ""}`}
+        >
           <div className="sk-card">
             <div className="sk-card-header py-3">
               <h3 className="sk-section-title text-sm">Estimater</h3>
@@ -1045,8 +1060,12 @@ export default function LeadPage() {
                             <button
                               className="sk-btn sk-btn-danger-ghost sk-btn-sm"
                               onClick={() => handleDeleteEstimate(e.id)}
-                              disabled={e.signed_at !== null}
-                              title="Slett"
+                              disabled={Boolean(e.signed_at)}
+                              title={
+                                e.signed_at
+                                  ? "Signerte tilbud kan ikke slettes"
+                                  : "Slett"
+                              }
                             >
                               <Trash2 size={14} />
                               Slett

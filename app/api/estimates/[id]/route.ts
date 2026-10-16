@@ -139,7 +139,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -149,15 +149,44 @@ export async function DELETE(
     }
     const id = resolvedParams.id;
 
-    const client = createSupabaseAdminClient();
+    const token = req.headers.get("Authorization")?.replace("Bearer ", "");
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const deleteLead = await deleteEstimate(client, id);
-    return NextResponse.json(deleteLead);
+    // Brukeren må kunne se estimatet (RLS) før det slettes med admin-klienten.
+    const userClient = createSupabaseClient(token);
+    const { data: existing, error: lookupError } = await userClient
+      .from("estimates")
+      .select("id, signed_at")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (lookupError) throw lookupError;
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Fant ikke estimatet" },
+        { status: 404 },
+      );
+    }
+    if (existing.signed_at) {
+      return NextResponse.json(
+        { error: "Signerte tilbud kan ikke slettes." },
+        { status: 409 },
+      );
+    }
+
+    const client = createSupabaseAdminClient();
+    await deleteEstimate(client, id);
+    return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("DELETE /api/leads/[id] error:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    console.error("DELETE /api/estimates/[id] error:", err);
+    const code = (err as { code?: string })?.code;
+    // 23503 = fremmednøkkel. Skjer hvis migrasjon 005 i soleklart-kalkulator ikke er kjørt.
+    const message =
+      code === "23503"
+        ? "Estimatet er koblet til en kalkyle og kan ikke slettes før databasemigrasjon 005 (soleklart-kalkulator) er kjørt."
+        : "Kunne ikke slette estimatet";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
