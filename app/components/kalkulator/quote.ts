@@ -1,5 +1,5 @@
 // Utkast-modell for kalkulatoren, og reglene som gjelder inne i kalkulatoren:
-// kWp fra panellinjene, mengder som følger panelantallet, invertervalg (nett, størrelse, hybrid ved batteri).
+// kWp fra panellinjene, mengder som følger panelantallet, invertervalg (nett, størrelse; stringinverter i grunnpakken).
 // Prisregning skjer i kalkulator-API-et; her bygges bare utkastet.
 import type {
   AdjustmentMode,
@@ -10,6 +10,7 @@ import type {
   LineKind,
   ProductKind,
   ProductSpecs,
+  BatteryOfferConfig,
 } from "@/lib/calcApi";
 
 export interface QuoteLine {
@@ -52,9 +53,10 @@ export interface QuoteDraft {
   customerType: "private" | "business";
   roofTypeId: string;
   grid: Grid;
-  battery: boolean;
   /** auto = kalkulatoren velger inverter, manual = brukeren har valgt selv */
   inverterMode: "auto" | "manual";
+  /** Batteri og hybrid som tillegg i tilbudet (bare på estimat). Regnes i kalkulatortjenesten. */
+  batteryOffer?: BatteryOfferConfig;
   lines: QuoteLine[];
   commission: Adjustment;
   reduction: Adjustment;
@@ -227,59 +229,81 @@ export function setPanelCount(catalog: CalcCatalog, draft: QuoteDraft, panels: n
 }
 
 // --- Inverter ---
+//
+// Grunnpakken bruker alltid en vanlig stringinverter. Hybridinverter velges bare manuelt i
+// grunnpakken; ellers tilbys den som tillegg i batteriseksjonen (regnes i kalkulatortjenesten).
 
 export interface InverterNeed {
   kwp: number;
   targetKw: number;
   grid: Grid;
-  hybrid: boolean;
-  batteryClass?: "HV" | "LV";
 }
 
 export function inverterNeed(catalog: CalcCatalog, draft: QuoteDraft): InverterNeed | null {
   const kwp = kwpOf(catalog, draft.lines);
   if (!kwp) return null;
-  const batteryLine = draft.lines.find((l) => l.productKind === "batteri" && specsOf(catalog, l).batteryClass);
   return {
     kwp,
     targetKw: Math.round((kwp / (catalog.settings.inverterSizingFactor || 1.2)) * 100) / 100,
     grid: draft.grid,
-    hybrid: draft.battery,
-    batteryClass: batteryLine ? specsOf(catalog, batteryLine).batteryClass : undefined,
   };
 }
 
-/** Passer inverteren nett, hybridkrav og batteritype? (Størrelse vurderes separat.) */
-export function inverterFits(product: CalcProduct, need: Pick<InverterNeed, "grid" | "hybrid" | "batteryClass" | "kwp">) {
+/** Passer inverteren nettet og anleggets PV-effekt? (Størrelse mot måleffekt vurderes separat.) */
+export function inverterFits(product: CalcProduct, need: Pick<InverterNeed, "grid" | "kwp">) {
   const s = product.specs;
   if (!s.acKw || !s.grid) return false;
   if (s.grid !== "begge" && s.grid !== need.grid) return false;
-  if (need.hybrid && !s.hybrid) return false;
-  if (need.hybrid && need.batteryClass && s.batteryClass && s.batteryClass !== need.batteryClass) return false;
   if (s.maxPvKwp && need.kwp > s.maxPvKwp) return false;
   return true;
 }
 
 export const inverters = (catalog: CalcCatalog) => catalog.products.filter((p) => p.active && categoryOf(catalog, p)?.productKind === "inverter");
 
-/** Kompatible invertere for nedtrekksmenyen, minst først. */
-export function compatibleInverters(catalog: CalcCatalog, need: InverterNeed | null, grid: Grid, hybrid: boolean) {
-  const n = need ?? { kwp: 0, grid, hybrid };
-  return inverters(catalog)
-    .filter((p) => inverterFits(p, n))
-    .sort((a, b) => (a.specs.acKw ?? 0) - (b.specs.acKw ?? 0) || a.priceOre - b.priceOre);
+/**
+ * Forslag til grunnpakken: rimeligste vanlige 3-fase stringinverter for riktig nett med
+ * AC-effekt ≥ kWp / dimensjoneringsfaktor (og høyst det doble, så den ikke blir urimelig stor).
+ * Teknisk egnethet først, deretter innkjøpspris; lik pris → minst.
+ */
+export function suggestInverter(catalog: CalcCatalog, need: InverterNeed): CalcProduct | null {
+  const candidates = inverters(catalog).filter((p) => {
+    const ac = p.specs.acKw ?? 0;
+    return inverterFits(p, need) && !p.specs.hybrid && p.specs.phases !== 1 && ac >= need.targetKw && ac <= need.targetKw * 2;
+  });
+  candidates.sort((a, b) => a.priceOre - b.priceOre || (a.specs.acKw ?? 0) - (b.specs.acKw ?? 0));
+  return candidates[0] ?? null;
+}
+
+export interface InverterGroup {
+  label: string;
+  items: { product: CalcProduct; fits: boolean; sized: boolean }[];
 }
 
 /**
- * Forslag: minste kompatible 3-fase inverter med AC-effekt ≥ kWp / dimensjoneringsfaktor.
- * Uten batteri foretrekkes vanlig inverter; med batteri kreves hybrid. Lik størrelse → lavest pris.
+ * Alle aktive invertere til manuelt valg, gruppert etter leverandør og type (string/hybrid).
+ * fits = passer nett og PV-effekt, sized = AC-effekt ≥ måleffekt. Sortert: egnet først, så pris.
  */
-export function suggestInverter(catalog: CalcCatalog, need: InverterNeed): CalcProduct | null {
-  const candidates = inverters(catalog).filter(
-    (p) => inverterFits(p, need) && p.specs.phases !== 1 && (need.hybrid || !p.specs.hybrid) && (p.specs.acKw ?? 0) >= need.targetKw,
-  );
-  candidates.sort((a, b) => (a.specs.acKw ?? 0) - (b.specs.acKw ?? 0) || a.priceOre - b.priceOre);
-  return candidates[0] ?? null;
+export function inverterGroups(catalog: CalcCatalog, need: InverterNeed | null, grid: Grid, query = ""): InverterGroup[] {
+  const q = query.trim().toLowerCase();
+  const groups = new Map<string, InverterGroup["items"]>();
+  for (const p of inverters(catalog)) {
+    const s = p.specs;
+    const type = s.hybrid ? `Hybrid${s.batteryClass ? ` ${s.batteryClass}` : ""}` : "String";
+    const hay = `${p.name} ${p.supplierName} ${type} ${s.acKw ?? ""}`.toLowerCase();
+    if (q && !q.split(/\s+/).every((w) => hay.includes(w))) continue;
+    const fits = inverterFits(p, { grid, kwp: need?.kwp ?? 0 });
+    const sized = !need || (s.acKw ?? 0) >= need.targetKw;
+    const label = `${p.supplierName || "Uten leverandør"} · ${type}`;
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label)!.push({ product: p, fits, sized });
+  }
+  const rank = (i: InverterGroup["items"][number]) => (i.fits && i.sized ? 0 : i.fits ? 1 : 2);
+  return [...groups.entries()]
+    .map(([label, items]) => ({
+      label,
+      items: items.sort((a, b) => rank(a) - rank(b) || (a.product.specs.acKw ?? 0) - (b.product.specs.acKw ?? 0) || a.product.priceOre - b.product.priceOre),
+    }))
+    .sort((a, b) => Math.min(...a.items.map(rank)) - Math.min(...b.items.map(rank)) || a.label.localeCompare(b.label, "nb"));
 }
 
 export interface RuleResult {
@@ -289,23 +313,16 @@ export interface RuleResult {
 }
 
 /**
- * Holder batterivalg og inverter i samsvar med reglene:
- *  - en batterilinje i kalkylen slår på batteri
- *  - batteri krever hybridinverter (og riktig batteritype)
- *  - automatisk modus: inverteren følger forslaget
- *  - manuelt valg beholdes så lenge det passer nett/hybrid
+ * Holder inverteren i grunnpakken i samsvar med anlegget:
+ *  - automatisk modus: inverteren følger forslaget (rimeligste egnede stringinverter)
+ *  - manuelt valg (også hybrid) beholdes så lenge det passer nett og PV-effekt
  */
 export function applyRules(catalog: CalcCatalog, input: QuoteDraft): RuleResult {
   let draft = input;
   const notes: string[] = [];
 
-  if (!draft.battery && draft.lines.some((l) => l.productKind === "batteri")) {
-    draft = { ...draft, battery: true };
-    notes.push("Batteri er lagt til, så det kreves hybridinverter.");
-  }
-
   const need = inverterNeed(catalog, draft);
-  if (!need) return { draft, notice: notes.join(" ") || null };
+  if (!need) return { draft, notice: null };
 
   const index = draft.lines.findIndex((l) => l.productKind === "inverter");
   const current = index >= 0 ? productById(catalog, draft.lines[index].sourceId) : undefined;
@@ -323,16 +340,17 @@ export function applyRules(catalog: CalcCatalog, input: QuoteDraft): RuleResult 
   if (draft.inverterMode === "manual" && current && currentFits) {
     // Behold brukerens valg
   } else if (suggestion && suggestion.id !== current?.id) {
-    const reason = draft.inverterMode === "manual" && current
-      ? `${current.name} passer ikke lenger (${need.hybrid ? "krever hybrid" : `${need.grid} V-nett`}). Byttet til ${suggestion.name}.`
-      : current
-        ? `Inverter oppdatert til ${suggestion.name} (${need.kwp.toLocaleString("nb-NO")} kWp ÷ ${catalog.settings.inverterSizingFactor.toLocaleString("nb-NO")} = ${need.targetKw.toLocaleString("nb-NO")} kW).`
-        : `Inverter lagt til: ${suggestion.name}.`;
+    const reason =
+      draft.inverterMode === "manual" && current
+        ? `${current.name} passer ikke ${need.grid} V-nettet eller anleggets ${need.kwp.toLocaleString("nb-NO")} kWp. Byttet til ${suggestion.name}.`
+        : current
+          ? `Inverter oppdatert til ${suggestion.name} (${need.kwp.toLocaleString("nb-NO")} kWp ÷ ${catalog.settings.inverterSizingFactor.toLocaleString("nb-NO")} = ${need.targetKw.toLocaleString("nb-NO")} kW, rimeligste egnede).`
+          : `Inverter lagt til: ${suggestion.name}.`;
     replaceWith(suggestion, reason);
     if (draft.inverterMode === "manual") draft = { ...draft, inverterMode: "auto" };
   } else if (!suggestion && (!current || !currentFits)) {
     notes.push(
-      `Ingen kompatibel ${need.hybrid ? "hybridinverter" : "inverter"} for ${need.grid} V på minst ${need.targetKw.toLocaleString("nb-NO")} kW i katalogen. Velg inverter manuelt.`,
+      `Ingen egnet stringinverter for ${need.grid} V på minst ${need.targetKw.toLocaleString("nb-NO")} kW i katalogen. Velg inverter manuelt.`,
     );
   }
 
@@ -354,13 +372,12 @@ export function defaultRoofTypeId(catalog: CalcCatalog) {
   return (priced.find((m) => m.roofTypeName === DEFAULT_ROOF_NAME) ?? priced[0])?.roofTypeId ?? "";
 }
 
-export function emptyDraft(catalog: CalcCatalog, name: string, roofTypeId = defaultRoofTypeId(catalog)): QuoteDraft {
+export function emptyDraft(catalog: CalcCatalog, name: string, roofTypeId = defaultRoofTypeId(catalog), grid: Grid = "230"): QuoteDraft {
   return {
     projectName: name,
     customerType: "private",
     roofTypeId,
-    grid: "230",
-    battery: false,
+    grid,
     inverterMode: "auto",
     lines: [],
     commission: { mode: "auto", value: "" },
@@ -370,13 +387,20 @@ export function emptyDraft(catalog: CalcCatalog, name: string, roofTypeId = defa
   };
 }
 
-export function newDraft(catalog: CalcCatalog, scenario: Scenario, panels = 36, roofTypeId = defaultRoofTypeId(catalog)): QuoteDraft {
+export function newDraft(
+  catalog: CalcCatalog,
+  scenario: Scenario,
+  panels = 36,
+  roofTypeId = defaultRoofTypeId(catalog),
+  grid: Grid = "230",
+): QuoteDraft {
   const draft = emptyDraft(
     catalog,
     scenario === "solar" ? "Nytt solcelleanlegg" : scenario === "battery" ? "Nytt batteritilbud" : "Ny kalkyle",
     roofTypeId,
+    grid,
   );
-  if (scenario !== "solar") return { ...draft, battery: scenario === "battery" };
+  if (scenario !== "solar") return draft;
 
   const active = (id: string) => catalog.products.find((p) => p.id === id && p.active);
   const panel = active(DEFAULT_PANEL) ?? catalog.products.find((p) => p.active && categoryOf(catalog, p)?.productKind === "panel");
@@ -396,7 +420,7 @@ export function newDraft(catalog: CalcCatalog, scenario: Scenario, panels = 36, 
     .filter((w) => w.active && (w.group === "søknad" || w.group === "solcelleanlegg") && w.priceOre != null)
     .forEach((w) => draft.lines.push(workLine(catalog, w)));
 
-  // Inverter etter forslag (nett, størrelse)
+  // Inverter etter forslag (nett, størrelse, pris)
   return applyRules(catalog, draft).draft;
 }
 

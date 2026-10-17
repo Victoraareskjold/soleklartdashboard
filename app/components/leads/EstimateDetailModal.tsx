@@ -7,6 +7,7 @@ import { Estimate } from "@/lib/types";
 import { PriceLineItem, PriceOverview } from "@/types/price_table";
 import { updateEstimate } from "@/lib/api";
 import { getQuoteVersion } from "@/lib/calcApi";
+import SignedBreakdownPanel from "./SignedBreakdownPanel";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -646,6 +647,8 @@ export default function EstimateDetailModal({
               Tilbudet er signert. Innholdet er låst slik at den signerte versjonen ikke endres. Opprett et nytt estimat for å gjøre endringer.
             </p>
           )}
+
+          {locked && quoteVersionId && <SignedBreakdownPanel estimateId={estimate.id} />}
 
           {/* ── Anlegget ──────────────────────────────────────────────── */}
           <div className="overflow-hidden rounded-xl border border-line bg-surface">

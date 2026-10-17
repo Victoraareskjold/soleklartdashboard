@@ -4,8 +4,10 @@
 // Gammel versjon: docs/backup-gammel-kalkulator/EstimateSection.tsx.bak
 //
 // Flyt ved «Opprett estimat»:
-//   1. kalkyle + låst versjon lagres i kalkulatortjenesten (serveren regner på nytt)
-//   2. estimatet opprettes som før, med price_data i dagens format fra versjonen
+//   1. kalkyle + låst versjon lagres i kalkulatortjenesten (serveren regner på nytt,
+//      også batteri/hybrid-tillegget og standardverdiene for økonomi)
+//   2. estimatet opprettes som før, med price_data fra versjonen
+//      (dagens format + batterySection + economy)
 //   3. estimatet kobles til versjonen (estimates.quote_version_id)
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -22,13 +24,13 @@ import {
   getCalcCatalog,
   linkEstimate,
   saveQuoteVersion,
+  type BatteryOfferConfig,
   type CalcCatalog,
   type CalcResult,
 } from "@/lib/calcApi";
-import Kalkulator from "../kalkulator/Kalkulator";
+import Kalkulator, { type PreviewExtra } from "../kalkulator/Kalkulator";
 import BatteryOfferSetup from "./BatteryOfferSetup";
-import EstimateFacilityInfo from "./EstimateFacilityInfo";
-import { initialSetup, toBatterySection, type BatterySetup } from "./batterySetup";
+import EstimateFacilityInfo, { type LeadCustomerInfo } from "./EstimateFacilityInfo";
 import type { QuoteDraft } from "../kalkulator/quote";
 import s from "../kalkulator/kalkulator.module.css";
 
@@ -38,6 +40,8 @@ interface EstimateSectionProps {
   onEstimateCreated?: (newEstimate: Estimate) => void;
   ownConsumption: number;
   leadCompany?: string | null;
+  /** Kundeinfo fra leaden (person og teknisk), vises ved siden av kalkulatoren */
+  customer?: LeadCustomerInfo;
 }
 
 /** Watt per panel fra produktnavnet, f.eks. «Astronergy ASTRO N7s 460Wp» → 460. */
@@ -56,13 +60,7 @@ function adjustSolarData(solarData: SolarData, draft: QuoteDraft, result: CalcRe
   return { ...solarData, totalPanels: panels, kwp: Number(newKwp.toFixed(2)), yearlyProd, selectedPanelType: panelLine?.name ?? solarData.selectedPanelType };
 }
 
-/** Sum eks. mva. (kr) for inverterlinjene i kalkylen, null hvis ingen inverter. */
-function inverterSaleFrom(result: CalcResult): number | null {
-  const lines = result.lines.filter((l) => l.productKind === "inverter");
-  return lines.length ? lines.reduce((sum, l) => sum + l.sale, 0) / 100 : null;
-}
-
-export default function EstimateSection({ solarData, onEstimateCreated, leadCompany, ownConsumption }: EstimateSectionProps) {
+export default function EstimateSection({ solarData, onEstimateCreated, leadCompany, ownConsumption, customer }: EstimateSectionProps) {
   const params = useParams();
   const leadId = params.leadId as string;
   const { installerGroupId } = useInstallerGroup();
@@ -70,24 +68,24 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
   const [error, setError] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [finished, setFinished] = useState(false);
-  const [batterySetup, setBatterySetup] = useState<BatterySetup | null>(null);
-  /** Inverterlinjens sum eks. mva. i kroner, fra siste beregning */
-  const [inverterSaleEx, setInverterSaleEx] = useState<number | null>(null);
-  /** Siste kalkyle, for «Info om anlegget» */
-  const [latest, setLatest] = useState<{ draft: QuoteDraft; result: CalcResult } | null>(null);
+  /** Batteri/hybrid-valg for tilbudet. Regnes i tjenesten sammen med kalkylen. */
+  const [batteryConfig, setBatteryConfig] = useState<BatteryOfferConfig>({ enabled: true });
+  /** Siste kalkyle, for «Kunde og anlegg» og batterioppsettet */
+  const [latest, setLatest] = useState<{ draft: QuoteDraft; result: CalcResult; extra: PreviewExtra } | null>(null);
   /** Manuell årsproduksjon (kWh), null = følg kalkylen */
   const [prodOverride, setProdOverride] = useState<number | null>(null);
 
   const adjusted = latest ? adjustSolarData(solarData, latest.draft, latest.result) : solarData;
   const finalSolarData = (s: SolarData): SolarData => (prodOverride != null ? { ...s, yearlyProd: prodOverride } : s);
   const originalKwp = solarData.kwp ?? ((solarData.totalPanels ?? 0) * wattFromName(solarData.selectedPanelType)) / 1000;
+  const business = Boolean(leadCompany);
 
   useEffect(() => {
     if (!installerGroupId) return;
     getCalcCatalog(installerGroupId)
       .then((c) => {
         setCatalog(c);
-        setBatterySetup(initialSetup(c));
+        setBatteryConfig({ enabled: true });
         setError(null);
       })
       .catch((e: Error) => setError(e.message));
@@ -101,24 +99,20 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
     return supabase.storage.from("estimate-images").getPublicUrl(filePath).data.publicUrl;
   };
 
+  /** draft inneholder batteryOffer (Kalkulator legger det til før lagring) */
   const handleCreateEstimate = async (draft: QuoteDraft, result: CalcResult) => {
     if (!installerGroupId) throw new Error("Velg installatør først");
 
-    // 1. Kalkyle og låst versjon (serveren regner på nytt)
+    // 1. Kalkyle og låst versjon (serveren regner på nytt, også batteri og hybrid)
     const calculation = await createCalculation({ installerGroupId, leadId, draft });
     const version = await saveQuoteVersion(calculation.id, { lockVersion: calculation.lockVersion, draft }, crypto.randomUUID());
 
-    // 2. Estimatet, med price_data fra versjonen
+    // 2. Estimatet, med price_data fra versjonen (inkl. batterySection og economy)
     const imageUrl = await uploadImage();
-    const inverterEx = inverterSaleFrom(result);
     const newEstimate = await createEstimate({
       lead_id: leadId,
       solarData: finalSolarData(adjustSolarData(solarData, draft, result)),
-      price_data: {
-        ...(version.priceData as PriceOverview),
-        // Leses av tilbudssiden: klargjøringspris, batterimodeller og priser
-        ...(batterySetup ? { batterySection: toBatterySection(batterySetup, inverterEx) } : {}),
-      } as PriceOverview,
+      price_data: version.priceData as PriceOverview,
       imageUrl,
       finished,
       leadCompany,
@@ -163,8 +157,9 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
         </label>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[260px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[280px_minmax(0,1fr)]">
         <EstimateFacilityInfo
+          customer={customer}
           solarData={adjusted}
           originalYearlyProd={solarData.yearlyProd}
           originalKwp={originalKwp}
@@ -172,35 +167,35 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
           onProdOverride={setProdOverride}
           ownConsumption={ownConsumption}
           support={latest ? latest.result.support.amount / 100 : null}
-          business={Boolean(leadCompany)}
+          business={business}
         />
-      <div className={`${s.calc} ${s.embedded} min-w-0`}>
-        <Kalkulator
-          catalog={catalog}
-          leadId={leadId}
-          initialPanels={solarData.totalPanels}
-          initialRoofName={solarData.selectedRoofType}
-          onSave={handleCreateEstimate}
-          saveLabel="Opprett estimat"
-          fullWidth
-          editableTotals
-          onResult={(d, r) => {
-            setInverterSaleEx(r ? inverterSaleFrom(r) : null);
-            if (r) setLatest({ draft: d, result: r });
-          }}
-        />
-      </div>
+        <div className={`${s.calc} ${s.embedded} min-w-0`}>
+          <Kalkulator
+            catalog={catalog}
+            leadId={leadId}
+            initialPanels={solarData.totalPanels}
+            initialRoofName={solarData.selectedRoofType}
+            initialGrid={customer?.voltage === 400 ? "400" : "230"}
+            initialCustomerType={business ? "business" : "private"}
+            batteryOffer={batteryConfig}
+            onSave={handleCreateEstimate}
+            saveLabel="Opprett estimat"
+            fullWidth
+            editableTotals
+            onResult={(d, r, extra) => {
+              if (r) setLatest({ draft: d, result: r, extra });
+            }}
+          />
+        </div>
       </div>
 
-      {batterySetup && (
-        <BatteryOfferSetup
-          catalog={catalog}
-          setup={batterySetup}
-          onChange={setBatterySetup}
-          inverterSaleEx={inverterSaleEx}
-          business={Boolean(leadCompany)}
-        />
-      )}
+      <BatteryOfferSetup
+        catalog={catalog}
+        config={batteryConfig}
+        onChange={setBatteryConfig}
+        offer={latest?.extra.batteryOffer ?? null}
+        business={business}
+      />
     </div>
   );
 }

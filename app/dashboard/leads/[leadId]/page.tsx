@@ -940,6 +940,21 @@ export default function LeadPage() {
                   onEstimateCreated={handleEstimateCreated}
                   ownConsumption={ownConsumtion}
                   leadCompany={company}
+                  customer={{
+                    name: personInfo,
+                    company,
+                    orgNr,
+                    address,
+                    email,
+                    phone,
+                    mobile,
+                    voltage,
+                    phases,
+                    mainFuse,
+                    roofType: roofTypes.find((rt) => rt.id === roofTypeId)?.name,
+                    roofSlope,
+                    roofAge,
+                  }}
                 />
               </div>
             )}

@@ -16,6 +16,7 @@ import {
 } from "@/lib/calcApi";
 import { Dialog } from "./Dialog";
 import { Help } from "./fields";
+import { supabase } from "@/lib/supabase";
 import s from "./kalkulator.module.css";
 
 export const KIND_LABELS: Record<ProductKind, string> = {
@@ -47,6 +48,11 @@ export function specsSummary(kind: ProductKind | undefined, sp: ProductSpecs) {
   return sp.powerKw ? `${str(sp.powerKw)} kW` : "";
 }
 
+/** Offentlig bucket i Supabase Storage (samme som estimatbildene) */
+const DATASHEET_BUCKET = "estimate-images";
+/** Samme mønster som kalkulatortjenesten bruker når «er BMS» ikke er satt */
+const BMS_PATTERN = /\b(bms|base|kontrollenhet|styringsenhet|control\s*unit|hvc|high\s*voltage\s*control|power\s*module|effektmodul)\b/i;
+
 export function ProductDialog({ catalog, product, onClose, onSaved }: { catalog: CalcCatalog; product?: CalcProduct; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(product?.name ?? "");
   const [supplierId, setSupplierId] = useState(product?.supplierId ?? catalog.suppliers.find((x) => x.active)?.id ?? "");
@@ -65,6 +71,13 @@ export function ProductDialog({ catalog, product, onClose, onSaved }: { catalog:
   const [batteryClass, setBatteryClass] = useState(sp0.batteryClass ?? "");
   const [capacityKwh, setCapacityKwh] = useState(str(sp0.capacityKwh));
   const [powerKw, setPowerKw] = useState(str(sp0.powerKw));
+  // Batteri: BMS-kobling og antall moduler
+  const [isBms, setIsBms] = useState(sp0.bms ?? BMS_PATTERN.test(product?.name ?? ""));
+  const [bmsProductId, setBmsProductId] = useState(sp0.bmsProductId ?? "");
+  const [modulesPerBase, setModulesPerBase] = useState(str(sp0.modulesPerBase));
+  const [minModules, setMinModules] = useState(str(sp0.minModules));
+  const [maxModules, setMaxModules] = useState(str(sp0.maxModules));
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const category = catalog.categories.find((c) => c.id === categoryId);
@@ -74,7 +87,8 @@ export function ProductDialog({ catalog, product, onClose, onSaved }: { catalog:
   const buildSpecs = (): ProductSpecs => {
     // Beholder ukjente felt, men fjerner "derived" fordi dataene nå er kontrollert/lagret av en person
     const rest = { ...sp0 };
-    for (const k of ["wp", "acKw", "maxPvKwp", "grid", "phases", "hybrid", "batteryClass", "capacityKwh", "powerKw", "derived"]) delete rest[k];
+    for (const k of ["wp", "acKw", "maxPvKwp", "grid", "phases", "hybrid", "batteryClass", "capacityKwh", "powerKw", "derived", "bms", "bmsProductId", "modulesPerBase", "minModules", "maxModules"])
+      delete rest[k];
     if (kind === "panel") return { ...rest, wp: numOrUndef(wp) };
     if (kind === "inverter")
       return {
@@ -86,9 +100,44 @@ export function ProductDialog({ catalog, product, onClose, onSaved }: { catalog:
         hybrid,
         batteryClass: hybrid && batteryClass ? (batteryClass as "HV" | "LV") : undefined,
       };
-    if (kind === "batteri") return { ...rest, capacityKwh: numOrUndef(capacityKwh), batteryClass: (batteryClass || undefined) as ProductSpecs["batteryClass"] };
+    if (kind === "batteri")
+      return isBms
+        ? { ...rest, bms: true, batteryClass: (batteryClass || undefined) as ProductSpecs["batteryClass"] }
+        : {
+            ...rest,
+            bms: false,
+            capacityKwh: numOrUndef(capacityKwh),
+            batteryClass: (batteryClass || undefined) as ProductSpecs["batteryClass"],
+            bmsProductId: bmsProductId || undefined,
+            modulesPerBase: numOrUndef(modulesPerBase),
+            minModules: numOrUndef(minModules),
+            maxModules: numOrUndef(maxModules),
+          };
     return { ...rest, powerKw: numOrUndef(powerKw) };
   };
+
+  /** Produktblad (PDF) lastes opp til Supabase Storage og lenkes på produktet */
+  const uploadDatasheet = async (file: File) => {
+    if (file.type !== "application/pdf") return toast.error("Last opp produktbladet som PDF.");
+    if (file.size > 20 * 1024 * 1024) return toast.error("PDF-en er større enn 20 MB.");
+    setUploading(true);
+    try {
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-").toLowerCase();
+      const path = `produktblad/${catalog.installer.id}/${Date.now()}-${safe}`;
+      const { error } = await supabase.storage.from(DATASHEET_BUCKET).upload(path, file, { contentType: "application/pdf" });
+      if (error) throw new Error(`Opplasting feilet: ${error.message}`);
+      setAttachmentUrl(supabase.storage.from(DATASHEET_BUCKET).getPublicUrl(path).data.publicUrl);
+      toast.success("Produktbladet er lastet opp. Lagre produktet for å koble det til.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const batteryProducts = catalog.products.filter(
+    (p) => p.id !== product?.id && catalog.categories.find((c) => c.id === p.categoryId)?.productKind === "batteri",
+  );
 
   const submit = async () => {
     setSaving(true);
@@ -172,8 +221,31 @@ export function ProductDialog({ catalog, product, onClose, onSaved }: { catalog:
           <input className={s.input} inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
         </label>
         <label className={s.wide}>
-          Lenke til produktark (valgfritt)
-          <input className={s.input} value={attachmentUrl} onChange={(e) => setAttachmentUrl(e.target.value)} placeholder="https://" />
+          <span>
+            Produktblad (PDF) <Help text="Følger produktet inn i tilbudet. Kunden får knappen «Åpne produktblad» når produktet er med." />
+          </span>
+          <span className={s.inputwrap}>
+            <input className={s.input} value={attachmentUrl} onChange={(e) => setAttachmentUrl(e.target.value)} placeholder="Last opp PDF, eller lim inn lenke (https://)" />
+            <label className={`${s.btn} ${s.small2}`} style={{ whiteSpace: "nowrap", cursor: "pointer" }}>
+              {uploading ? "Laster opp …" : "Last opp PDF"}
+              <input
+                type="file"
+                accept="application/pdf"
+                hidden
+                disabled={uploading}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void uploadDatasheet(f);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {attachmentUrl && (
+              <a className={`${s.btn} ${s.small2}`} href={attachmentUrl} target="_blank" rel="noopener noreferrer">
+                Åpne
+              </a>
+            )}
+          </span>
         </label>
       </div>
 
@@ -233,10 +305,37 @@ export function ProductDialog({ catalog, product, onClose, onSaved }: { catalog:
             )}
             {kind === "batteri" && (
               <>
-                <label>
-                  Kapasitet (kWh)
-                  <input className={s.input} inputMode="decimal" value={capacityKwh} onChange={(e) => setCapacityKwh(e.target.value)} />
+                <label className={`${s.check} ${s.wide}`}>
+                  <input type="checkbox" checked={isBms} onChange={(e) => setIsBms(e.target.checked)} /> Dette er en BMS / styringsenhet / base (ikke et batteri kunden velger)
                 </label>
+                {!isBms && (
+                  <>
+                    <label>
+                      <span>Kapasitet (kWh) <Help text="Per modul for modulære batterier, ellers per enhet." /></span>
+                      <input className={s.input} inputMode="decimal" value={capacityKwh} onChange={(e) => setCapacityKwh(e.target.value)} />
+                    </label>
+                    <label>
+                      <span>BMS / base <Help text="Velg BMS-produktet som hører til dette batteriet. Da blir batteriet modulært, og BMS-prisen tas med i tilbudet. Tom = finnes automatisk etter merke, eller hel enhet uten BMS." /></span>
+                      <select className={s.input} value={bmsProductId} onChange={(e) => setBmsProductId(e.target.value)}>
+                        <option value="">Automatisk / ingen</option>
+                        {batteryProducts.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Moduler per BMS
+                      <input className={s.input} inputMode="numeric" placeholder="8" value={modulesPerBase} onChange={(e) => setModulesPerBase(e.target.value)} />
+                    </label>
+                    <label>
+                      <span>Min / maks antall <Help text="Hvor mange moduler (eller enheter) kunden kan velge mellom på tilbudet." /></span>
+                      <span className={s.inputwrap}>
+                        <input className={s.input} inputMode="numeric" placeholder="min" value={minModules} onChange={(e) => setMinModules(e.target.value)} />
+                        <input className={s.input} inputMode="numeric" placeholder="maks" value={maxModules} onChange={(e) => setMaxModules(e.target.value)} />
+                      </span>
+                    </label>
+                  </>
+                )}
                 <label>
                   <span>Batteritype <Help text="Hybridinverteren må ha samme type (HV/LV)." /></span>
                   <select className={s.input} value={batteryClass} onChange={(e) => setBatteryClass(e.target.value as typeof batteryClass)}>

@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { updateSettings, type CalcCatalog } from "@/lib/calcApi";
 import { MoneyField, NumberField, PercentField, fmtPct } from "./fields";
 import { TierEditor } from "./TierEditor";
+import { MapPanels } from "./MapPanels";
 import s from "./kalkulator.module.css";
 
 export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () => Promise<void> }) {
@@ -37,7 +38,7 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
             </div>
             <div className={s.panelbody}>
               <p className={s.rulehelp}>
-                Kalkulatoren foreslår den minste inverteren som passer valgt strømnett (230/400 V), har AC-effekt minst lik måleffekten, og som er hybrid når anlegget har batteri. Ved lik størrelse velges laveste pris. Er maks PV-effekt oppgitt på inverteren, må anlegget være innenfor.
+                Grunnpakken får alltid en vanlig 3-fase stringinverter: blant inverterne som passer strømnettet (230/400 V) og har AC-effekt fra måleffekten opp til det doble, velges laveste innkjøpspris (på tvers av leverandører). Er maks PV-effekt oppgitt, må anlegget være innenfor. Hybrid i grunnpakken velges bare manuelt; ellers tilbys hybrid som tillegg i batteridelen.
               </p>
               <div className={s.formula}>
                 Anleggseffekt (kWp) = paneler × Wp / 1000
@@ -151,6 +152,88 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
               </p>
             </div>
           </section>
+
+          <section className={s.panel}>
+            <div className={s.panelhead}>
+              <h2>Batteri og hybrid på tilbudet</h2>
+            </div>
+            <div className={s.panelbody}>
+              <p className={s.rulehelp}>
+                Hybridalternativet velges automatisk: hybridinvertere for kundens strømnett og valgt batteritype som tåler anleggets PV-effekt, helst ikke større enn stringinverteren, laveste innkjøpspris først. Har inverteren ikke oppgitt maks PV-effekt, brukes AC-effekt × DC/AC-forhold. Kunden betaler mellomlegget (hybrid − stringinverter) med installatørens påslag og Soleklart-satsen.
+              </p>
+              <table>
+                <tbody>
+                  <tr>
+                    <td className={s.small}>Standard batteritype</td>
+                    <td className={s.num}>
+                      {edit ? (
+                        <select className={s.input} value={st.defaultBatteryClass} onChange={(e) => save({ defaultBatteryClass: e.target.value as "HV" | "LV" })} aria-label="Standard batteritype">
+                          <option value="HV">HV (høyvolt)</option>
+                          <option value="LV">LV (lavvolt)</option>
+                        </select>
+                      ) : (
+                        st.defaultBatteryClass
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>DC/AC-forhold for hybrid uten oppgitt maks PV</td>
+                    <td className={s.num}>
+                      <NumberField label="DC/AC-forhold" value={st.hybridDcRatio} editable={edit} min={0.5} max={5} onSave={(v) => save({ hybridDcRatio: v })} />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className={`${s.small} ${s.muted}`}>Batteritypen kan endres per tilbud.</p>
+            </div>
+          </section>
+
+          <section className={s.panel}>
+            <div className={s.panelhead}>
+              <h2>Standardverdier for økonomi</h2>
+            </div>
+            <div className={s.panelbody}>
+              <p className={s.rulehelp}>
+                Startverdier for strømpris, nettleie og prisvekst i lønnsomhetsberegningen på tilbudet. Nye tilbud får verdiene som gjelder når de opprettes; signerte og tidligere tilbud endres ikke. Kunden kan justere dem på tilbudssiden.
+              </p>
+              <table>
+                <tbody>
+                  <tr>
+                    <td className={s.small}>Strømpris privat</td>
+                    <td className={s.num}>
+                      <NumberField label="Strømpris privat" value={st.economy.private.elPrice} unit="kr/kWh" editable={edit} max={20} onSave={(v) => save({ economyElPricePrivate: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Nettleie privat</td>
+                    <td className={s.num}>
+                      <NumberField label="Nettleie privat" value={st.economy.private.netPrice} unit="kr/kWh" editable={edit} max={20} onSave={(v) => save({ economyNetPricePrivate: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Strømpris næring</td>
+                    <td className={s.num}>
+                      <NumberField label="Strømpris næring" value={st.economy.business.elPrice} unit="kr/kWh" editable={edit} max={20} onSave={(v) => save({ economyElPriceBusiness: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Nettleie næring</td>
+                    <td className={s.num}>
+                      <NumberField label="Nettleie næring" value={st.economy.business.netPrice} unit="kr/kWh" editable={edit} max={20} onSave={(v) => save({ economyNetPriceBusiness: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Forventet prisvekst per år</td>
+                    <td className={s.num}>
+                      <NumberField label="Prisvekst" value={st.economy.priceGrowthPercent} unit="%" editable={edit} max={20} onSave={(v) => save({ economyPriceGrowthPercent: v })} />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <MapPanels editable={edit} />
         </div>
       </div>
     </div>

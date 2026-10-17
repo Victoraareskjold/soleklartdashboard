@@ -1,11 +1,30 @@
 "use client";
 
-// «Info om anlegget» ved siden av kalkulatoren når et estimat lages.
+// «Kunde og anlegg» ved siden av kalkulatoren når et estimat lages.
+// Kundeinfo (person og teknisk) fra leaden øverst, så anleggsdata fra solkartet.
 // Viser dataene fra solkartet (pvmap) slik den gamle kalkulatoren gjorde: kWp, årsproduksjon,
 // selvprodusert andel og Enova-støtte, oppdatert når panelantall eller paneltype endres i kalkylen.
 import type { SolarData } from "../SolarDataView";
 
+/** Kundeinfo fra leaden */
+export interface LeadCustomerInfo {
+  name?: string;
+  company?: string;
+  orgNr?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  voltage?: number | null;
+  phases?: number | null;
+  mainFuse?: number | null;
+  roofType?: string;
+  roofSlope?: number | null;
+  roofAge?: number | null;
+}
+
 interface Props {
+  customer?: LeadCustomerInfo;
   /** Solkartdata justert til kalkylen (kWp og årsproduksjon følger panelantallet) */
   solarData: SolarData;
   /** Årsproduksjon fra solkartet før justering, for å vise kWh per kWp */
@@ -32,7 +51,12 @@ function Row({ label, children, hint }: { label: string; children: React.ReactNo
   );
 }
 
+function Section({ title }: { title: string }) {
+  return <p className="border-y border-line bg-gray-50/60 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">{title}</p>;
+}
+
 export default function EstimateFacilityInfo({
+  customer,
   solarData,
   originalYearlyProd,
   originalKwp,
@@ -51,33 +75,66 @@ export default function EstimateFacilityInfo({
   const hasMapData = Boolean(solarData.yearlyProd);
 
   return (
-    <aside className="h-fit overflow-hidden rounded-xl border border-line bg-surface xl:sticky xl:top-4">
-      <div className="border-b border-line bg-gray-50/60 px-3 py-2">
-        <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Info om anlegget</h3>
+    <aside className="h-fit overflow-hidden rounded-xl border-2 border-blue-200 bg-surface xl:sticky xl:top-4">
+      <div className="bg-brand-soft px-3 py-2.5">
+        <h3 className="text-sm font-semibold text-brand">Kunde og anlegg</h3>
         {!hasMapData && <p className="mt-0.5 text-[11px] text-muted">Ingen data fra solkartet ennå</p>}
       </div>
 
-      <Row label="kWp">{fmt(kwp, 2)}</Row>
-      <Row label="Paneler">{fmt(solarData.totalPanels)}</Row>
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-3 py-1.5">
-        <span className="text-xs font-medium text-muted">Årlig kWh produksjon</span>
-        <span className="flex items-center gap-1">
+      {customer && (
+        <>
+          <div className="space-y-0.5 px-3 py-2 text-sm text-ink">
+            {customer.name && <p className="font-semibold">{customer.name}</p>}
+            {customer.company && (
+              <p className="font-semibold">
+                {customer.company}
+                {customer.orgNr ? <span className="font-normal text-muted"> · org.nr. {customer.orgNr}</span> : null}
+              </p>
+            )}
+            {customer.address && <p className="text-xs text-muted">{customer.address}</p>}
+            {customer.email && <p className="truncate text-xs text-muted" title={customer.email}>{customer.email}</p>}
+            {(customer.phone || customer.mobile) && (
+              <p className="text-xs text-muted">{[customer.mobile, customer.phone].filter(Boolean).join(" · ")}</p>
+            )}
+          </div>
+          <Section title="Teknisk" />
+          <Row label="Strømnett">
+            {customer.voltage ? `${customer.voltage} V${customer.voltage === 400 ? " (TN)" : " (IT/TT)"}` : "—"}
+          </Row>
+          <Row label="Faser">{customer.phases ? `${customer.phases}-fase` : "—"}</Row>
+          <Row label="Hovedsikring">{customer.mainFuse ? `${customer.mainFuse} A` : "—"}</Row>
+          {customer.roofType ? <Row label="Taktype (lead)">{customer.roofType}</Row> : null}
+          {customer.roofSlope ? <Row label="Takvinkel">{`${fmt(customer.roofSlope)}°`}</Row> : null}
+          {customer.roofAge ? <Row label="Takets alder">{`${fmt(customer.roofAge)} år`}</Row> : null}
+          <Section title="Anlegget" />
+        </>
+      )}
+
+      <div className="border-b border-gray-100 bg-amber-50/60 px-3 py-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-ink">Årsproduksjon (kWh)</span>
           <input
             type="number"
             min={0}
-            className="h-7 w-24 rounded-md border border-transparent bg-transparent px-1.5 text-right text-sm font-semibold tabular-nums text-ink hover:border-line hover:bg-white focus:border-gray-300 focus:bg-white"
+            className="h-9 w-full rounded-md border border-line bg-white px-2 text-right text-base font-semibold tabular-nums text-ink focus:border-brand"
             value={Math.round(yearlyProd) || ""}
             placeholder="0"
-            aria-label="Årlig kWh produksjon"
+            aria-label="Årsproduksjon i kWh"
             onChange={(e) => onProdOverride(e.target.value === "" ? null : Number(e.target.value))}
           />
-        </span>
+          <span className="text-[11px] text-muted">
+            Brukes i produksjon, besparelse og nedbetaling på tilbudet.
+            {prodOverride != null ? " Endret for hånd." : " Følger kalkylen (solkartet × kWp)."}
+          </span>
+        </label>
+        {prodOverride != null && (
+          <button type="button" className="mt-1 text-[11px] text-brand underline" onClick={() => onProdOverride(null)}>
+            Følg kalkylen ({fmt(solarData.yearlyProd)} kWh)
+          </button>
+        )}
       </div>
-      {prodOverride != null && (
-        <button type="button" className="w-full px-3 py-1 text-right text-[11px] text-brand underline" onClick={() => onProdOverride(null)}>
-          Følg kalkylen ({fmt(solarData.yearlyProd)} kWh)
-        </button>
-      )}
+      <Row label="kWp">{fmt(kwp, 2)}</Row>
+      <Row label="Paneler">{fmt(solarData.totalPanels)}</Row>
       <Row label="kWh per kWp" hint="Spesifikk produksjon fra solkartet">{fmt(specific)}</Row>
       <Row label="Eget forbruk">{ownConsumption ? `${fmt(ownConsumption)} kWh` : "—"}</Row>
       <Row label="Selvprodusert">{selfProduced == null ? "—" : `${fmt(selfProduced, 1)} %`}</Row>
@@ -86,7 +143,7 @@ export default function EstimateFacilityInfo({
       {solarData.selectedElPrice ? <Row label="Strømpris">{`${fmt(solarData.selectedElPrice, 2)} kr/kWh`}</Row> : null}
       {solarData.yearlyCost ? <Row label="Årlig besparelse">{`${fmt(solarData.yearlyCost)} kr`}</Row> : null}
       {solarData.selectedRoofType ? <Row label="Taktype">{solarData.selectedRoofType}</Row> : null}
-      {solarData.voltage ? <Row label="Spenning">{`${solarData.voltage} V`}</Row> : null}
+      {!customer && solarData.voltage ? <Row label="Spenning">{`${solarData.voltage} V`}</Row> : null}
       <Row label={support != null ? "Støtte (kalkylen)" : "Enova-støtte"}>{`${fmt(enova)} kr`}</Row>
 
       {roofs.length > 0 && (

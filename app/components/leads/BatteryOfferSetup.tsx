@@ -1,291 +1,464 @@
 "use client";
 
-// «Batteri på tilbudssiden» – settes når estimatet opprettes.
-// Bestemmer prisen på «Klargjør for batteri», hvilke batterimodeller kunden kan velge mellom,
-// og prisene per modul og BMS. Standardvalgene lagres i nettleseren per installatør.
-import { BatteryCharging, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
-import { toast } from "react-toastify";
-import {
-  batteryMarkupPercent,
-  clearDefaults,
-  hybridPriceEx,
-  modelsFromCatalog,
-  saveDefaults,
-  suggestedModules,
-  type BatteryModelSetup,
-  type BatterySetup,
-} from "./batterySetup";
-import type { CalcCatalog } from "@/lib/calcApi";
+// «Batteri og hybrid på tilbudet» – settes når estimatet opprettes.
+//
+// Alt regnes i kalkulatortjenesten (samme vei som grunnkalkylen), her velges bare:
+//   - batteritype (HV/LV) og hybridinverter (automatisk = rimeligste egnede, eller manuelt)
+//   - påslag på batteri og hybrid (standard = installatørens sats for solcellemateriell)
+//   - batteriinstallasjon, modeller kunden kan velge mellom, innkjøpspris og BMS per modell
+// Innkjøpspriser og BMS hentes fra produktkatalogen; overstyringer gjelder bare dette tilbudet
+// og lagres med kalkylen. Soleklart-satsen ligger inne i kundeprisene og vises ikke for kunden.
+import { useState } from "react";
+import { BatteryCharging, ExternalLink, RotateCcw } from "lucide-react";
+import type { BatteryOfferConfig, BatteryOfferResult, CalcCatalog, PriceSteps } from "@/lib/calcApi";
 
 interface Props {
   catalog: CalcCatalog;
-  setup: BatterySetup;
-  onChange: (setup: BatterySetup) => void;
-  /** Inverterlinjens sum eks. mva. fra kalkylen (null = ingen inverter i kalkylen) */
-  inverterSaleEx: number | null;
+  config: BatteryOfferConfig;
+  onChange: (config: BatteryOfferConfig) => void;
+  /** Siste beregning fra tjenesten (null mens den regnes) */
+  offer: BatteryOfferResult | null;
   /** Næringskunde: kunden ser priser eks. mva. */
   business: boolean;
 }
 
-const nok = (n: number) => Math.round(n || 0).toLocaleString("nb-NO");
-const toNum = (raw: string) => {
-  const n = Number(raw.replace(/\s/g, "").replace(",", "."));
-  return Number.isFinite(n) ? n : 0;
-};
+type ModelConfig = NonNullable<BatteryOfferConfig["models"]>[number];
+
+const kr = (ore: number) => `${Math.round(ore / 100).toLocaleString("nb-NO")} kr`;
+const pct = (n: number) => `${n.toLocaleString("nb-NO", { maximumFractionDigits: 2 })} %`;
+const kwh = (n: number) => n.toLocaleString("nb-NO", { maximumFractionDigits: 1 });
 
 const cell = "h-8 w-full min-w-0 rounded-md border border-line bg-surface px-2 text-sm text-ink hover:border-gray-300";
 const numCell = `${cell} text-right tabular-nums`;
+const label = "flex flex-col gap-1 text-xs font-medium text-muted";
 
-function capacityRange(m: BatteryModelSetup) {
-  const fmt = (n: number) => n.toLocaleString("nb-NO", { maximumFractionDigits: 1 });
-  return `${fmt(m.min * m.moduleKwh)}–${fmt(m.max * m.moduleKwh)} kWh`;
+/** Tekstfelt som lagres når det forlates (unngår ny beregning per tastetrykk). Tomt = katalogverdi. */
+function Commit({
+  value,
+  placeholder,
+  onCommit,
+  className = numCell,
+  ariaLabel,
+}: {
+  value: string;
+  placeholder?: string;
+  onCommit: (v: string) => void;
+  className?: string;
+  ariaLabel: string;
+}) {
+  const [text, setText] = useState(value);
+  const [focused, setFocused] = useState(false);
+  return (
+    <input
+      className={className}
+      inputMode="decimal"
+      aria-label={ariaLabel}
+      placeholder={placeholder}
+      value={focused ? text : value}
+      onFocus={() => {
+        setText(value);
+        setFocused(true);
+      }}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => {
+        setFocused(false);
+        if (text.trim() !== value) onCommit(text.trim().replace(/\s/g, "").replace(",", "."));
+      }}
+      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+    />
+  );
 }
 
-export default function BatteryOfferSetup({ catalog, setup, onChange, inverterSaleEx, business }: Props) {
-  const set = (patch: Partial<BatterySetup>) => onChange({ ...setup, ...patch });
-  const setModel = (id: string, patch: Partial<BatteryModelSetup>) =>
-    set({ models: setup.models.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
+export default function BatteryOfferSetup({ catalog, config, onChange, offer, business }: Props) {
+  const vat = 1 + catalog.settings.vatPercent / 100;
+  const taxLabel = business ? "eks. mva." : "inkl. mva.";
+  /** Kundepris slik kunden ser den */
+  const shown = (customerOre: number) => kr(business ? customerOre : customerOre * vat);
 
-  const hybridEx = hybridPriceEx(setup, inverterSaleEx);
-  const vat = business ? 1 : 1.25;
-  const taxLabel = business ? "eks. mva" : "inkl. mva";
-  const recommended = setup.models.find((m) => m.id === setup.recommendedModelId);
-  const enabledCount = setup.models.filter((m) => m.enabled).length;
-
-  const addCustom = () => {
-    const model: BatteryModelSetup = {
-      id: `egen-${Date.now()}`,
-      enabled: true,
-      name: "Nytt batteri",
-      structure: "unit",
-      moduleKwh: 10,
-      moduleEx: 0,
-      bmsName: "",
-      baseEx: 0,
-      modulesPerBase: 1,
-      min: 1,
-      max: 2,
-      datasheetUrl: null,
-    };
-    set({ models: [...setup.models, model] });
+  const set = (patch: Partial<BatteryOfferConfig>) => onChange({ ...config, ...patch });
+  const modelCfg = (id: string) => config.models?.find((m) => m.productId === id);
+  const setModel = (id: string, patch: Partial<ModelConfig>) => {
+    const list = config.models ?? [];
+    const next = list.some((m) => m.productId === id)
+      ? list.map((m) => (m.productId === id ? { ...m, ...patch } : m))
+      : [...list, { productId: id, ...patch }];
+    set({ models: next });
   };
 
-  const resetToCatalog = () => {
-    clearDefaults(catalog.installer.id);
-    const models = modelsFromCatalog(catalog);
-    onChange({
-      ...setup,
-      hybridMode: "formula",
-      hybridFactor: 2,
-      installEx: setup.installEx,
-      models,
-      recommendedModelId: models[0]?.id ?? "",
-      recommendedModules: suggestedModules(models[0]),
-    });
-    toast.info("Batterioppsettet er tilbakestilt til produktkatalogen.");
-  };
+  const batteryWork = catalog.workTypes.filter((w) => w.group === "batteri" && w.active && w.priceOre != null);
+  const modelIds = new Set(offer?.models.map((m) => m.productId));
+  const batteryCategoryIds = new Set(catalog.categories.filter((c) => c.productKind === "batteri").map((c) => c.id));
+  const bmsOptions = catalog.products.filter((p) => p.active && batteryCategoryIds.has(p.categoryId) && !modelIds.has(p.id));
+
+  const header = (
+    <div className="sk-card-header flex-wrap gap-2 py-3">
+      <div className="flex items-center gap-2">
+        <BatteryCharging size={16} className="text-brand" />
+        <h3 className="sk-section-title text-sm">Batteri og hybrid på tilbudet</h3>
+        <span className="text-xs text-muted">Kunden kan velge «Klargjør for batteri» eller «Solceller + batteri». Priser regnes av kalkulatoren.</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <label className="flex items-center gap-2 text-sm font-medium text-ink">
+          <input type="checkbox" className="size-4" checked={config.enabled} onChange={(e) => set({ enabled: e.target.checked })} />
+          Vis batterivalg for kunden
+        </label>
+        <button
+          type="button"
+          className="sk-btn sk-btn-ghost sk-btn-sm"
+          title="Fjern alle overstyringer og bruk katalog, prisavtaler og automatisk hybridvalg"
+          onClick={() => onChange({ enabled: config.enabled })}
+        >
+          <RotateCcw size={14} /> Tilbakestill
+        </button>
+      </div>
+    </div>
+  );
+
+  if (!config.enabled) {
+    return (
+      <section className="sk-card overflow-hidden">
+        {header}
+        <p className="px-4 pb-4 text-sm text-muted">Tilbudet vises uten batteri og hybridvalg.</p>
+      </section>
+    );
+  }
+  if (!offer) {
+    return (
+      <section className="sk-card overflow-hidden">
+        {header}
+        <p className="px-4 pb-4 text-sm text-muted">Beregner batteri og hybrid …</p>
+      </section>
+    );
+  }
+
+  const ratePct = offer.commissionRate * 100;
+  const hybrid = offer.hybrid;
+  const fitting = offer.hybridCandidates.filter((c) => c.fits);
+  const notFitting = offer.hybridCandidates.filter((c) => !c.fits);
+  const recommended = offer.models.find((m) => m.productId === offer.recommended?.model);
 
   return (
     <section className="sk-card overflow-hidden">
-      <div className="sk-card-header flex-wrap gap-2 py-3">
-        <div className="flex items-center gap-2">
-          <BatteryCharging size={16} className="text-brand" />
-          <h3 className="sk-section-title text-sm">Batteri på tilbudssiden</h3>
-          <span className="text-xs text-muted">
-            Kunden kan velge «Klargjør for batteri» eller «Solceller + batteri» på tilbudet. Priser eks. mva.
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button type="button" className="sk-btn sk-btn-ghost sk-btn-sm" onClick={resetToCatalog} title="Hent modeller og priser på nytt fra produktkatalogen">
-            <RotateCcw size={14} /> Fra katalog
-          </button>
-          <button
-            type="button"
-            className="sk-btn sk-btn-secondary sk-btn-sm"
-            onClick={() =>
-              saveDefaults(setup)
-                ? toast.success("Lagret som standard for alle installatører i denne nettleseren. Prisene hentes fortsatt fra hver installatørs katalog.")
-                : toast.error("Kunne ikke lagre i nettleseren.")
-            }
-          >
-            <Save size={14} /> Lagre som standard
-          </button>
-        </div>
-      </div>
+      {header}
 
-      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-        {/* Klargjøring */}
+      {offer.warnings.length > 0 && (
+        <div className="mx-4 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {offer.warnings.map((w) => (
+            <p key={w}>{w}</p>
+          ))}
+        </div>
+      )}
+
+      <div className="grid gap-4 px-4 pb-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        {/* Hybrid */}
         <div className="rounded-xl border border-line p-3">
           <p className="sk-label mb-2">Klargjør for batteri (hybridinverter)</p>
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs font-medium text-muted">
-              Prisgrunnlag
-              <select className={`${cell} w-56`} value={setup.hybridMode} onChange={(e) => set({ hybridMode: e.target.value as BatterySetup["hybridMode"] })}>
-                <option value="formula">Automatisk: inverterpris × faktor</option>
-                <option value="manual">Manuell pris</option>
+          <div className="grid grid-cols-[110px_minmax(0,1fr)] items-end gap-3">
+            <label className={label}>
+              Batteritype
+              <select className={cell} value={offer.batteryClass} onChange={(e) => set({ batteryClass: e.target.value as "HV" | "LV", hybridProductId: null })}>
+                <option value="HV">HV (høyvolt)</option>
+                <option value="LV">LV (lavvolt)</option>
               </select>
             </label>
-            {setup.hybridMode === "formula" ? (
-              <label className="flex flex-col gap-1 text-xs font-medium text-muted">
-                Faktor
-                <input className={`${numCell} w-20`} inputMode="decimal" value={setup.hybridFactor} onChange={(e) => set({ hybridFactor: toNum(e.target.value) })} />
-              </label>
-            ) : (
-              <label className="flex flex-col gap-1 text-xs font-medium text-muted">
-                Pris eks. mva
-                <input className={`${numCell} w-32`} inputMode="decimal" value={setup.hybridManualEx} onChange={(e) => set({ hybridManualEx: toNum(e.target.value) })} />
-              </label>
-            )}
-            <div className="ml-auto text-right">
-              <p className="text-lg font-semibold tabular-nums text-ink">{nok(hybridEx)} kr</p>
-              <p className="text-xs text-muted">
-                eks. mva{business ? "" : ` · ${nok(hybridEx * 1.25)} kr inkl. mva`}
-              </p>
-            </div>
+            <label className={label}>
+              Hybridinverter
+              <select
+                className={cell}
+                disabled={offer.hybridIncluded}
+                value={config.hybridProductId ?? ""}
+                onChange={(e) => set({ hybridProductId: e.target.value || null })}
+              >
+                <option value="">Automatisk{hybrid?.auto ? `: ${hybrid.name}` : " (rimeligste egnede)"}</option>
+                {fitting.length > 0 && (
+                  <optgroup label={`Passer ${offer.batteryClass} og anlegget`}>
+                    {fitting.map((c) => (
+                      <option key={c.productId} value={c.productId}>
+                        {c.name} · {c.acKw ?? "?"} kW · {c.supplier} · {kr(c.purchaseOre)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {notFitting.length > 0 && (
+                  <optgroup label="Passer ikke (nett, batteritype eller PV-effekt)">
+                    {notFitting.map((c) => (
+                      <option key={c.productId} value={c.productId}>
+                        {c.name} · {c.acKw ?? "?"} kW · {c.supplier}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </label>
           </div>
-          <p className="mt-2 text-xs text-muted">
-            {setup.hybridMode === "formula"
-              ? inverterSaleEx == null
-                ? "Kalkylen har ingen inverter ennå. Legg til en inverter, eller bruk manuell pris."
-                : `Inverteren i kalkylen: ${nok(inverterSaleEx)} kr (sum eks. mva) × ${setup.hybridFactor.toLocaleString("nb-NO")}.`
-              : "Fast pris uavhengig av inverteren i kalkylen."}
-          </p>
+
+          {offer.hybridIncluded ? (
+            <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-900">
+              Hybridinverteren ({hybrid?.name}) er valgt i grunnpakken. «Klargjør for batteri» koster da 0 kr ekstra.
+            </p>
+          ) : hybrid ? (
+            <table className="mt-3 w-full text-xs tabular-nums">
+              <tbody>
+                <tr>
+                  <td className="py-0.5 text-muted">Stringinverter i grunnpakken</td>
+                  <td className="py-0.5 text-right">{offer.stringInverter ? `${offer.stringInverter.name} · ${offer.stringInverter.acKw ?? "?"} kW` : "—"}</td>
+                </tr>
+                <tr>
+                  <td className="py-0.5 text-muted">Hybrid {hybrid.auto ? "(automatisk)" : "(valgt manuelt)"}</td>
+                  <td className="py-0.5 text-right">
+                    {hybrid.name} · {hybrid.acKw ?? "?"} kW{hybrid.batteryClass ? ` · ${hybrid.batteryClass}` : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-0.5 text-muted">Hybrid innkjøp + {pct(offer.materialMarkupPercent)} påslag</td>
+                  <td className="py-0.5 text-right">
+                    {kr(hybrid.purchaseOre)} → {kr(hybrid.saleOre)}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-0.5 text-muted">− stringinverter (salg i grunnpakken)</td>
+                  <td className="py-0.5 text-right">−{kr(offer.stringInverter?.saleUnitOre ?? 0)}</td>
+                </tr>
+                <tr className="border-t border-gray-100 font-semibold text-ink">
+                  <td className="pt-1">Mellomlegg til kunden {taxLabel}</td>
+                  <td className="pt-1 text-right text-sm">{shown(offer.upgrade.customerOre)}</td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            <p className="mt-3 text-xs text-muted">Ingen hybridinverter valgt.</p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-3 text-xs">
+            {offer.stringInverter?.datasheetUrl && (
+              <a className="inline-flex items-center gap-1 text-brand underline" href={offer.stringInverter.datasheetUrl} target="_blank" rel="noreferrer">
+                <ExternalLink size={12} /> Produktblad stringinverter
+              </a>
+            )}
+            {hybrid?.datasheetUrl && (
+              <a className="inline-flex items-center gap-1 text-brand underline" href={hybrid.datasheetUrl} target="_blank" rel="noreferrer">
+                <ExternalLink size={12} /> Produktblad hybrid
+              </a>
+            )}
+          </div>
         </div>
 
-        {/* Installasjon og anbefaling */}
+        {/* Påslag, installasjon og anbefaling */}
         <div className="rounded-xl border border-line p-3">
-          <p className="sk-label mb-2">Batteripakke som foreslås først</p>
-          <div className="grid grid-cols-[minmax(0,1fr)_88px_120px] items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs font-medium text-muted">
-              Modell
-              <select className={cell} value={setup.recommendedModelId} onChange={(e) => {
-                const m = setup.models.find((x) => x.id === e.target.value);
-                set({ recommendedModelId: e.target.value, recommendedModules: suggestedModules(m) });
-              }}>
-                {setup.models.filter((m) => m.enabled).map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
+          <p className="sk-label mb-2">Påslag, installasjon og forslag</p>
+          <div className="grid grid-cols-2 gap-3">
+            <label className={label}>
+              Påslag batteri og hybrid %
+              <Commit
+                ariaLabel="Påslag batteri og hybrid i prosent"
+                value={config.markupPercent ?? ""}
+                placeholder={`${catalog.markups.solcellemateriell ?? 0} (avtale)`}
+                onCommit={(v) => set({ markupPercent: v === "" ? null : v })}
+              />
+              <span className="text-[11px] font-normal">
+                {offer.materialMarkupOverridden ? `Overstyrt. Avtalen er ${pct(catalog.markups.solcellemateriell ?? 0)}.` : `Fra prisavtalen (solcellemateriell) hos ${catalog.installer.name}.`}
+              </span>
+            </label>
+            <label className={label}>
+              Installasjon av batteri
+              <select className={cell} value={config.installWorkTypeId ?? offer.install?.workTypeId ?? ""} onChange={(e) => set({ installWorkTypeId: e.target.value || null })}>
+                {batteryWork.length === 0 && <option value="">Ingen avtalt sats</option>}
+                {batteryWork.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} · {kr(w.priceOre!)}
+                  </option>
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-xs font-medium text-muted">
-              {recommended?.structure === "unit" ? "Enheter" : "Moduler"}
-              <input
-                className={numCell}
-                inputMode="numeric"
-                value={setup.recommendedModules}
-                onChange={(e) => set({ recommendedModules: Math.max(0, Math.round(toNum(e.target.value))) })}
+            <label className={label}>
+              Installasjon, overstyr sats (kr)
+              <Commit
+                ariaLabel="Overstyr installasjonssats"
+                value={config.installPrice ?? ""}
+                placeholder={offer.install ? String(Math.round(offer.install.purchaseOre / 100)) : ""}
+                onCommit={(v) => set({ installPrice: v === "" ? null : v })}
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs font-medium text-muted">
-              Installasjon eks. mva
-              <input className={numCell} inputMode="decimal" value={setup.installEx} onChange={(e) => set({ installEx: toNum(e.target.value) })} />
+            <div className="text-right text-xs text-muted">
+              {offer.install && (
+                <>
+                  {kr(offer.install.purchaseOre)} + {pct(offer.elektroMarkupPercent)} = {kr(offer.install.saleOre)}
+                  <p className="text-sm font-semibold text-ink">{shown(offer.install.customerOre)}</p>
+                  <span>{taxLabel} til kunden</span>
+                </>
+              )}
+            </div>
+            <label className={label}>
+              Batteri som foreslås først
+              <select
+                className={cell}
+                value={offer.recommended?.model ?? ""}
+                onChange={(e) => set({ recommendedModelId: e.target.value || null, recommendedModules: null })}
+              >
+                {offer.models
+                  .filter((m) => m.enabled)
+                  .map((m) => (
+                    <option key={m.productId} value={m.productId}>
+                      {m.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className={label}>
+              {recommended?.structure === "unit" ? "Antall enheter" : "Antall moduler"}
+              <Commit
+                ariaLabel="Antall i forslaget"
+                value={String(offer.recommended?.modules ?? "")}
+                onCommit={(v) => {
+                  const n = Math.round(Number(v));
+                  set({ recommendedModules: Number.isFinite(n) && n > 0 ? n : null });
+                }}
+              />
+              {recommended && offer.recommended && (
+                <span className="text-[11px] font-normal">
+                  = {kwh(offer.recommended.modules * recommended.moduleKwh)} kWh (tillatt {recommended.min}–{recommended.max})
+                </span>
+              )}
             </label>
           </div>
-          {recommended && (
-            <p className="mt-2 text-xs text-muted">
-              {recommended.structure === "modular"
-                ? `${setup.recommendedModules} × ${recommended.moduleKwh.toLocaleString("nb-NO")} kWh = ${(setup.recommendedModules * recommended.moduleKwh).toLocaleString("nb-NO", { maximumFractionDigits: 1 })} kWh, ${Math.ceil(setup.recommendedModules / Math.max(1, recommended.modulesPerBase))} BMS`
-                : `${setup.recommendedModules} × ${recommended.moduleKwh.toLocaleString("nb-NO")} kWh = ${(setup.recommendedModules * recommended.moduleKwh).toLocaleString("nb-NO", { maximumFractionDigits: 1 })} kWh`}
-              {" · "}kunden ser {nok(packEx(recommended, setup) * vat)} kr {taxLabel} for batteri og installasjon.
-              {(setup.recommendedModules < recommended.min || setup.recommendedModules > recommended.max) &&
-                ` Utenfor ${recommended.min}–${recommended.max}, justeres automatisk.`}
-            </p>
-          )}
+          <p className="mt-3 text-[11px] text-muted">
+            Kundeprisene inkluderer Soleklart-satsen fra grunnkalkylen ({pct(ratePct)}), så kommisjonen følger med når kunden velger batteri, flere moduler eller hybrid. Satsen vises ikke for kunden.
+          </p>
         </div>
       </div>
 
       {/* Modeller */}
       <div className="border-t border-line">
-        <div className="flex items-center justify-between px-4 pt-3">
-          <p className="sk-label m-0">
-            Batterimodeller kunden kan velge mellom <span className="font-normal text-muted">({enabledCount} valgt)</span>
-          </p>
-          <button type="button" className="sk-btn sk-btn-ghost sk-btn-sm text-brand" onClick={addCustom}>
-            <Plus size={14} /> Legg til modell
-          </button>
-        </div>
-        {setup.models.length === 0 ? (
+        <p className="sk-label m-0 px-4 pt-3">
+          Batterimodeller kunden kan velge mellom{" "}
+          <span className="font-normal text-muted">
+            ({offer.models.filter((m) => m.enabled).length} valgt · standard: {offer.batteryClass}-modeller)
+          </span>
+        </p>
+        {offer.models.length === 0 ? (
           <p className="m-4 rounded-xl border border-dashed border-gray-300 p-4 text-center text-sm text-muted">
-            Ingen batterier i produktkatalogen for denne installatøren. Legg til en modell her, eller legg batteriene inn i katalogen.
+            Ingen batterier i produktkatalogen for {catalog.installer.name}. Legg batteriene (og BMS) inn under Prisoppsett → Katalog.
           </p>
         ) : (
           <div className="overflow-x-auto px-4 pb-4 pt-2">
-            <table className="w-full min-w-[1150px] text-sm">
+            <table className="w-full min-w-[1180px] text-sm">
               <thead className="text-left text-[11px] font-semibold uppercase tracking-wide text-muted">
                 <tr>
                   <th className="w-12 px-1.5 py-2">Vis</th>
                   <th className="px-1.5 py-2">Modell</th>
-                  <th className="w-44 px-1.5 py-2">Oppbygging</th>
-                  <th className="w-24 px-1.5 py-2 text-right">kWh / stk</th>
-                  <th className="w-28 px-1.5 py-2 text-right">Pris / stk</th>
-                  <th className="w-44 px-1.5 py-2">BMS / base</th>
-                  <th className="w-28 px-1.5 py-2 text-right">Pris BMS</th>
-                  <th className="w-24 px-1.5 py-2 text-right">Stk / BMS</th>
-                  <th className="w-20 px-1.5 py-2 text-right">Min</th>
-                  <th className="w-20 px-1.5 py-2 text-right">Maks</th>
-                  <th className="w-32 px-1.5 py-2 text-right">Kapasitet</th>
-                  <th className="w-8 px-1.5 py-2" />
+                  <th className="w-28 px-1.5 py-2 text-right">Innkjøp / stk</th>
+                  <th className="w-56 px-1.5 py-2">BMS</th>
+                  <th className="w-28 px-1.5 py-2 text-right">Innkjøp BMS</th>
+                  <th className="w-20 px-1.5 py-2 text-right">Stk / BMS</th>
+                  <th className="w-16 px-1.5 py-2 text-right">Min</th>
+                  <th className="w-16 px-1.5 py-2 text-right">Maks</th>
+                  <th className="w-40 px-1.5 py-2 text-right">Kunden ser ({taxLabel})</th>
                 </tr>
               </thead>
               <tbody>
-                {setup.models.map((m) => {
-                  const modular = m.structure === "modular";
-                  const custom = m.id.startsWith("egen-");
+                {offer.models.map((m) => {
+                  const cfg = modelCfg(m.productId);
+                  const priceCell = (steps: PriceSteps) => `${kr(steps.purchaseOre)} → ${kr(steps.saleOre)}`;
                   return (
-                    <tr key={m.id} className={`border-t border-gray-100 ${m.enabled ? "" : "opacity-55"}`}>
+                    <tr key={m.productId} className={`border-t border-gray-100 align-top ${m.enabled ? "" : "opacity-55"}`}>
                       <td className="px-1.5 py-1.5">
-                        <input type="checkbox" className="size-4" checked={m.enabled} aria-label={`Vis ${m.name} for kunden`} onChange={(e) => setModel(m.id, { enabled: e.target.checked })} />
+                        <input
+                          type="checkbox"
+                          className="size-4"
+                          checked={m.enabled}
+                          aria-label={`Vis ${m.name} for kunden`}
+                          onChange={(e) => setModel(m.productId, { enabled: e.target.checked })}
+                        />
                       </td>
                       <td className="px-1.5 py-1.5">
-                        <input className={cell} value={m.name} aria-label="Modellnavn" onChange={(e) => setModel(m.id, { name: e.target.value })} />
-                        {m.moduleKwh <= 0 && <p className="mt-0.5 text-[11px] text-red-600">Mangler kWh – vises ikke for kunden</p>}
+                        <p className="font-medium text-ink">{m.name}</p>
+                        <p className="text-[11px] text-muted">
+                          {m.batteryClass ?? "type mangler"} · {kwh(m.moduleKwh)} kWh/{m.structure === "modular" ? "modul" : "enhet"} · {kwh(m.min * m.moduleKwh)}–
+                          {kwh(m.max * m.moduleKwh)} kWh
+                          {m.datasheetUrl && (
+                            <>
+                              {" · "}
+                              <a className="text-brand underline" href={m.datasheetUrl} target="_blank" rel="noreferrer">
+                                produktblad
+                              </a>
+                            </>
+                          )}
+                        </p>
+                      </td>
+                      <td className="px-1.5 py-1.5">
+                        <Commit
+                          ariaLabel={`Innkjøp per stk ${m.name}`}
+                          value={cfg?.modulePrice ?? ""}
+                          placeholder={String(Math.round(m.module.purchaseOre / 100))}
+                          onCommit={(v) => setModel(m.productId, { modulePrice: v === "" ? null : v })}
+                        />
+                        <p className="mt-0.5 text-right text-[11px] text-muted">{m.modulePriceOverridden ? "overstyrt" : "katalog"}</p>
                       </td>
                       <td className="px-1.5 py-1.5">
                         <select
                           className={cell}
-                          value={m.structure}
-                          aria-label="Oppbygging"
-                          onChange={(e) => {
-                            const structure = e.target.value as BatteryModelSetup["structure"];
-                            setModel(m.id, structure === "unit"
-                              ? { structure, modulesPerBase: 1 }
-                              : { structure, modulesPerBase: m.modulesPerBase > 1 ? m.modulesPerBase : 8 });
-                          }}
+                          aria-label={`BMS for ${m.name}`}
+                          value={cfg?.bmsProductId === null ? "none" : (cfg?.bmsProductId ?? m.bms?.productId ?? "")}
+                          onChange={(e) => setModel(m.productId, { bmsProductId: e.target.value === "none" ? null : e.target.value || undefined })}
                         >
-                          <option value="modular">Moduler + BMS</option>
-                          <option value="unit">Hel enhet (uten BMS)</option>
+                          <option value="">{m.bms?.productId ? "Automatisk" : "Ingen funnet (automatisk)"}</option>
+                          <option value="none">Ingen BMS (hel enhet)</option>
+                          {bmsOptions.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} · {kr(p.priceOre)}
+                            </option>
+                          ))}
                         </select>
+                        {m.bms && <p className="mt-0.5 text-[11px] text-muted">{m.bms.name}</p>}
                       </td>
                       <td className="px-1.5 py-1.5">
-                        <input className={numCell} inputMode="decimal" value={m.moduleKwh} aria-label="kWh per stk" onChange={(e) => setModel(m.id, { moduleKwh: toNum(e.target.value) })} />
+                        <Commit
+                          ariaLabel={`Innkjøp BMS ${m.name}`}
+                          value={cfg?.bmsPrice ?? ""}
+                          placeholder={m.bms ? String(Math.round(m.bms.purchaseOre / 100)) : "—"}
+                          onCommit={(v) => setModel(m.productId, { bmsPrice: v === "" ? null : v })}
+                        />
+                        {m.bms && <p className="mt-0.5 text-right text-[11px] text-muted">{m.bms.overridden ? "overstyrt" : "katalog"}</p>}
                       </td>
                       <td className="px-1.5 py-1.5">
-                        <input className={numCell} inputMode="decimal" value={m.moduleEx} aria-label="Pris per stk eks. mva" onChange={(e) => setModel(m.id, { moduleEx: toNum(e.target.value) })} />
+                        <Commit
+                          ariaLabel={`Moduler per BMS ${m.name}`}
+                          value={m.structure === "modular" ? String(m.modulesPerBms) : "—"}
+                          onCommit={(v) => {
+                            const n = Math.round(Number(v));
+                            if (n > 0) setModel(m.productId, { modulesPerBms: n });
+                          }}
+                        />
                       </td>
                       <td className="px-1.5 py-1.5">
-                        <input className={cell} disabled={!modular} value={modular ? m.bmsName : "—"} placeholder="BMS / base" aria-label="BMS-navn" onChange={(e) => setModel(m.id, { bmsName: e.target.value })} />
+                        <Commit
+                          ariaLabel={`Minste antall ${m.name}`}
+                          value={String(m.min)}
+                          onCommit={(v) => {
+                            const n = Math.round(Number(v));
+                            if (n > 0) setModel(m.productId, { min: n });
+                          }}
+                        />
                       </td>
                       <td className="px-1.5 py-1.5">
-                        <input className={numCell} disabled={!modular} inputMode="decimal" value={modular ? m.baseEx : 0} aria-label="Pris BMS eks. mva" onChange={(e) => setModel(m.id, { baseEx: toNum(e.target.value) })} />
+                        <Commit
+                          ariaLabel={`Største antall ${m.name}`}
+                          value={String(m.max)}
+                          onCommit={(v) => {
+                            const n = Math.round(Number(v));
+                            if (n > 0) setModel(m.productId, { max: n });
+                          }}
+                        />
                       </td>
-                      <td className="px-1.5 py-1.5">
-                        <input className={numCell} disabled={!modular} inputMode="numeric" value={modular ? m.modulesPerBase : "—"} aria-label="Moduler per BMS" onChange={(e) => setModel(m.id, { modulesPerBase: Math.max(1, Math.round(toNum(e.target.value))) })} />
-                      </td>
-                      <td className="px-1.5 py-1.5">
-                        <input className={numCell} inputMode="numeric" value={m.min} aria-label="Minste antall" onChange={(e) => setModel(m.id, { min: Math.max(1, Math.round(toNum(e.target.value))) })} />
-                      </td>
-                      <td className="px-1.5 py-1.5">
-                        <input className={numCell} inputMode="numeric" value={m.max} aria-label="Største antall" onChange={(e) => setModel(m.id, { max: Math.max(1, Math.round(toNum(e.target.value))) })} />
-                      </td>
-                      <td className="px-1.5 py-1.5 text-right text-xs tabular-nums text-muted">
-                        {m.moduleKwh > 0 ? capacityRange(m) : "—"}
-                        {m.max < m.min && <span className="block text-red-600">maks &lt; min</span>}
-                      </td>
-                      <td className="px-1.5 py-1.5 text-right">
-                        {custom && (
-                          <button type="button" className="sk-icon-btn size-7 text-red-600 hover:bg-red-50" aria-label="Fjern modell" onClick={() => set({ models: setup.models.filter((x) => x.id !== m.id) })}>
-                            <Trash2 size={14} />
-                          </button>
+                      <td className="px-1.5 py-1.5 text-right text-xs tabular-nums">
+                        <p className="text-muted" title="Innkjøp → etter installatørens påslag">
+                          {priceCell(m.module)}
+                        </p>
+                        <p className="font-semibold text-ink">{shown(m.module.customerOre)} / stk</p>
+                        {m.bms && (
+                          <>
+                            <p className="mt-1 text-muted">{priceCell(m.bms)}</p>
+                            <p className="font-semibold text-ink">{shown(m.bms.customerOre)} / BMS</p>
+                          </>
                         )}
                       </td>
                     </tr>
@@ -294,20 +467,13 @@ export default function BatteryOfferSetup({ catalog, setup, onChange, inverterSa
               </tbody>
             </table>
             <p className="mt-2 text-xs text-muted">
-              Modulær: kunden velger antall moduler, og det legges til én BMS per {"«Stk / BMS»"} moduler. Hel enhet: kunden velger antall enheter, uten BMS.
-              Pris / stk og BMS-pris = innkjøp + {batteryMarkupPercent(catalog).toLocaleString("nb-NO")} % påslag for solcellemateriell hos {catalog.installer.name}, og kan overstyres på dette estimatet.
-              «Lagre som standard» lagrer valgene (modeller, oppbygging, antall, klargjøring) for alle installatører, men ikke prisene. Kryss av for modellene som skal vises; uten avkryssede modeller vises bare «Klargjør for batteri».
+              Innkjøp hentes fra katalogen; tomt felt = katalogpris. Påslaget ({pct(offer.materialMarkupPercent)}) legges på innkjøp av moduler, BMS og hybrid.
+              BMS kobles fast til batteriet i katalogen (Prisoppsett → Katalog → batteriet → «BMS»), eller velges her for dette tilbudet. Modulær: én BMS per «Stk / BMS» moduler.
+              Uten avkryssede modeller vises bare «Klargjør for batteri».
             </p>
           </div>
         )}
       </div>
     </section>
   );
-}
-
-/** Batteri + BMS + installasjon for anbefalt pakke, eks. mva. */
-function packEx(m: BatteryModelSetup, setup: BatterySetup) {
-  const n = Math.max(m.min, Math.min(m.max, setup.recommendedModules));
-  const bases = m.structure === "modular" ? Math.ceil(n / Math.max(1, m.modulesPerBase)) : 0;
-  return n * m.moduleEx + bases * m.baseEx + setup.installEx;
 }

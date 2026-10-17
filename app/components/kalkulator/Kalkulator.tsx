@@ -12,7 +12,10 @@ import {
   type CalcCatalog,
   type CalcDraftSummary,
   type CalcProduct,
+  type BatteryOfferConfig,
+  type BatteryOfferResult,
   type CalcResult,
+  type Economy,
   type LineKind,
 } from "@/lib/calcApi";
 import { Dialog } from "./Dialog";
@@ -20,8 +23,8 @@ import { Help } from "./fields";
 import {
   alternativesFor,
   applyRules,
-  compatibleInverters,
   customLine,
+  inverterGroups,
   inverterNeed,
   kwpOf,
   mountLine,
@@ -36,6 +39,8 @@ import {
   swapProduct,
   workLine,
   type Adjustment,
+  type Grid,
+  type InverterNeed,
   type QuoteDraft,
   type QuoteLine,
   type Scenario,
@@ -72,15 +77,42 @@ interface KalkulatorProps {
   fullWidth?: boolean;
   /** Estimat: Sum og Kundepris kan skrives inn direkte per linje (blir fast salgsbeløp) */
   editableTotals?: boolean;
+  /** Kundens strømnett fra leaden (230/400 V) */
+  initialGrid?: Grid;
+  /** Kundetype fra leaden (firma = næring) */
+  initialCustomerType?: QuoteDraft["customerType"];
+  /** Batteri/hybrid-tillegg (estimat). Sendes med til beregning og lagring. */
+  batteryOffer?: BatteryOfferConfig;
   /** Kalles hver gang kalkylen er regnet på nytt */
-  onResult?: (draft: QuoteDraft, result: CalcResult | null) => void;
+  onResult?: (draft: QuoteDraft, result: CalcResult | null, extra: PreviewExtra) => void;
+}
+
+export interface PreviewExtra {
+  kwp: number | null;
+  batteryOffer: BatteryOfferResult | null;
+  economy: Economy | null;
 }
 
 /** Installatøren bestemmes av dashboardet (catalog er hentet for den). */
-export default function Kalkulator({ catalog, leadId = null, initialPanels, initialRoofName, onSave, saveLabel, fullWidth = false, editableTotals = false, onResult }: KalkulatorProps) {
-  const startDraft = () => {
+export default function Kalkulator({
+  catalog,
+  leadId = null,
+  initialPanels,
+  initialRoofName,
+  initialGrid,
+  initialCustomerType,
+  batteryOffer,
+  onSave,
+  saveLabel,
+  fullWidth = false,
+  editableTotals = false,
+  onResult,
+}: KalkulatorProps) {
+  const startDraft = (): QuoteDraft => {
     const roofId = catalog.mountRates.find((m) => m.priceOre != null && m.roofTypeName === initialRoofName)?.roofTypeId;
-    return newDraft(catalog, "solar", initialPanels && initialPanels > 0 ? initialPanels : 36, roofId);
+    const d = newDraft(catalog, "solar", initialPanels && initialPanels > 0 ? initialPanels : 36, roofId, initialGrid ?? "230");
+    // Næring: priser eks. mva. og ingen automatisk støtte
+    return initialCustomerType === "business" ? { ...d, customerType: "business", support: { mode: "off", amount: "0", provider: "" } } : d;
   };
   const [draft, setDraft] = useState<QuoteDraft>(startDraft);
   const [notice, setNotice] = useState<string | null>(null);
@@ -88,13 +120,14 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<CalcResult | null>(null);
+  const [extra, setExtra] = useState<PreviewExtra>({ kwp: null, batteryOffer: null, economy: null });
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<
     null | { type: "add"; kind: LineKind } | { type: "edit"; id: string } | { type: "new" } | { type: "preview" } | { type: "drafts" }
   >(null);
 
   // Ny installatør, eller nye data fra solkartet = ny kalkyle
-  const startKey = `${catalog.installer.id}|${initialPanels ?? ""}|${initialRoofName ?? ""}`;
+  const startKey = `${catalog.installer.id}|${initialPanels ?? ""}|${initialRoofName ?? ""}|${initialGrid ?? ""}|${initialCustomerType ?? ""}`;
   const startRef = useRef(startKey);
   useEffect(() => {
     if (startRef.current !== startKey) {
@@ -107,12 +140,18 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
   }, [startKey]);
 
   // Regn på nytt (via API) når utkastet endres
-  const draftJson = useMemo(() => JSON.stringify(draft), [draft]);
+  const fullDraft = useMemo<QuoteDraft>(() => (batteryOffer ? { ...draft, batteryOffer } : draft), [draft, batteryOffer]);
+  const draftJson = useMemo(() => JSON.stringify(fullDraft), [fullDraft]);
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(() => {
       previewDraft(catalog.installer.id, JSON.parse(draftJson))
-        .then((r) => !cancelled && (setResult(r.result), setError(null)))
+        .then((r) => {
+          if (cancelled) return;
+          setExtra({ kwp: r.kwp, batteryOffer: r.batteryOffer, economy: r.economy });
+          setResult(r.result);
+          setError(null);
+        })
         .catch((e: Error) => !cancelled && (setResult(null), setError(e.message)));
     }, 200);
     return () => {
@@ -127,9 +166,9 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
     onResultRef.current = onResult;
   });
   useEffect(() => {
-    onResultRef.current?.(draft, result);
+    onResultRef.current?.(draft, result, extra);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result]);
+  }, [result, extra]);
 
   /** Endrer utkastet. rules = kjør regler for batteri/inverter etterpå og vis eventuell melding. */
   const change = (fn: (d: QuoteDraft) => QuoteDraft, rules = false) => {
@@ -190,13 +229,13 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
     setSaving(true);
     try {
       if (onSave) {
-        if (result) await onSave(draft, result);
+        if (result) await onSave(fullDraft, result);
         return;
       }
       if (!draft.projectName.trim()) throw new Error("Gi utkastet et navn (Prosjektnavn) før du lagrer.");
       const res = saved
-        ? await updateCalculation(saved.calculationId, { lockVersion: saved.lockVersion, draft })
-        : await createCalculation({ installerGroupId: catalog.installer.id, leadId, draft });
+        ? await updateCalculation(saved.calculationId, { lockVersion: saved.lockVersion, draft: fullDraft })
+        : await createCalculation({ installerGroupId: catalog.installer.id, leadId, draft: fullDraft });
       setSaved({ calculationId: res.id, lockVersion: res.lockVersion, savedAt: new Date() });
       setDirty(false);
       toast.success(`Utkast «${draft.projectName}» lagret. Du finner det under «Utkast».`);
@@ -335,15 +374,10 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
                   />
                 </label>
               </div>
-              <label className={`${s.check} ${s.batterycheck}`}>
-                <input type="checkbox" checked={draft.battery} onChange={(e) => update({ battery: e.target.checked }, true)} />
-                Batteri i anlegget <span className={s.muted}>(krever hybridinverter)</span>
-              </label>
               {need && (
                 <div className={s.inverterinfo}>
                   <strong>Inverter:</strong> {fmt(need.kwp)} kWp ÷ {fmt(catalog.settings.inverterSizingFactor)} ={" "}
-                  <strong>{fmt(need.targetKw)} kW</strong> måleffekt · {need.grid} V{need.hybrid ? " · hybrid" : ""}
-                  {need.batteryClass ? ` (${need.batteryClass}-batteri)` : ""}. Forslag:{" "}
+                  <strong>{fmt(need.targetKw)} kW</strong> måleffekt · {need.grid} V. Forslag (rimeligste egnede stringinverter):{" "}
                   <strong>{suggestion?.name ?? "ingen kompatibel modell"}</strong>
                   {inverterLine && draft.inverterMode === "manual" && (
                     <>
@@ -355,6 +389,9 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
                       )}
                     </>
                   )}
+                  <div className={`${s.small} ${s.muted}`}>
+                    Grunnpakken bruker vanlig stringinverter. Hybrid velges manuelt her, eller tilbys som tillegg i batteridelen.
+                  </div>
                 </div>
               )}
             </div>
@@ -436,14 +473,22 @@ export default function Kalkulator({ catalog, leadId = null, initialPanels, init
         </div>
 
         <aside className={s.side}>
-          <Summary result={result} isPrivate={isPrivate} onPreview={() => setDialog({ type: "preview" })} />
+          <Summary
+            result={result}
+            isPrivate={isPrivate}
+            vatPercent={Number(draft.vatPercent.replace(",", ".")) || 0}
+            agreed={draft.commission.mode === "total"}
+            onAgreedExVat={(ore) => update({ commission: { mode: "total", value: (ore / 100).toFixed(2) } })}
+            onResetAgreed={() => update({ commission: { mode: "auto", value: "" } })}
+            onPreview={() => setDialog({ type: "preview" })}
+          />
           <SupportCard draft={draft} result={result} catalog={catalog} onChange={(support) => update({ support })} />
           <ModeCard
             title="Soleklart-kommisjon"
             value={draft.commission}
-            modes={[["auto", "Automatisk sats (trinn)"], ["percent", "Manuell prosent"], ["amount", "Fast kronebeløp"]]}
+            modes={[["auto", "Automatisk sats (trinn)"], ["percent", "Manuell prosent"], ["amount", "Fast kronebeløp"], ["total", "Avtalt sluttsum"]]}
             onChange={(commission) => update({ commission })}
-            current={result ? { percent: result.commission.percent, amount: result.commission.amount } : null}
+            current={result ? { percent: result.commission.percent, amount: result.commission.amount, total: result.totals.totalExVat } : null}
             detail={result ? `${result.commission.percent === null ? "Fast beløp" : `${result.commission.percent} % av ${money(result.commission.base)}`} = ${money(result.commission.amount, 2)} eks. mva.` : ""}
           />
           <ModeCard
@@ -588,14 +633,9 @@ function LineRow({
   onRemove: () => void;
 }) {
   const isInverter = l.productKind === "inverter";
-  let alternatives = l.kind === "product" ? alternativesFor(catalog, l) : [];
-  if (isInverter) {
-    const need = inverterNeed(catalog, draft);
-    const fits = compatibleInverters(catalog, need, draft.grid, draft.battery);
-    alternatives = fits.some((p) => p.id === l.sourceId) ? fits : [...alternatives.filter((p) => p.id === l.sourceId), ...fits];
-  }
-  const label = (p: CalcProduct) =>
-    isInverter ? `${p.name} · ${p.specs.acKw ?? "?"} kW${p.specs.hybrid ? " hybrid" : ""}` : p.name;
+  const alternatives = l.kind === "product" && !isInverter ? alternativesFor(catalog, l) : [];
+  const [picking, setPicking] = useState(false);
+  const current = isInverter ? catalog.products.find((p) => p.id === l.sourceId) : undefined;
 
   /** Fast salgsbeløp for linjen (kr eks. mva., før Soleklart) */
   const setFixedSale = (saleOre: number) => onChange({ priceMode: "fixed", fixedSale: String(Math.max(0, saleOre) / 100) });
@@ -606,7 +646,16 @@ function LineRow({
   return (
     <tr>
       <td>
-        {alternatives.length > 1 ? (
+        {isInverter ? (
+          <button
+            type="button"
+            className={`${s.input} ${s.productselect} ${s.pickbtn}`}
+            title="Velg inverter fra katalogen (søk, gruppert etter leverandør og type)"
+            onClick={() => setPicking(true)}
+          >
+            {current ? `${current.name} · ${current.specs.acKw ?? "?"} kW${current.specs.hybrid ? " hybrid" : ""}` : l.name || "Velg inverter"} ▾
+          </button>
+        ) : alternatives.length > 1 ? (
           <select
             className={`${s.input} ${s.productselect}`}
             value={l.sourceId}
@@ -618,7 +667,7 @@ function LineRow({
             }}
           >
             {alternatives.map((p) => (
-              <option key={p.id} value={p.id}>{label(p)}</option>
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
         ) : editable ? (
@@ -650,6 +699,19 @@ function LineRow({
             ))}
           {l.edited && <span className={`${s.pill} ${s.manual}`}>justert</span>}
         </div>
+        {picking && (
+          <InverterPicker
+            catalog={catalog}
+            need={inverterNeed(catalog, draft)}
+            grid={draft.grid}
+            currentId={l.sourceId}
+            onPick={(p) => {
+              setPicking(false);
+              if (p.id !== l.sourceId) onSwap(p);
+            }}
+            onClose={() => setPicking(false)}
+          />
+        )}
       </td>
       <td className={s.num}>
         <input className={`${s.input} ${s.quantity}`} inputMode="decimal" aria-label={`Mengde ${l.name}`} value={l.quantity} onChange={(e) => onChange({ quantity: e.target.value })} />
@@ -751,18 +813,163 @@ function CommitInput({ value, onCommit, placeholder, inputMode }: { value: strin
   );
 }
 
+/** Stort beløpsfelt for kundens sluttsum. Lagres ved Enter eller når feltet forlates. */
+function SumField({ label, ore, onCommit }: { label: string; ore?: number; onCommit: (ore: number) => void }) {
+  const shown = ore == null ? "" : (ore / 100).toFixed(0);
+  const [text, setText] = useState(shown);
+  const [focused, setFocused] = useState(false);
+  const commit = () => {
+    setFocused(false);
+    const kr = Number(text.replace(/\s/g, "").replace(",", "."));
+    if (text.trim() === "" || !Number.isFinite(kr) || kr <= 0) return;
+    if (Math.round(kr) !== Math.round((ore ?? 0) / 100)) onCommit(Math.round(kr * 100));
+  };
+  return (
+    <label className={s.sumfield}>
+      <span className={`${s.small} ${s.summarymuted}`}>{label}</span>
+      <span className={s.sumwrap}>
+        <input
+          inputMode="decimal"
+          aria-label={label}
+          value={focused ? text : ore == null ? "—" : new Intl.NumberFormat("nb-NO").format(Math.round(ore / 100))}
+          onFocus={() => {
+            setText(shown);
+            setFocused(true);
+          }}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+        />
+        <span>kr</span>
+      </span>
+    </label>
+  );
+}
+
+/** Manuelt valg av inverter: søkbar liste gruppert etter leverandør og type. */
+function InverterPicker({
+  catalog,
+  need,
+  grid,
+  currentId,
+  onPick,
+  onClose,
+}: {
+  catalog: CalcCatalog;
+  need: InverterNeed | null;
+  grid: Grid;
+  currentId?: string;
+  onPick: (p: CalcProduct) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [onlyFitting, setOnlyFitting] = useState(true);
+  const groups = inverterGroups(catalog, need, grid, query)
+    .map((g) => ({ ...g, items: onlyFitting ? g.items.filter((i) => i.fits || i.product.id === currentId) : g.items }))
+    .filter((g) => g.items.length);
+  return (
+    <Dialog title="Velg inverter" onClose={onClose}>
+      <p className={`${s.small} ${s.muted}`}>
+        {need
+          ? `Anlegget: ${fmt(need.kwp)} kWp, ${grid} V, måleffekt ${fmt(need.targetKw)} kW. Egnede vises først, deretter laveste innkjøpspris.`
+          : `${grid} V. Legg inn paneler for å se hvilke størrelser som passer.`}
+      </p>
+      <div className={s.toolbar}>
+        <input className={s.input} autoFocus placeholder="Søk: navn, leverandør, kW, hybrid …" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <label className={s.check}>
+          <input type="checkbox" checked={onlyFitting} onChange={(e) => setOnlyFitting(e.target.checked)} /> Bare de som passer {grid} V
+        </label>
+      </div>
+      <div className={s.list}>
+        {groups.map((g) => (
+          <div key={g.label}>
+            <div className={s.grouphead}>{g.label}</div>
+            {g.items.map(({ product: p, fits, sized }) => (
+              <button
+                key={p.id}
+                className={`${s.btn} ${p.id === currentId ? s.selected : ""}`}
+                onClick={() => onPick(p)}
+                title={!fits ? `Passer ikke ${grid} V eller anleggets PV-effekt` : !sized ? "Under anbefalt måleffekt" : "Velg"}
+              >
+                <span>
+                  <strong>{p.name}</strong>
+                  <br />
+                  <span className={`${s.small} ${s.muted}`}>
+                    {p.specs.acKw ?? "?"} kW AC
+                    {p.specs.maxPvKwp ? ` · maks ${fmt(p.specs.maxPvKwp)} kWp PV` : ""}
+                    {p.specs.grid ? ` · ${p.specs.grid === "begge" ? "230/400" : p.specs.grid} V` : " · nett mangler"}
+                    {p.specs.phases === 1 ? " · 1-fase" : ""}
+                    {!fits ? " · passer ikke" : !sized ? " · under måleffekt" : ""}
+                    {p.id === currentId ? " · valgt nå" : ""}
+                  </span>
+                </span>
+                <span className={s.price}>{money(p.priceOre)}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+        {!groups.length && <div className={s.empty}>Ingen treff</div>}
+      </div>
+    </Dialog>
+  );
+}
+
 // --- Sidekolonne ---
 
-function Summary({ result, isPrivate, onPreview }: { result: CalcResult | null; isPrivate: boolean; onPreview: () => void }) {
+function Summary({
+  result,
+  isPrivate,
+  vatPercent,
+  agreed,
+  onAgreedExVat,
+  onResetAgreed,
+  onPreview,
+}: {
+  result: CalcResult | null;
+  isPrivate: boolean;
+  vatPercent: number;
+  agreed: boolean;
+  onAgreedExVat: (ore: number) => void;
+  onResetAgreed: () => void;
+  onPreview: () => void;
+}) {
   const t = result?.totals;
   const supportAmount = t?.support ?? 0;
   const afterSupport = t ? (isPrivate ? t.afterSupport : t.totalExVat - supportAmount) : 0;
+  const exField = (
+    <SumField
+      key="ex"
+      label="Kundens sluttsum eks. mva."
+      ore={t?.totalExVat}
+      onCommit={onAgreedExVat}
+    />
+  );
+  const incField = (
+    <SumField
+      key="inc"
+      label="Kundens sluttsum inkl. mva."
+      ore={t?.totalIncVat}
+      onCommit={(inc) => onAgreedExVat(Math.round(inc / (1 + vatPercent / 100)))}
+    />
+  );
   return (
     <div className={s.summary}>
-      <div className={`${s.small} ${s.summarymuted}`}>KUNDEPRIS {isPrivate ? "INKL. MVA." : "EKS. MVA."}</div>
-      <div className={s.total}>{t ? money(isPrivate ? t.totalIncVat : t.totalExVat) : "Må avklares"}</div>
+      {t ? (
+        <div className={s.sumfields}>{isPrivate ? [incField, exField] : [exField, incField]}</div>
+      ) : (
+        <div className={s.total}>Må avklares</div>
+      )}
       <div className={`${s.small} ${s.summarymuted}`}>
-        {t ? `${money(isPrivate ? t.totalExVat : t.totalIncVat)} ${isPrivate ? "eks. mva." : "inkl. mva."}` : "Rett verdien før kalkylen kan lagres"}
+        {!t
+          ? "Rett verdien før kalkylen kan lagres"
+          : agreed
+            ? (
+              <>
+                Avtalt sluttsum: Soleklart-kommisjonen justeres så summen stemmer.{" "}
+                <button type="button" className={s.summarylink} onClick={onResetAgreed}>Tilbakestill til automatisk</button>
+              </>
+            )
+            : "Skriv inn ny sluttsum (eks. eller inkl. mva.) for å avtale prisen. Differansen tas på Soleklart-kommisjonen."}
       </div>
       {t && result && (
         <dl>
@@ -856,7 +1063,7 @@ function ModeCard({
   value: Adjustment;
   modes: [Adjustment["mode"], string][];
   onChange: (a: Adjustment) => void;
-  current: { percent: number | null; amount: number } | null;
+  current: { percent: number | null; amount: number; total?: number } | null;
   detail: string;
 }) {
   return (
@@ -873,7 +1080,14 @@ function ModeCard({
               value={value.mode}
               onChange={(e) => {
                 const mode = e.target.value as Adjustment["mode"];
-                const start = mode === "amount" ? String((current?.amount ?? 0) / 100) : mode === "percent" ? String(current?.percent ?? 0) : "";
+                const start =
+                  mode === "amount"
+                    ? String((current?.amount ?? 0) / 100)
+                    : mode === "percent"
+                      ? String(current?.percent ?? 0)
+                      : mode === "total"
+                        ? ((current?.total ?? 0) / 100).toFixed(2)
+                        : "";
                 onChange({ mode, value: start });
               }}
             >
@@ -884,7 +1098,7 @@ function ModeCard({
           </label>
           {value.mode !== "auto" && (
             <label>
-              {value.mode === "amount" ? "Beløp eks. mva., kr" : "Prosent"}
+              {value.mode === "amount" ? "Beløp eks. mva., kr" : value.mode === "total" ? "Sluttsum eks. mva., kr" : "Prosent"}
               <input className={s.input} inputMode="decimal" value={value.value} onChange={(e) => onChange({ ...value, value: e.target.value })} />
             </label>
           )}

@@ -39,6 +39,14 @@ export interface ProductSpecs {
   batteryClass?: "HV" | "LV";
   capacityKwh?: number;
   powerKw?: number;
+  /** Batteri: BMS/base-produkt som hører til modulen */
+  bmsProductId?: string | null;
+  /** Batteri: moduler per BMS/base, og min/maks moduler kunden kan velge */
+  modulesPerBase?: number;
+  minModules?: number;
+  maxModules?: number;
+  /** Dette produktet er en BMS/base (ikke et batteri kunden velger) */
+  bms?: boolean;
   derived?: boolean;
   [key: string]: unknown;
 }
@@ -110,6 +118,16 @@ export interface CalcSupplier {
 }
 
 export interface CalcSettings {
+  /** Standard batteritype på batterisiden av tilbudet */
+  defaultBatteryClass: "HV" | "LV";
+  /** kWp PV en hybridinverter tåler per kW AC når maks PV ikke er oppgitt */
+  hybridDcRatio: number;
+  /** Standardverdier for økonomien i nye tilbud */
+  economy: {
+    private: { elPrice: number; netPrice: number };
+    business: { elPrice: number; netPrice: number };
+    priceGrowthPercent: number;
+  };
   noPanelCommissionPercent: number;
   vatPercent: number;
   /** Måleffekt for inverter = kWp / faktor */
@@ -170,6 +188,25 @@ export const setMountRate = (installerId: string, roofTypeId: string, productId:
 export const setVolumeTiers = (installerId: string, tiers: CalcTier[]) =>
   put(`${inst(installerId)}/volume-tiers`, { tiers });
 
+// --- Panelvalg i solkartet (pvmap, public.solarpanels) ---
+
+export const MAP_PANEL_STEPS = ["0-72", "72-150", "150-300", "300-600", "600-1000", "1000+"] as const;
+export type MapPanelStep = (typeof MAP_PANEL_STEPS)[number];
+
+export interface MapPanel {
+  id: string;
+  name: string;
+  watt: number;
+  description: string | null;
+  /** Kroner per panel etter antall paneler */
+  prices: Record<MapPanelStep, number>;
+}
+
+export const getMapPanels = () => calcRequest<{ panels: MapPanel[] }>("/api/map-panels").then((r) => r.panels);
+
+export const updateMapPanel = (id: string, body: Partial<{ name: string; watt: number; description: string | null; prices: Partial<Record<MapPanelStep, number>> }>) =>
+  calcRequest<MapPanel>(`/api/map-panels/${encodeURIComponent(id)}`, "PATCH", body);
+
 /** Sentrale regler. Bare feltene som sendes, endres. Kroner for beløp. */
 export const updateSettings = (body: Partial<{
   commissionTiers: CalcTier[];
@@ -183,6 +220,13 @@ export const updateSettings = (body: Partial<{
   supportMaxKwp: number;
   supportMax: number;
   mountSupportEligible: boolean;
+  defaultBatteryClass: "HV" | "LV";
+  hybridDcRatio: number;
+  economyElPricePrivate: number;
+  economyNetPricePrivate: number;
+  economyElPriceBusiness: number;
+  economyNetPriceBusiness: number;
+  economyPriceGrowthPercent: number;
 }>) => put("/api/settings", body);
 
 export const createSupplier = (name: string) => calcRequest<{ id: string; name: string }>("/api/suppliers", "POST", { name });
@@ -238,7 +282,8 @@ export const oreToInput = (ore: number | null | undefined) => (ore == null ? "" 
 // --- Beregning ---
 
 export type LineKind = "product" | "mount" | "work";
-export type AdjustmentMode = "auto" | "percent" | "amount";
+/** total = avtalt sluttsum eks. mva. (bare for kommisjon) */
+export type AdjustmentMode = "auto" | "percent" | "amount" | "total";
 
 /** Motorens input (se soleklart-kalkulator lib/engine/types.ts). Beløp i kroner. */
 export interface CalcInputLine {
@@ -304,7 +349,113 @@ export interface CalcResult {
 
 /** Forhåndsvisning av et utkast med samme regler som ved lagring. */
 export const previewDraft = (installerGroupId: string, draft: unknown) =>
-  calcRequest<{ kwp: number; result: CalcResult }>("/api/preview", "POST", { installerGroupId, draft });
+  calcRequest<{ kwp: number; result: CalcResult; batteryOffer: BatteryOfferResult | null; economy: Economy }>("/api/preview", "POST", {
+    installerGroupId,
+    draft,
+  });
+
+export interface Economy {
+  elPrice: number;
+  netPrice: number;
+  priceGrowthPercent: number;
+}
+
+// --- Batteri og hybrid som tillegg (regnes i kalkulatortjenesten) ---
+
+/** Det brukeren velger for batteriseksjonen i et tilbud. Beløp i kroner. */
+export interface BatteryOfferConfig {
+  enabled: boolean;
+  batteryClass?: "HV" | "LV";
+  /** null = automatisk */
+  hybridProductId?: string | null;
+  /** null = installatørens sats for solcellemateriell */
+  markupPercent?: string | null;
+  installWorkTypeId?: string | null;
+  installPrice?: string | null;
+  recommendedModelId?: string | null;
+  recommendedModules?: number | null;
+  models?: {
+    productId: string;
+    enabled?: boolean;
+    min?: number;
+    max?: number;
+    modulePrice?: string | null;
+    bmsProductId?: string | null;
+    bmsPrice?: string | null;
+    modulesPerBms?: number;
+  }[];
+}
+
+/** Øre: innkjøp → etter installatørens påslag → kundepris eks. mva. inkl. Soleklart */
+export interface PriceSteps {
+  purchaseOre: number;
+  saleOre: number;
+  customerOre: number;
+}
+
+export interface BatteryOfferResult {
+  enabled: boolean;
+  batteryClass: "HV" | "LV";
+  materialMarkupPercent: number;
+  materialMarkupOverridden: boolean;
+  elektroMarkupPercent: number;
+  commissionRate: number;
+  stringInverter: { productId: string | null; name: string; acKw: number | null; saleUnitOre: number; datasheetUrl: string | null } | null;
+  hybridIncluded: boolean;
+  hybrid: (PriceSteps & { productId: string; name: string; acKw: number | null; batteryClass: string | null; datasheetUrl: string | null; auto: boolean }) | null;
+  upgrade: { saleOre: number; customerOre: number };
+  hybridCandidates: { productId: string; name: string; acKw: number | null; supplier: string; purchaseOre: number; fits: boolean }[];
+  install: (PriceSteps & { workTypeId: string | null; name: string }) | null;
+  models: {
+    productId: string;
+    name: string;
+    enabled: boolean;
+    structure: "modular" | "unit";
+    moduleKwh: number;
+    batteryClass: string | null;
+    min: number;
+    max: number;
+    modulesPerBms: number;
+    module: PriceSteps;
+    modulePriceOverridden: boolean;
+    bms: (PriceSteps & { productId: string | null; name: string; overridden: boolean }) | null;
+    datasheetUrl: string | null;
+  }[];
+  recommended: { model: string; modules: number } | null;
+  warnings: string[];
+  section: Record<string, unknown> | null;
+}
+
+export interface SignedBreakdown {
+  signedAt: string | null;
+  version: number;
+  versionCreatedAt: string;
+  baseLines: { name: string; kind: string; quantity: number; purchaseOre: number; saleOre: number; markupPercent: number }[];
+  batteryOffer: BatteryOfferResult | null;
+  selection: { mode: "solar" | "hybrid" | "battery"; model?: string | null; modules?: number };
+  capacityKwh: number;
+  base: { subtotalOre: number; supplierCostOre: number; commissionOre: number; totalExVatOre: number };
+  extras: {
+    label: string;
+    quantity: number;
+    purchaseOre: number | null;
+    installerMarkupOre: number | null;
+    saleOre: number | null;
+    soleklartOre: number | null;
+    customerOre: number;
+  }[];
+  extrasCustomerOre: number;
+  extrasSoleklartOre: number;
+  commissionOre: number;
+  totalExVatOre: number;
+  totalIncVatOre: number;
+  commissionRate: number;
+  materialMarkupPercent: number | null;
+}
+
+/** Intern oppstilling for detaljvisningen (endelig kommisjon etter kundens valg ved signering). */
+export const getEstimateBreakdown = (estimateId: string) =>
+  calcRequest<SignedBreakdown>(`/api/estimates/${encodeURIComponent(estimateId)}/breakdown`);
 
 export const calculatePreview = (input: CalcInput) => calcRequest<CalcResult>("/api/calculate", "POST", input);
 
@@ -356,7 +507,7 @@ export const updateCalculation = (id: string, body: { lockVersion: number; draft
 export const getCalculation = (id: string) => calcRequest<CalcCalculation>(`/api/calculations/${encodeURIComponent(id)}`);
 
 export const saveQuoteVersion = (calculationId: string, body: { lockVersion: number; draft: unknown }, idempotencyKey: string) =>
-  calcRequest<{ quoteVersionId: string; version: number; lockVersion: number; estimateId: string | null; priceData: unknown }>(
+  calcRequest<{ quoteVersionId: string; version: number; lockVersion: number; estimateId: string | null; priceData: unknown; batteryOffer: BatteryOfferResult | null }>(
     `/api/calculations/${encodeURIComponent(calculationId)}/versions`,
     "POST",
     body,

@@ -191,3 +191,17 @@ select.input {
 .hiddenrow td { opacity: 0.6; }
 .primarylight { background: #eaf0e4; border-color: #9fb58f; color: var(--green); }
 .inline { display: inline-flex; gap: 6px; align-items: center; }
+
+/* Kundens sluttsum (redigerbar, eks. og inkl. mva.) */
+.sumfields { display: grid; gap: 10px; margin-bottom: 8px; }
+.sumfield { display: grid; gap: 4px; }
+.sumwrap { display: flex; align-items: baseline; gap: 6px; background: rgba(255,255,255,.1); border: 1px solid #536b50; border-radius: 8px; padding: 4px 10px; }
+.sumwrap:focus-within { border-color: #e7f2d9; background: rgba(255,255,255,.16); }
+.sumwrap input { flex: 1; min-width: 0; background: transparent; border: 0; color: #fff; font: inherit; font-size: 24px; font-weight: 650; letter-spacing: -.6px; font-variant-numeric: tabular-nums; outline: none; padding: 2px 0; }
+.sumwrap span { color: #c9d6c6; font-weight: 600; }
+.summary .summarylink { width: auto; margin: 0; padding: 0; background: none; border: 0; color: #e7f2d9; text-decoration: underline; font-size: inherit; cursor: pointer; }
+.summary .summarylink:hover { background: none; color: #fff; }
+.pickbtn { text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grouphead { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #6b7280); margin: 12px 0 4px; }
+.selected { border-color: var(--green) !important; box-shadow: inset 0 0 0 1px var(--green); }
+.list > div { display: flex; flex-direction: column; gap: 6px; }
