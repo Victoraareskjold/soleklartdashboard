@@ -2,7 +2,7 @@
 
 // Foretrukne merker og leverandører. Kalkulatoren velger disse først når de passer prosjektet
 // (nett, størrelse, batteritype); ellers velges som før. Alt kan overstyres i hvert tilbud.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { updateSettings, type CalcCatalog, type PreferenceKind } from "@/lib/calcApi";
 import s from "./kalkulator.module.css";
@@ -16,20 +16,38 @@ const KINDS: { kind: PreferenceKind; label: string; help: string; productKind: s
 
 export function Preferences({ catalog, reload }: { catalog: CalcCatalog; reload: () => Promise<void> }) {
   const edit = catalog.canEdit;
-  const current = catalog.settings.preferences ?? {};
+  type Prefs = Record<PreferenceKind, { supplierIds: string[]; brands: string[] }>;
+  const fromCatalog = (): Prefs =>
+    Object.fromEntries(
+      KINDS.map(({ kind }) => [
+        kind,
+        { supplierIds: catalog.settings.preferences?.[kind]?.supplierIds ?? [], brands: catalog.settings.preferences?.[kind]?.brands ?? [] },
+      ]),
+    ) as Prefs;
+  // Lokal kopi som oppdateres med en gang, så flere klikk etter hverandre ikke overskriver hverandre
+  const [current, setCurrent] = useState<Prefs>(fromCatalog);
+  const latest = useRef(current);
+  const [saving, setSaving] = useState(false);
   const [brands, setBrands] = useState<Record<string, string>>(() =>
     Object.fromEntries(KINDS.map(({ kind }) => [kind, (current[kind]?.brands ?? []).join(", ")])),
   );
 
   const save = (kind: PreferenceKind, patch: { supplierIds?: string[]; brands?: string[] }) => {
-    const next = Object.fromEntries(
-      KINDS.map(({ kind: k }) => [k, { supplierIds: current[k]?.supplierIds ?? [], brands: current[k]?.brands ?? [] }]),
-    ) as Record<PreferenceKind, { supplierIds: string[]; brands: string[] }>;
-    next[kind] = { ...next[kind], ...patch };
+    const before = latest.current;
+    const next: Prefs = { ...before, [kind]: { ...before[kind], ...patch } };
+    latest.current = next;
+    setCurrent(next);
+    setSaving(true);
     return updateSettings({ preferences: next })
       .then(() => toast.success("Foretrukne valg lagret"))
       .then(reload)
-      .catch((e: Error) => toast.error(e.message));
+      .catch((e: Error) => {
+        // Vis det som faktisk er lagret
+        latest.current = before;
+        setCurrent(before);
+        toast.error(e.message);
+      })
+      .finally(() => setSaving(false));
   };
 
   const suppliersFor = (productKind: string) => {
@@ -42,6 +60,7 @@ export function Preferences({ catalog, reload }: { catalog: CalcCatalog; reload:
     <section className={s.panel}>
       <div className={s.panelhead}>
         <h2>Foretrukne merker og leverandører</h2>
+        {saving && <span className={`${s.small} ${s.muted}`}>Lagrer …</span>}
       </div>
       <div className={s.panelbody}>
         <p className={s.rulehelp}>
@@ -51,7 +70,7 @@ export function Preferences({ catalog, reload }: { catalog: CalcCatalog; reload:
         <table>
           <tbody>
             {KINDS.map(({ kind, label, help, productKind }) => {
-              const pref = current[kind] ?? {};
+              const pref = current[kind];
               const chosen = pref.supplierIds ?? [];
               return (
                 <tr key={kind}>

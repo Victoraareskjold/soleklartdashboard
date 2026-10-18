@@ -17,6 +17,19 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
     updateSettings(patch)
       .then(() => toast.success(ok))
       .then(reload);
+  // Forutsetninger i tilbudet. Lagres samlet; tomt egenbruk = automatisk anslag.
+  const oa = {
+    exportPrice: 0.6,
+    selfUsePercent: null as number | null,
+    degradationPercent: 0.4,
+    replacementYear: 15,
+    replacementFactor: 1.4,
+    maintenancePerYear: 0,
+    consumptionFallback: 20000,
+    periodYears: 30 as 10 | 20 | 30,
+    ...Object.fromEntries(Object.entries(st.offerAssumptions ?? {}).filter(([k, v]) => v !== undefined && (v !== null || k === "selfUsePercent"))),
+  };
+  const saveOa = (patch: Partial<typeof oa>) => save({ offerAssumptions: { ...oa, ...patch } });
   const supportCategories = catalog.categories.filter((c) => !c.parentId && c.supportEligible).map((c) => c.name);
   const supportWork = catalog.workTypes.filter((w) => w.active && w.supportEligible).length;
   const kr = (ore: number) => `${(ore / 100).toLocaleString("nb-NO")} kr`;
@@ -191,11 +204,11 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
 
           <section className={s.panel}>
             <div className={s.panelhead}>
-              <h2>Standardverdier for økonomi</h2>
+              <h2>Forutsetninger i tilbudet</h2>
             </div>
             <div className={s.panelbody}>
               <p className={s.rulehelp}>
-                Startverdier for strømpris, nettleie og prisvekst i lønnsomhetsberegningen på tilbudet. Nye tilbud får verdiene som gjelder når de opprettes; signerte og tidligere tilbud endres ikke. Kunden kan justere dem på tilbudssiden.
+                Det kunden ser under «Forutsetninger» i tilbudet, og som alle beløp, nøkkeltall og grafer der regnes fra. Endringer slår gjennom i alle tilbud som ikke er signert. Signerte tilbud beholder verdiene de ble signert med. Kunden kan fortsatt justere verdiene selv på tilbudssiden.
               </p>
               <table>
                 <tbody>
@@ -227,6 +240,66 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
                     <td className={s.small}>Forventet prisvekst per år</td>
                     <td className={s.num}>
                       <NumberField label="Prisvekst" value={st.economy.priceGrowthPercent} unit="%" editable={edit} max={20} onSave={(v) => save({ economyPriceGrowthPercent: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Salgspris for overskuddsstrøm</td>
+                    <td className={s.num}>
+                      <NumberField label="Salgspris overskudd" value={oa.exportPrice} unit="kr/kWh" editable={edit} max={20} onSave={(v) => saveOa({ exportPrice: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>
+                      Andel av solstrømmen kunden bruker selv
+                      <div className={s.muted}>Tomt = anslås fra produksjon og forbruk (25–60 %)</div>
+                    </td>
+                    <td className={s.num}>
+                      <PercentField label="Egenbruk" value={oa.selfUsePercent} editable={edit} onSave={(v) => saveOa({ selfUsePercent: v })} />
+                      {!edit && oa.selfUsePercent == null && " automatisk"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Produksjonsnedgang for panelene per år</td>
+                    <td className={s.num}>
+                      <NumberField label="Produksjonsnedgang" value={oa.degradationPercent} unit="%" editable={edit} max={5} onSave={(v) => saveOa({ degradationPercent: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Inverterbytte etter</td>
+                    <td className={s.num}>
+                      <NumberField label="Inverterbytte år" value={oa.replacementYear} unit="år" editable={edit} min={1} max={30} onSave={(v) => saveOa({ replacementYear: Math.round(v) })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Inverterbytte = inverterens pris ×</td>
+                    <td className={s.num}>
+                      <NumberField label="Faktor inverterbytte" value={oa.replacementFactor} editable={edit} max={5} onSave={(v) => saveOa({ replacementFactor: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Faste driftskostnader per år</td>
+                    <td className={s.num}>
+                      <NumberField label="Drift per år" value={oa.maintenancePerYear} unit="kr" editable={edit} max={1_000_000} onSave={(v) => saveOa({ maintenancePerYear: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Årsforbruk når kunden ikke har oppgitt det</td>
+                    <td className={s.num}>
+                      <NumberField label="Standard årsforbruk" value={oa.consumptionFallback} unit="kWh" editable={edit} min={500} max={1_000_000} onSave={(v) => saveOa({ consumptionFallback: Math.round(v) })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Periode som vises først («Spart over … år»)</td>
+                    <td className={s.num}>
+                      {edit ? (
+                        <select className={s.input} value={oa.periodYears} aria-label="Periode" onChange={(e) => saveOa({ periodYears: Number(e.target.value) as 10 | 20 | 30 })}>
+                          <option value={10}>10 år</option>
+                          <option value={20}>20 år</option>
+                          <option value={30}>30 år</option>
+                        </select>
+                      ) : (
+                        `${oa.periodYears} år`
+                      )}
                     </td>
                   </tr>
                 </tbody>

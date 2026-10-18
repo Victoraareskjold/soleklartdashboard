@@ -131,7 +131,21 @@ export interface CalcBatteryDefaults {
   models?: string[];
 }
 
+/** Forutsetninger i tilbudets økonomiberegning (utover strømpris, nettleie og prisvekst) */
+export interface CalcOfferAssumptions {
+  exportPrice?: number;
+  /** null = anslås automatisk fra produksjon og forbruk */
+  selfUsePercent?: number | null;
+  degradationPercent?: number;
+  replacementYear?: number;
+  replacementFactor?: number;
+  maintenancePerYear?: number;
+  consumptionFallback?: number;
+  periodYears?: 10 | 20 | 30;
+}
+
 export interface CalcSettings {
+  offerAssumptions: CalcOfferAssumptions;
   preferences: Partial<Record<PreferenceKind, CalcPreference>>;
   batteryDefaults: CalcBatteryDefaults;
   /** Standard batteritype på batterisiden av tilbudet */
@@ -245,7 +259,17 @@ export const updateSettings = (body: Partial<{
   economyPriceGrowthPercent: number;
   preferences: Partial<Record<PreferenceKind, { supplierIds: string[]; brands: string[] }>>;
   batteryDefaults: CalcBatteryDefaults;
-}>) => put("/api/settings", body);
+  offerAssumptions: CalcOfferAssumptions;
+}>) =>
+  calcRequest<{ ok: true; saved?: string[]; settings?: CalcSettings }>("/api/settings", "PUT", body).then((res) => {
+    // En eldre kalkulatortjeneste ignorerer felt den ikke kjenner, og svarer likevel ok.
+    // Da skal brukeren få beskjed i stedet for at ingenting skjer.
+    const missing = Object.keys(body).filter((k) => !res.saved?.includes(k));
+    if (missing.length) {
+      throw new Error("Kalkulatortjenesten tok ikke imot endringen. Den må oppdateres (kjør siste databaseendring og deploy tjenesten), så prøv igjen.");
+    }
+    return res;
+  });
 
 export const createSupplier = (name: string) => calcRequest<{ id: string; name: string }>("/api/suppliers", "POST", { name });
 export const updateSupplier = (id: string, changes: Partial<{ name: string; active: boolean }>) =>
