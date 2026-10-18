@@ -85,7 +85,7 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
     getCalcCatalog(installerGroupId)
       .then((c) => {
         setCatalog(c);
-        setBatteryConfig({ enabled: true });
+        setBatteryConfig({ enabled: c.settings.batteryDefaults?.offerEnabled ?? true });
         setError(null);
       })
       .catch((e: Error) => setError(e.message));

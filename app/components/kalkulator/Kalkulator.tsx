@@ -26,6 +26,7 @@ import {
   customLine,
   inverterGroups,
   inverterNeed,
+  isPreferred,
   kwpOf,
   mountLine,
   newDraft,
@@ -123,7 +124,7 @@ export default function Kalkulator({
   const [extra, setExtra] = useState<PreviewExtra>({ kwp: null, batteryOffer: null, economy: null });
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<
-    null | { type: "add"; kind: LineKind } | { type: "edit"; id: string } | { type: "new" } | { type: "preview" } | { type: "drafts" }
+    null | { type: "add"; kind: LineKind } | { type: "custom"; kind: LineKind } | { type: "edit"; id: string } | { type: "new" } | { type: "preview" } | { type: "drafts" }
   >(null);
 
   // Ny installatør, eller nye data fra solkartet = ny kalkyle
@@ -193,6 +194,7 @@ export default function Kalkulator({
   const need = inverterNeed(catalog, draft);
   const suggestion = need ? suggestInverter(catalog, need) : null;
   const inverterLine = draft.lines.find((l) => l.productKind === "inverter");
+  const customInverter = draft.lines.some((l) => l.productKind === "inverter" && l.kind === "product" && !l.sourceId);
 
   const commitPanels = (n: number) => {
     if (!Number.isInteger(n) || n < 0) return toast.error("Panelantall må være et helt tall.");
@@ -377,17 +379,34 @@ export default function Kalkulator({
               {need && (
                 <div className={s.inverterinfo}>
                   <strong>Inverter:</strong> {fmt(need.kwp)} kWp ÷ {fmt(catalog.settings.inverterSizingFactor)} ={" "}
-                  <strong>{fmt(need.targetKw)} kW</strong> måleffekt · {need.grid} V. Forslag (rimeligste egnede stringinverter):{" "}
-                  <strong>{suggestion?.name ?? "ingen kompatibel modell"}</strong>
-                  {inverterLine && draft.inverterMode === "manual" && (
+                  <strong>{fmt(need.targetKw)} kW</strong> måleffekt · {need.grid} V. Forslag:{" "}
+                  <strong>
+                    {suggestion
+                      ? `${suggestion.quantity > 1 ? `${suggestion.quantity} × ` : ""}${suggestion.product.name}${suggestion.preferred ? " (foretrukket)" : ""}`
+                      : "ingen egnet modell i katalogen"}
+                  </strong>
+                  {customInverter ? (
                     <>
-                      {" "}· <span className={`${s.pill} ${s.manual}`}>manuelt valgt</span>{" "}
-                      {suggestion && suggestion.id !== inverterLine.sourceId && (
-                        <button className={s.linkbtn} onClick={() => update({ inverterMode: "auto" }, true)}>
-                          Bruk forslaget
-                        </button>
-                      )}
+                      {" "}· <span className={`${s.pill} ${s.manual}`}>egendefinert inverter i tilbudet</span>
                     </>
+                  ) : (
+                    inverterLine &&
+                    draft.inverterMode === "manual" && (
+                      <>
+                        {" "}· <span className={`${s.pill} ${s.manual}`}>manuelt valgt</span>{" "}
+                        {suggestion && (suggestion.product.id !== inverterLine.sourceId || String(suggestion.quantity) !== inverterLine.quantity) && (
+                          <button className={s.linkbtn} onClick={() => update({ inverterMode: "auto" }, true)}>
+                            Bruk forslaget
+                          </button>
+                        )}
+                      </>
+                    )
+                  )}
+                  {!suggestion && !customInverter && (
+                    <div className={`${s.notice} ${s.error}`} style={{ marginTop: 8 }} role="alert">
+                      Ingen stringinverter i katalogen passer {need.grid} V og {fmt(need.kwp)} kWp (opptil 20 like invertere). Velg inverter manuelt i linjen under, eller legg til en
+                      egen inverterlinje med pris fra leverandøren («+ Egen linje» under Materiell).
+                    </div>
                   )}
                   <div className={`${s.small} ${s.muted}`}>
                     Grunnpakken bruker vanlig stringinverter. Hybrid velges manuelt her, eller tilbys som tillegg i batteridelen.
@@ -435,7 +454,12 @@ export default function Kalkulator({
                             isAuto={l.productKind === "inverter" && draft.inverterMode === "auto"}
                             editable={editableTotals}
                             saleFromCustomer={saleFromCustomer}
-                            onChange={(patch) => updateLine(l.id, patch, l.productKind === "panel")}
+                            onChange={(patch) =>
+                              l.productKind === "inverter" && patch.quantity !== undefined
+                                ? change((d) => ({ ...d, inverterMode: "manual", lines: d.lines.map((x) => (x.id === l.id ? { ...x, ...patch } : x)) }))
+                                : updateLine(l.id, patch, l.productKind === "panel")
+                            }
+                            onRename={(name) => change((d) => ({ ...d, lines: d.lines.map((x) => (x.id === l.id ? { ...x, name } : x)) }))}
                             onSwap={(p) =>
                               change(
                                 (d) => ({
@@ -457,9 +481,18 @@ export default function Kalkulator({
                   <div className={s.empty}>Ingen poster lagt til</div>
                 )}
                 <div className={s.footerbar}>
-                  <button className={s.btn} onClick={() => setDialog({ type: "add", kind: g.kind })}>
-                    + {g.add}
-                  </button>
+                  <span className={s.actions}>
+                    <button className={s.btn} onClick={() => setDialog({ type: "add", kind: g.kind })}>
+                      + {g.add}
+                    </button>
+                    <button
+                      className={s.btn}
+                      title="Egen post med beskrivelse, pris og antall, uten å legge produktet i katalogen. Gjelder bare dette tilbudet."
+                      onClick={() => setDialog({ type: "custom", kind: g.kind })}
+                    >
+                      + Egen linje
+                    </button>
+                  </span>
                   <span className={`${s.small} ${s.muted}`}>{groupSum != null && `Sum ${money(groupSum, 2)} eks. mva., før Soleklart`}</span>
                 </div>
               </section>
@@ -531,6 +564,24 @@ export default function Kalkulator({
             );
             setDialog(null);
             if (line.markupPercent === "") toast.warn("Denne kategorien mangler avtalt påslag. Fyll inn påslaget på linjen.");
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.type === "custom" && (
+        <CustomLineDialog
+          catalog={catalog}
+          kind={dialog.kind}
+          onAdd={(line, replaceInverter) => {
+            change(
+              (d) => ({
+                ...d,
+                inverterMode: line.productKind === "inverter" ? "manual" : d.inverterMode,
+                lines: [...(replaceInverter ? d.lines.filter((x) => x.productKind !== "inverter") : d.lines), line],
+              }),
+              line.productKind === "inverter",
+            );
+            setDialog(null);
           }}
           onClose={() => setDialog(null)}
         />
@@ -616,6 +667,7 @@ function LineRow({
   saleFromCustomer,
   onChange,
   onSwap,
+  onRename,
   onDetails,
   onRemove,
 }: {
@@ -629,13 +681,14 @@ function LineRow({
   saleFromCustomer?: (customerOre: number) => number | null;
   onChange: (patch: Partial<QuoteLine>) => void;
   onSwap: (product: CalcProduct) => void;
+  onRename: (name: string) => void;
   onDetails: () => void;
   onRemove: () => void;
 }) {
   const isInverter = l.productKind === "inverter";
   const alternatives = l.kind === "product" && !isInverter ? alternativesFor(catalog, l) : [];
   const [picking, setPicking] = useState(false);
-  const current = isInverter ? catalog.products.find((p) => p.id === l.sourceId) : undefined;
+  const current = l.kind === "product" ? catalog.products.find((p) => p.id === l.sourceId) : undefined;
 
   /** Fast salgsbeløp for linjen (kr eks. mva., før Soleklart) */
   const setFixedSale = (saleOre: number) => onChange({ priceMode: "fixed", fixedSale: String(Math.max(0, saleOre) / 100) });
@@ -646,40 +699,42 @@ function LineRow({
   return (
     <tr>
       <td>
-        {isInverter ? (
-          <button
-            type="button"
-            className={`${s.input} ${s.productselect} ${s.pickbtn}`}
-            title="Velg inverter fra katalogen (søk, gruppert etter leverandør og type)"
-            onClick={() => setPicking(true)}
-          >
-            {current ? `${current.name} · ${current.specs.acKw ?? "?"} kW${current.specs.hybrid ? " hybrid" : ""}` : l.name || "Velg inverter"} ▾
-          </button>
-        ) : alternatives.length > 1 ? (
-          <select
-            className={`${s.input} ${s.productselect}`}
-            value={l.sourceId}
-            aria-label={`Bytt produkt for ${l.name}`}
-            title="Bytt til et annet produkt i samme kategori"
-            onChange={(e) => {
-              const p = alternatives.find((x) => x.id === e.target.value);
-              if (p) onSwap(p);
-            }}
-          >
-            {alternatives.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        ) : editable ? (
-          <input
-            className={`${s.input} ${s.productselect}`}
-            aria-label="Navn på post"
-            value={l.name}
-            placeholder="Uten navn"
-            onChange={(e) => onChange({ name: e.target.value })}
-          />
-        ) : (
-          <div className={s.productname}>{l.name || "Uten navn"}</div>
+        <input
+          className={`${s.input} ${s.productselect}`}
+          aria-label="Tekst på linjen"
+          title="Teksten kunden ser på linjen. Endringen gjelder bare dette tilbudet."
+          value={l.name}
+          placeholder="Uten navn"
+          onChange={(e) => onRename(e.target.value)}
+        />
+        {(isInverter || alternatives.length > 1) && (
+          <div className={s.swaprow}>
+            {isInverter ? (
+              <button type="button" className={`${s.linkbtn}`} title="Velg inverter fra katalogen (søk, gruppert etter leverandør og type)" onClick={() => setPicking(true)}>
+                {current ? `${current.specs.acKw ?? "?"} kW${current.specs.hybrid ? " hybrid" : ""} · velg annen inverter ▾` : "Velg inverter fra katalogen ▾"}
+              </button>
+            ) : (
+              <select
+                className={s.swapselect}
+                value={l.sourceId}
+                aria-label={`Bytt produkt for ${l.name}`}
+                title="Bytt til et annet produkt i samme kategori"
+                onChange={(e) => {
+                  const p = alternatives.find((x) => x.id === e.target.value);
+                  if (p) onSwap(p);
+                }}
+              >
+                {alternatives.map((p) => (
+                  <option key={p.id} value={p.id}>{p.id === l.sourceId ? `Bytt produkt (nå: ${p.name})` : p.name}</option>
+                ))}
+              </select>
+            )}
+            {current && l.name !== current.name && (
+              <button type="button" className={s.linkbtn} onClick={() => onRename(current.name)} title="Bruk produktnavnet fra katalogen igjen">
+                tilbakestill tekst
+              </button>
+            )}
+          </div>
         )}
         <div className={s.productmeta}>
           {l.detail} · per {l.unit}
@@ -892,7 +947,10 @@ function InverterPicker({
                 title={!fits ? `Passer ikke ${grid} V eller anleggets PV-effekt` : !sized ? "Under anbefalt måleffekt" : "Velg"}
               >
                 <span>
-                  <strong>{p.name}</strong>
+                  <strong>
+                    {isPreferred(p, p.specs.hybrid ? catalog.settings.preferences?.hybrid : catalog.settings.preferences?.inverter) ? "★ " : ""}
+                    {p.name}
+                  </strong>
                   <br />
                   <span className={`${s.small} ${s.muted}`}>
                     {p.specs.acKw ?? "?"} kW AC
@@ -1254,9 +1312,117 @@ function AddLineDialog({
         {!filtered.length && <div className={s.empty}>Ingen treff</div>}
       </div>
       <hr className={s.subtleline} />
-      <button className={s.btn} onClick={() => onAdd(customLine(catalog, kind))}>
-        + Egendefinert post
-      </button>
+      <p className={`${s.small} ${s.muted}`}>Finner du ikke produktet? Bruk «+ Egen linje» under gruppen for å legge inn en post med egen tekst, pris og antall.</p>
+    </Dialog>
+  );
+}
+
+/** Egen post uten produkt i katalogen (f.eks. eget leverandørtilbud på en Deye 120 kW). Gjelder bare dette tilbudet. */
+function CustomLineDialog({
+  catalog,
+  kind,
+  onAdd,
+  onClose,
+}: {
+  catalog: CalcCatalog;
+  kind: LineKind;
+  onAdd: (line: QuoteLine, replaceInverter: boolean) => void;
+  onClose: () => void;
+}) {
+  const base = customLine(catalog, kind);
+  const [name, setName] = useState("");
+  const [type, setType] = useState<"annet" | "inverter" | "batteri" | "feste">("annet");
+  const [quantity, setQuantity] = useState("1");
+  const [unit, setUnit] = useState(kind === "mount" ? "panel" : kind === "work" ? "jobb" : "stk");
+  const [price, setPrice] = useState("");
+  const [markup, setMarkup] = useState(base.markupPercent);
+  const [support, setSupport] = useState(false);
+  const [replaceInverter, setReplaceInverter] = useState(true);
+  const title = kind === "product" ? "Egen materiellinje" : kind === "mount" ? "Egen monteringslinje" : "Egen arbeidslinje";
+
+  const submit = () => {
+    const qty = Number(quantity.replace(",", "."));
+    const unitPrice = Number(price.replace(/\s/g, "").replace(",", "."));
+    if (!name.trim()) return toast.error("Skriv en beskrivelse.");
+    if (!(qty > 0)) return toast.error("Antall må være større enn 0.");
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) return toast.error("Skriv inn pris per enhet.");
+    const line: QuoteLine = {
+      ...base,
+      name: name.trim(),
+      detail: "Egen linje (ikke i katalogen)",
+      quantity,
+      unit,
+      baseUnit: price.replace(/\s/g, ""),
+      markupPercent: markup,
+      supportEligible: support,
+      productKind: kind === "product" && type !== "annet" ? type : undefined,
+    };
+    onAdd(line, kind === "product" && type === "inverter" && replaceInverter);
+  };
+
+  return (
+    <Dialog
+      title={title}
+      onClose={onClose}
+      footer={
+        <button className={`${s.btn} ${s.primary}`} onClick={submit}>
+          Legg til i tilbudet
+        </button>
+      }
+    >
+      <p className={`${s.small} ${s.muted}`}>
+        Linjen gjelder bare dette tilbudet og regnes som vanlig: pris × antall + påslag, og Soleklart-kommisjon og mva. på toppen. Produktkatalogen endres ikke.
+      </p>
+      <div className={`${s.fields} ${s.two}`}>
+        <label className={s.wide}>
+          Beskrivelse (vises for kunden)
+          <input className={s.input} autoFocus value={name} placeholder={kind === "product" ? "F.eks. Deye 120 kW inverter" : "Beskrivelse"} onChange={(e) => setName(e.target.value)} />
+        </label>
+        {kind === "product" && (
+          <label>
+            <span>
+              Type <Help text="Inverter: erstatter inverterforslaget og vises som inverter på tilbudet. Batteri/festesystem vises i riktig gruppe. Paneler må ligge i katalogen, fordi kWp og støtte regnes fra panelets effekt." />
+            </span>
+            <select
+              className={s.input}
+              value={type}
+              onChange={(e) => {
+                const t = e.target.value as typeof type;
+                setType(t);
+                setSupport(t === "inverter" || t === "feste");
+              }}
+            >
+              <option value="annet">Annet materiell</option>
+              <option value="inverter">Inverter</option>
+              <option value="feste">Festesystem</option>
+              <option value="batteri">Batteri</option>
+            </select>
+          </label>
+        )}
+        <label>
+          Antall
+          <span className={s.inputwrap}>
+            <input className={`${s.input} ${s.quantity}`} inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            <input className={s.input} aria-label="Enhet" value={unit} onChange={(e) => setUnit(e.target.value)} />
+          </span>
+        </label>
+        <label>
+          {kind === "product" ? "Innkjøpspris per enhet eks. mva. (kr)" : "Pris per enhet eks. mva. (kr)"}
+          <input className={s.input} inputMode="decimal" value={price} placeholder="0" onChange={(e) => setPrice(e.target.value)} />
+        </label>
+        <label>
+          Påslag %
+          <input className={`${s.input} ${s.percent}`} inputMode="decimal" value={markup} onChange={(e) => setMarkup(e.target.value)} />
+        </label>
+        <label className={s.check}>
+          <input type="checkbox" checked={support} onChange={(e) => setSupport(e.target.checked)} /> Med i støttegrunnlaget
+        </label>
+        {kind === "product" && type === "inverter" && (
+          <label className={`${s.check} ${s.wide}`}>
+            <input type="checkbox" checked={replaceInverter} onChange={(e) => setReplaceInverter(e.target.checked)} /> Erstatter inverteren(e) i grunnpakken
+          </label>
+        )}
+      </div>
     </Dialog>
   );
 }

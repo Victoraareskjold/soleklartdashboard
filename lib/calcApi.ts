@@ -117,7 +117,23 @@ export interface CalcSupplier {
   active: boolean;
 }
 
+/** Foretrukne leverandører (ID) og merker (ord i produktnavnet). Tomme lister = ingen preferanse. */
+export interface CalcPreference {
+  supplierIds?: string[];
+  brands?: string[];
+}
+export type PreferenceKind = "inverter" | "hybrid" | "panel" | "battery";
+
+export interface CalcBatteryDefaults {
+  /** Vis hybrid/batteri for kunden som standard i nye tilbud */
+  offerEnabled?: boolean;
+  /** Batterimodeller kunden ser, i rekkefølge */
+  models?: string[];
+}
+
 export interface CalcSettings {
+  preferences: Partial<Record<PreferenceKind, CalcPreference>>;
+  batteryDefaults: CalcBatteryDefaults;
   /** Standard batteritype på batterisiden av tilbudet */
   defaultBatteryClass: "HV" | "LV";
   /** kWp PV en hybridinverter tåler per kW AC når maks PV ikke er oppgitt */
@@ -227,6 +243,8 @@ export const updateSettings = (body: Partial<{
   economyElPriceBusiness: number;
   economyNetPriceBusiness: number;
   economyPriceGrowthPercent: number;
+  preferences: Partial<Record<PreferenceKind, { supplierIds: string[]; brands: string[] }>>;
+  batteryDefaults: CalcBatteryDefaults;
 }>) => put("/api/settings", body);
 
 export const createSupplier = (name: string) => calcRequest<{ id: string; name: string }>("/api/suppliers", "POST", { name });
@@ -368,6 +386,12 @@ export interface BatteryOfferConfig {
   batteryClass?: "HV" | "LV";
   /** null = automatisk */
   hybridProductId?: string | null;
+  /** Egen hybridinverter som ikke ligger i katalogen. Pris = innkjøp per stk (kr). */
+  hybridCustom?: { name: string; price: string; quantity?: number } | null;
+  /** Antall hybridinvertere. null = like mange som stringinvertere */
+  hybridQuantity?: number | null;
+  /** Rekkefølgen batterimodellene vises i for kunden. null = standardoppsettet */
+  modelOrder?: string[] | null;
   /** null = installatørens sats for solcellemateriell */
   markupPercent?: string | null;
   installWorkTypeId?: string | null;
@@ -400,11 +424,23 @@ export interface BatteryOfferResult {
   materialMarkupOverridden: boolean;
   elektroMarkupPercent: number;
   commissionRate: number;
-  stringInverter: { productId: string | null; name: string; acKw: number | null; saleUnitOre: number; datasheetUrl: string | null } | null;
+  stringInverter: { productId: string | null; name: string; acKw: number | null; saleUnitOre: number; quantity: number; datasheetUrl: string | null } | null;
   hybridIncluded: boolean;
-  hybrid: (PriceSteps & { productId: string; name: string; acKw: number | null; batteryClass: string | null; datasheetUrl: string | null; auto: boolean }) | null;
+  hybrid:
+    | (PriceSteps & {
+        productId: string | null;
+        name: string;
+        acKw: number | null;
+        batteryClass: string | null;
+        datasheetUrl: string | null;
+        auto: boolean;
+        custom: boolean;
+        quantity: number;
+        preferred: boolean;
+      })
+    | null;
   upgrade: { saleOre: number; customerOre: number };
-  hybridCandidates: { productId: string; name: string; acKw: number | null; supplier: string; purchaseOre: number; fits: boolean }[];
+  hybridCandidates: { productId: string; name: string; acKw: number | null; supplier: string; purchaseOre: number; fits: boolean; preferred: boolean }[];
   install: (PriceSteps & { workTypeId: string | null; name: string }) | null;
   models: {
     productId: string;
@@ -420,6 +456,7 @@ export interface BatteryOfferResult {
     modulePriceOverridden: boolean;
     bms: (PriceSteps & { productId: string | null; name: string; overridden: boolean }) | null;
     datasheetUrl: string | null;
+    preferred: boolean;
   }[];
   recommended: { model: string; modules: number } | null;
   warnings: string[];

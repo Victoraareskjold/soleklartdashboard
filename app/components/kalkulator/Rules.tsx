@@ -7,6 +7,7 @@ import { updateSettings, type CalcCatalog } from "@/lib/calcApi";
 import { MoneyField, NumberField, PercentField, fmtPct } from "./fields";
 import { TierEditor } from "./TierEditor";
 import { MapPanels } from "./MapPanels";
+import { Preferences } from "./Preferences";
 import s from "./kalkulator.module.css";
 
 export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () => Promise<void> }) {
@@ -232,6 +233,8 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
               </table>
             </div>
           </section>
+
+          <Preferences catalog={catalog} reload={reload} />
 
           <MapPanels editable={edit} />
         </div>

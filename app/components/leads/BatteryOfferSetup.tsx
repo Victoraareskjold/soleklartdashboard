@@ -9,8 +9,9 @@
 // Innkjøpspriser og BMS hentes fra produktkatalogen; overstyringer gjelder bare dette tilbudet
 // og lagres med kalkylen. Soleklart-satsen ligger inne i kundeprisene og vises ikke for kunden.
 import { useState } from "react";
-import { BatteryCharging, ExternalLink, RotateCcw } from "lucide-react";
-import type { BatteryOfferConfig, BatteryOfferResult, CalcCatalog, PriceSteps } from "@/lib/calcApi";
+import { ArrowDown, ArrowUp, BatteryCharging, ExternalLink, RotateCcw, Save } from "lucide-react";
+import { toast } from "react-toastify";
+import { updateSettings, type BatteryOfferConfig, type BatteryOfferResult, type CalcCatalog, type PriceSteps } from "@/lib/calcApi";
 
 interface Props {
   catalog: CalcCatalog;
@@ -91,26 +92,34 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
   const bmsOptions = catalog.products.filter((p) => p.active && batteryCategoryIds.has(p.categoryId) && !modelIds.has(p.id));
 
   const header = (
-    <div className="sk-card-header flex-wrap gap-2 py-3">
-      <div className="flex items-center gap-2">
-        <BatteryCharging size={16} className="text-brand" />
-        <h3 className="sk-section-title text-sm">Batteri og hybrid på tilbudet</h3>
-        <span className="text-xs text-muted">Kunden kan velge «Klargjør for batteri» eller «Solceller + batteri». Priser regnes av kalkulatoren.</span>
+    <div className="border-b border-line px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <BatteryCharging size={16} className="text-brand" />
+          <h3 className="sk-section-title text-sm">Batteri og hybrid på tilbudet</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="sk-btn sk-btn-ghost sk-btn-sm"
+            title="Fjern endringene i dette tilbudet og bruk standardoppsettet (Beregningsregler), katalogpriser, prisavtaler og automatisk hybridvalg"
+            onClick={() => onChange({ enabled: config.enabled })}
+          >
+            <RotateCcw size={14} /> Bruk standardoppsettet
+          </button>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <label className="flex items-center gap-2 text-sm font-medium text-ink">
-          <input type="checkbox" className="size-4" checked={config.enabled} onChange={(e) => set({ enabled: e.target.checked })} />
-          Vis batterivalg for kunden
-        </label>
-        <button
-          type="button"
-          className="sk-btn sk-btn-ghost sk-btn-sm"
-          title="Fjern alle overstyringer og bruk katalog, prisavtaler og automatisk hybridvalg"
-          onClick={() => onChange({ enabled: config.enabled })}
-        >
-          <RotateCcw size={14} /> Tilbakestill
-        </button>
-      </div>
+      <label className={`mt-3 flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${config.enabled ? "border-green-300 bg-green-50" : "border-line bg-gray-50"}`}>
+        <input type="checkbox" className="mt-0.5 size-5" checked={config.enabled} onChange={(e) => set({ enabled: e.target.checked })} />
+        <span>
+          <span className="block text-sm font-semibold text-ink">Tilby oppgradering til hybridinverter og batteri</span>
+          <span className="block text-xs text-muted">
+            {config.enabled
+              ? "På: kunden ser «Klargjør for batteri» (hybridinverter) og batterimodellene som er huket av under, med priser."
+              : "Av: kunden ser bare solcelleanlegget. Ingen oppgraderingsvalg og ingen tilleggspriser for hybrid eller batteri."}
+          </span>
+        </span>
+      </label>
     </div>
   );
 
@@ -118,7 +127,7 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
     return (
       <section className="sk-card overflow-hidden">
         {header}
-        <p className="px-4 pb-4 text-sm text-muted">Tilbudet vises uten batteri og hybridvalg.</p>
+        <p className="px-4 py-3 text-sm text-muted">Slå på for å velge hybridinverter og batterimodeller kunden kan velge mellom.</p>
       </section>
     );
   }
@@ -132,6 +141,14 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
   }
 
   const ratePct = offer.commissionRate * 100;
+  /** Flytter en modell opp/ned. Gjelder dette tilbudet; «Lagre … som standard» for nye tilbud. */
+  const move = (index: number, dir: -1 | 1) => {
+    const ids = offer.models.map((m) => m.productId);
+    const j = index + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[index], ids[j]] = [ids[j], ids[index]];
+    set({ modelOrder: ids, recommendedModelId: null, recommendedModules: null });
+  };
   const hybrid = offer.hybrid;
   const fitting = offer.hybridCandidates.filter((c) => c.fits);
   const notFitting = offer.hybridCandidates.filter((c) => !c.fits);
@@ -166,14 +183,20 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
               <select
                 className={cell}
                 disabled={offer.hybridIncluded}
-                value={config.hybridProductId ?? ""}
-                onChange={(e) => set({ hybridProductId: e.target.value || null })}
+                value={config.hybridCustom ? "__custom" : (config.hybridProductId ?? "")}
+                onChange={(e) =>
+                  e.target.value === "__custom"
+                    ? set({ hybridProductId: null, hybridCustom: { name: hybrid?.name ?? "", price: hybrid ? String(Math.round(hybrid.purchaseOre / 100)) : "", quantity: hybrid?.quantity ?? 1 } })
+                    : set({ hybridProductId: e.target.value || null, hybridCustom: null })
+                }
               >
-                <option value="">Automatisk{hybrid?.auto ? `: ${hybrid.name}` : " (rimeligste egnede)"}</option>
+                <option value="">Automatisk{hybrid?.auto ? `: ${hybrid.name}` : " (foretrukket, ellers rimeligste egnede)"}</option>
+                <option value="__custom">Egen hybridinverter (ikke i katalogen) …</option>
                 {fitting.length > 0 && (
                   <optgroup label={`Passer ${offer.batteryClass} og anlegget`}>
                     {fitting.map((c) => (
                       <option key={c.productId} value={c.productId}>
+                        {c.preferred ? "★ " : ""}
                         {c.name} · {c.acKw ?? "?"} kW · {c.supplier} · {kr(c.purchaseOre)}
                       </option>
                     ))}
@@ -192,6 +215,59 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
             </label>
           </div>
 
+          {!offer.hybridIncluded &&
+            (config.hybridCustom ? (
+              <div className="mt-3 grid grid-cols-[minmax(0,1fr)_120px_80px] items-end gap-3">
+                <label className={label}>
+                  Navn (vises for kunden)
+                  <Commit
+                    className={cell}
+                    ariaLabel="Navn på egen hybridinverter"
+                    value={config.hybridCustom.name}
+                    placeholder="F.eks. Deye 50 kW hybrid"
+                    onCommit={(v) => set({ hybridCustom: { ...config.hybridCustom!, name: v } })}
+                  />
+                </label>
+                <label className={label}>
+                  Innkjøp / stk (kr)
+                  <Commit
+                    ariaLabel="Innkjøp per stk"
+                    value={config.hybridCustom.price}
+                    onCommit={(v) => set({ hybridCustom: { ...config.hybridCustom!, price: v } })}
+                  />
+                </label>
+                <label className={label}>
+                  Antall
+                  <Commit
+                    ariaLabel="Antall hybridinvertere"
+                    value={String(config.hybridCustom.quantity ?? 1)}
+                    onCommit={(v) => {
+                      const n = Math.round(Number(v));
+                      if (n > 0) set({ hybridCustom: { ...config.hybridCustom!, quantity: n } });
+                    }}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="mt-3 grid grid-cols-[110px_minmax(0,1fr)] items-end gap-3">
+                <label className={label}>
+                  Antall hybrider
+                  <Commit
+                    ariaLabel="Antall hybridinvertere"
+                    value={config.hybridQuantity ? String(config.hybridQuantity) : ""}
+                    placeholder={String(offer.stringInverter?.quantity ?? 1)}
+                    onCommit={(v) => {
+                      const n = Math.round(Number(v));
+                      set({ hybridQuantity: v === "" || !(n > 0) ? null : n });
+                    }}
+                  />
+                </label>
+                <span className="pb-2 text-[11px] text-muted">
+                  Tomt = like mange som stringinvertere i grunnpakken ({offer.stringInverter?.quantity ?? 1}). Hver hybrid må tåle sin andel av anlegget.
+                </span>
+              </div>
+            ))}
+
           {offer.hybridIncluded ? (
             <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-900">
               Hybridinverteren ({hybrid?.name}) er valgt i grunnpakken. «Klargjør for batteri» koster da 0 kr ekstra.
@@ -204,20 +280,29 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
                   <td className="py-0.5 text-right">{offer.stringInverter ? `${offer.stringInverter.name} · ${offer.stringInverter.acKw ?? "?"} kW` : "—"}</td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 text-muted">Hybrid {hybrid.auto ? "(automatisk)" : "(valgt manuelt)"}</td>
+                  <td className="py-0.5 text-muted">
+                    Hybrid {hybrid.custom ? "(egen, ikke i katalogen)" : hybrid.auto ? `(automatisk${hybrid.preferred ? ", foretrukket" : ""})` : "(valgt manuelt)"}
+                  </td>
                   <td className="py-0.5 text-right">
-                    {hybrid.name} · {hybrid.acKw ?? "?"} kW{hybrid.batteryClass ? ` · ${hybrid.batteryClass}` : ""}
+                    {hybrid.quantity > 1 ? `${hybrid.quantity} × ` : ""}
+                    {hybrid.name}
+                    {hybrid.acKw ? ` · ${hybrid.acKw} kW` : ""}
+                    {hybrid.batteryClass ? ` · ${hybrid.batteryClass}` : ""}
                   </td>
                 </tr>
                 <tr>
                   <td className="py-0.5 text-muted">Hybrid innkjøp + {pct(offer.materialMarkupPercent)} påslag</td>
                   <td className="py-0.5 text-right">
+                    {hybrid.quantity > 1 ? `${hybrid.quantity} × ` : ""}
                     {kr(hybrid.purchaseOre)} → {kr(hybrid.saleOre)}
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-0.5 text-muted">− stringinverter (salg i grunnpakken)</td>
-                  <td className="py-0.5 text-right">−{kr(offer.stringInverter?.saleUnitOre ?? 0)}</td>
+                  <td className="py-0.5 text-muted">− stringinverter(e) som byttes ut (salg i grunnpakken)</td>
+                  <td className="py-0.5 text-right">
+                    −{Math.min(hybrid.quantity, offer.stringInverter?.quantity ?? 1) > 1 ? `${Math.min(hybrid.quantity, offer.stringInverter?.quantity ?? 1)} × ` : ""}
+                    {kr(offer.stringInverter?.saleUnitOre ?? 0)}
+                  </td>
                 </tr>
                 <tr className="border-t border-gray-100 font-semibold text-ink">
                   <td className="pt-1">Mellomlegg til kunden {taxLabel}</td>
@@ -328,12 +413,28 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
 
       {/* Modeller */}
       <div className="border-t border-line">
-        <p className="sk-label m-0 px-4 pt-3">
-          Batterimodeller kunden kan velge mellom{" "}
-          <span className="font-normal text-muted">
-            ({offer.models.filter((m) => m.enabled).length} valgt · standard: {offer.batteryClass}-modeller)
-          </span>
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3">
+          <p className="sk-label m-0">
+            Batterimodeller kunden kan velge mellom{" "}
+            <span className="font-normal text-muted">
+              ({offer.models.filter((m) => m.enabled).length} valgt · vises for kunden i denne rekkefølgen, øverste foreslås først)
+            </span>
+          </p>
+          {catalog.canEdit && (
+            <button
+              type="button"
+              className="sk-btn sk-btn-secondary sk-btn-sm"
+              title="Nye tilbud starter med disse modellene i denne rekkefølgen, og med batteri/hybrid slått på. Dette tilbudet endres ikke."
+              onClick={() =>
+                updateSettings({ batteryDefaults: { offerEnabled: config.enabled, models: offer.models.filter((m) => m.enabled).map((m) => m.productId) } })
+                  .then(() => toast.success("Lagret som standard for nye tilbud."))
+                  .catch((e: Error) => toast.error(e.message))
+              }
+            >
+              <Save size={14} /> Lagre utvalg og rekkefølge som standard
+            </button>
+          )}
+        </div>
         {offer.models.length === 0 ? (
           <p className="m-4 rounded-xl border border-dashed border-gray-300 p-4 text-center text-sm text-muted">
             Ingen batterier i produktkatalogen for {catalog.installer.name}. Legg batteriene (og BMS) inn under Prisoppsett → Katalog.
@@ -343,6 +444,7 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
             <table className="w-full min-w-[1180px] text-sm">
               <thead className="text-left text-[11px] font-semibold uppercase tracking-wide text-muted">
                 <tr>
+                  <th className="w-16 px-1.5 py-2">Rekkefølge</th>
                   <th className="w-12 px-1.5 py-2">Vis</th>
                   <th className="px-1.5 py-2">Modell</th>
                   <th className="w-28 px-1.5 py-2 text-right">Innkjøp / stk</th>
@@ -355,11 +457,25 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
                 </tr>
               </thead>
               <tbody>
-                {offer.models.map((m) => {
+                {offer.models.map((m, i) => {
                   const cfg = modelCfg(m.productId);
                   const priceCell = (steps: PriceSteps) => `${kr(steps.purchaseOre)} → ${kr(steps.saleOre)}`;
                   return (
                     <tr key={m.productId} className={`border-t border-gray-100 align-top ${m.enabled ? "" : "opacity-55"}`}>
+                      <td className="px-1.5 py-1.5 whitespace-nowrap">
+                        <button type="button" className="sk-icon-btn size-7" aria-label={`Flytt ${m.name} opp`} disabled={i === 0} onClick={() => move(i, -1)}>
+                          <ArrowUp size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="sk-icon-btn size-7"
+                          aria-label={`Flytt ${m.name} ned`}
+                          disabled={i === offer.models.length - 1}
+                          onClick={() => move(i, 1)}
+                        >
+                          <ArrowDown size={14} />
+                        </button>
+                      </td>
                       <td className="px-1.5 py-1.5">
                         <input
                           type="checkbox"

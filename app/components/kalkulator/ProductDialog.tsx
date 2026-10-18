@@ -53,11 +53,24 @@ const DATASHEET_BUCKET = "estimate-images";
 /** Samme mønster som kalkulatortjenesten bruker når «er BMS» ikke er satt */
 const BMS_PATTERN = /\b(bms|base|kontrollenhet|styringsenhet|control\s*unit|hvc|high\s*voltage\s*control|power\s*module|effektmodul)\b/i;
 
-export function ProductDialog({ catalog, product, onClose, onSaved }: { catalog: CalcCatalog; product?: CalcProduct; onClose: () => void; onSaved: () => void }) {
+export function ProductDialog({
+  catalog,
+  product,
+  initial,
+  onClose,
+  onSaved,
+}: {
+  catalog: CalcCatalog;
+  product?: CalcProduct;
+  /** Nytt produkt: forhåndsvalgt leverandør og kategori (fra gruppen i katalogen) */
+  initial?: { supplierId?: string; categoryId?: string };
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [name, setName] = useState(product?.name ?? "");
-  const [supplierId, setSupplierId] = useState(product?.supplierId ?? catalog.suppliers.find((x) => x.active)?.id ?? "");
+  const [supplierId, setSupplierId] = useState(product?.supplierId ?? initial?.supplierId ?? catalog.suppliers.find((x) => x.active)?.id ?? "");
   const [newSupplier, setNewSupplier] = useState<string | null>(null);
-  const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? initial?.categoryId ?? "");
   const [unit, setUnit] = useState(product?.unit ?? "stk");
   const [price, setPrice] = useState(product ? oreToInput(product.priceOre) : "");
   const [attachmentUrl, setAttachmentUrl] = useState(product?.attachmentUrl ?? "");

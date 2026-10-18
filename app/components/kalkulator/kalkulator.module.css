@@ -205,3 +205,24 @@ select.input {
 .grouphead { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #6b7280); margin: 12px 0 4px; }
 .selected { border-color: var(--green) !important; box-shadow: inset 0 0 0 1px var(--green); }
 .list > div { display: flex; flex-direction: column; gap: 6px; }
+
+/* Sluttsum-feltene skal holde seg innenfor sidekolonnen (inputs har ellers en egen minstebredde) */
+.side { min-width: 0; }
+.summary { min-width: 0; overflow: hidden; }
+.sumfields, .sumfield, .sumwrap { min-width: 0; max-width: 100%; }
+.sumwrap input { width: 100%; font-size: 22px; }
+.sumwrap span { flex: none; }
+
+/* Linjetekst + bytt produkt */
+.swaprow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.swapselect { max-width: 100%; border: 0; background: transparent; color: var(--green, #2f4a2c); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+
+/* Katalog: kategorifaner og grupper */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.chip { border: 1px solid var(--line, #dcdcd4); background: #fff; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer; color: inherit; }
+.chip span { color: var(--muted, #6b7280); font-size: 11px; margin-left: 4px; }
+.chip:hover { border-color: var(--green, #2f4a2c); }
+.chipon { background: var(--green, #2f4a2c); border-color: var(--green, #2f4a2c); color: #fff; }
+.chipon span { color: #dfe8dc; }
+.grouprow td { background: #f4f5f0; font-size: 12px; font-weight: 650; padding: 7px 10px; }
+.grouprow td > span { margin-right: 12px; }
