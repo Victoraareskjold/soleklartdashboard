@@ -22,6 +22,7 @@ import { Dialog } from "./Dialog";
 import { Help } from "./fields";
 import {
   alternativesFor,
+  applyRoofType,
   applyRules,
   customLine,
   inverterGroups,
@@ -344,7 +345,18 @@ export default function Kalkulator({
                 </label>
                 <label>
                   Taktype
-                  <select className={s.input} value={draft.roofTypeId} onChange={(e) => update({ roofTypeId: e.target.value })}>
+                  <select
+                    className={s.input}
+                    value={draft.roofTypeId}
+                    onChange={(e) => {
+                      const roofTypeId = e.target.value;
+                      change((d) => {
+                        const r = applyRoofType(catalog, d, roofTypeId);
+                        if (r.notice) setNotice(r.notice);
+                        return r.draft;
+                      });
+                    }}
+                  >
                     {pricedRoofs.map((m) => (
                       <option key={m.roofTypeId} value={m.roofTypeId}>{m.roofTypeName}</option>
                     ))}

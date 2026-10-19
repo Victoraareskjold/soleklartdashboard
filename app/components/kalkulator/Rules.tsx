@@ -27,6 +27,9 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
     maintenancePerYear: 0,
     consumptionFallback: 20000,
     periodYears: 30 as 10 | 20 | 30,
+    productWarrantyYears: 25,
+    powerWarrantyYears: 30,
+    expectedLifetimeYears: 40,
     ...Object.fromEntries(Object.entries(st.offerAssumptions ?? {}).filter(([k, v]) => v !== undefined && (v !== null || k === "selfUsePercent"))),
   };
   const saveOa = (patch: Partial<typeof oa>) => save({ offerAssumptions: { ...oa, ...patch } });
@@ -300,6 +303,29 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
                       ) : (
                         `${oa.periodYears} år`
                       )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small} colSpan={2} style={{ paddingTop: 14 }}>
+                      <strong>Garantier og levetid</strong> (vises i tilbudet under «Garantier og levetid»)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Produktgaranti på panelene</td>
+                    <td className={s.num}>
+                      <NumberField label="Produktgaranti" value={oa.productWarrantyYears} unit="år" editable={edit} max={60} onSave={(v) => saveOa({ productWarrantyYears: Math.round(v) })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Effektgaranti på panelene</td>
+                    <td className={s.num}>
+                      <NumberField label="Effektgaranti" value={oa.powerWarrantyYears} unit="år" editable={edit} max={60} onSave={(v) => saveOa({ powerWarrantyYears: Math.round(v) })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Forventet levetid (vises som «over N år»)</td>
+                    <td className={s.num}>
+                      <NumberField label="Forventet levetid" value={oa.expectedLifetimeYears} unit="år" editable={edit} min={1} max={80} onSave={(v) => saveOa({ expectedLifetimeYears: Math.round(v) })} />
                     </td>
                   </tr>
                 </tbody>

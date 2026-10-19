@@ -397,6 +397,51 @@ export function applyRules(catalog: CalcCatalog, input: QuoteDraft): RuleResult 
   return { draft, notice: notes.join(" ") || null };
 }
 
+// --- Taktype ---
+
+/**
+ * Bytter taktype: monteringslinjen får taktypens avtalte pris per panel hos installatøren, og
+ * festesystemet byttes til produktet som er koblet til taktypen (Prisavtaler → Montering).
+ * Mengden (antall paneler) beholdes. Egendefinerte linjer røres ikke.
+ */
+export function applyRoofType(catalog: CalcCatalog, input: QuoteDraft, roofTypeId: string): RuleResult {
+  const mount = catalog.mountRates.find((m) => m.roofTypeId === roofTypeId && m.priceOre != null);
+  const kit = mount?.productId ? productById(catalog, mount.productId) : undefined;
+  const kitIds = new Set(catalog.mountRates.map((m) => m.productId).filter(Boolean) as string[]);
+  const panels = panelCountOf(input.lines) || 1;
+  const notes: string[] = [];
+  const lines = [...input.lines];
+
+  // Montering per panel
+  if (mount) {
+    const i = lines.findIndex((l) => l.kind === "mount" && l.sourceId);
+    if (i >= 0) {
+      const old = lines[i];
+      lines[i] = { ...mountLine(catalog, mount, num(old.quantity) || panels), id: old.id, quantity: old.quantity };
+    } else {
+      lines.push(mountLine(catalog, mount, panels));
+    }
+  } else {
+    notes.push("Taktypen har ingen avtalt monteringspris hos installatøren. Legg den inn under Prisavtaler → Montering.");
+  }
+
+  // Festesystem koblet til taktypen
+  const kitIndex = lines.findIndex((l) => l.kind === "product" && l.sourceId && (kitIds.has(l.sourceId) || l.productKind === "feste"));
+  if (kit) {
+    if (kitIndex >= 0) {
+      const old = lines[kitIndex];
+      if (old.sourceId !== kit.id) lines[kitIndex] = { ...swapProduct(catalog, old, kit), id: old.id };
+    } else {
+      const at = lines.findIndex((l) => l.productKind === "panel");
+      lines.splice(at >= 0 ? at + 1 : 0, 0, productLine(catalog, kit, panels));
+    }
+  } else if (mount) {
+    notes.push(`Ingen festesystem er koblet til «${mount.roofTypeName}». Velg festesystem manuelt, eller koble det under Prisavtaler → Montering.`);
+  }
+
+  return { draft: { ...input, roofTypeId, lines }, notice: notes.join(" ") || null };
+}
+
 // --- Nytt utkast ---
 
 const DEFAULT_PANEL = "17d47b70-dd41-4e8d-8c28-4e9d12cc26d6";

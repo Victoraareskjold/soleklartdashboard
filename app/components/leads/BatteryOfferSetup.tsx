@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUp, BatteryCharging, ExternalLink, RotateCcw, Save } from "lucide-react";
 import { toast } from "react-toastify";
-import { updateSettings, type BatteryOfferConfig, type BatteryOfferResult, type CalcCatalog, type PriceSteps } from "@/lib/calcApi";
+import { updateSettings, type BatteryOfferConfig, type BatteryOfferResult, type CalcCatalog, type HybridCommission, type PriceSteps } from "@/lib/calcApi";
 
 interface Props {
   catalog: CalcCatalog;
@@ -141,6 +141,7 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
   }
 
   const ratePct = offer.commissionRate * 100;
+  const up = offer.upgrade;
   /** Flytter en modell opp/ned. Gjelder dette tilbudet; «Lagre … som standard» for nye tilbud. */
   const move = (index: number, dir: -1 | 1) => {
     const ids = offer.models.map((m) => m.productId);
@@ -304,15 +305,131 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
                     {kr(offer.stringInverter?.saleUnitOre ?? 0)}
                   </td>
                 </tr>
+                <tr className="border-t border-gray-100">
+                  <td className="py-0.5 text-muted">= Prisforskjell (installatørens påslag er med)</td>
+                  <td className="py-0.5 text-right">{kr(up.differenceOre)}</td>
+                </tr>
+                {up.discountOre !== 0 && (
+                  <tr className={up.discountOre > 0 ? "text-green-800" : "text-amber-800"}>
+                    <td className="py-0.5">{up.discountOre > 0 ? "− Rabatt (manuell pris)" : "+ Tillegg (manuell pris)"}</td>
+                    <td className="py-0.5 text-right">
+                      {up.discountOre > 0 ? "−" : "+"}
+                      {kr(Math.abs(up.discountOre))}
+                    </td>
+                  </tr>
+                )}
+                <tr>
+                  <td className="py-0.5 text-muted">= Grunnlag for kommisjon (til installatør)</td>
+                  <td className="py-0.5 text-right">{kr(up.saleOre)}</td>
+                </tr>
+                <tr>
+                  <td className="py-0.5 text-muted">
+                    + Soleklart-kommisjon{" "}
+                    {up.commission.mode === "amount" ? "(fast beløp)" : `(${pct(up.commission.percent ?? 0)} av grunnlaget${up.commission.mode === "auto" ? ", som anlegget" : ""})`}
+                    {up.commission.fromDefault ? " · standard" : ""}
+                  </td>
+                  <td className="py-0.5 text-right">{kr(up.commissionOre)}</td>
+                </tr>
+                <tr className="border-t border-gray-100">
+                  <td className="py-0.5 text-muted">= Mellomlegg eks. mva.</td>
+                  <td className="py-0.5 text-right">{kr(up.customerOre)}</td>
+                </tr>
+                {!business && (
+                  <tr>
+                    <td className="py-0.5 text-muted">+ mva. {pct(catalog.settings.vatPercent)}</td>
+                    <td className="py-0.5 text-right">{kr(up.customerOre * (vat - 1))}</td>
+                  </tr>
+                )}
                 <tr className="border-t border-gray-100 font-semibold text-ink">
                   <td className="pt-1">Mellomlegg til kunden {taxLabel}</td>
-                  <td className="pt-1 text-right text-sm">{shown(offer.upgrade.customerOre)}</td>
+                  <td className="pt-1 text-right text-sm">{shown(up.customerOre)}</td>
                 </tr>
               </tbody>
             </table>
-          ) : (
+          ) : null}
+
+          {!offer.hybridIncluded && hybrid && (
+            <div className="mt-3 grid gap-3 rounded-lg bg-gray-50 p-3 sm:grid-cols-2">
+              <div>
+                <p className="mb-1 text-xs font-semibold text-ink">Soleklart-kommisjon på oppgraderingen</p>
+                <div className="grid grid-cols-[minmax(0,1fr)_100px] gap-2">
+                  <select
+                    className={cell}
+                    aria-label="Kommisjon på hybridoppgraderingen"
+                    value={config.hybridCommission?.mode ?? (up.commission.fromDefault ? up.commission.mode : "auto")}
+                    onChange={(e) => {
+                      const mode = e.target.value as HybridCommission["mode"];
+                      set({
+                        hybridCommission:
+                          mode === "auto"
+                            ? { mode: "auto" }
+                            : { mode, value: mode === "percent" ? String(Math.round((up.commission.percent ?? 0) * 100) / 100) : String(Math.round(up.commissionOre / 100)) },
+                      });
+                    }}
+                  >
+                    <option value="auto">Som resten av anlegget ({pct(ratePct)})</option>
+                    <option value="percent">Egen prosent av grunnlaget</option>
+                    <option value="amount">Fast beløp (kr eks. mva.)</option>
+                  </select>
+                  {up.commission.mode !== "auto" && (
+                    <Commit
+                      ariaLabel={up.commission.mode === "percent" ? "Kommisjon i prosent" : "Kommisjon i kroner"}
+                      value={String(config.hybridCommission?.value ?? (up.commission.mode === "percent" ? up.commission.percent ?? "" : (up.commission.amountOre ?? 0) / 100))}
+                      onCommit={(v) => set({ hybridCommission: { mode: up.commission.mode, value: v === "" ? "0" : v } })}
+                    />
+                  )}
+                </div>
+                <p className="mt-1 text-[11px] text-muted">
+                  Grunnlaget er prisforskjellen for oppgraderingen etter eventuell rabatt, ikke hele anlegget. Gjelder bare hybridoppgraderingen.
+                </p>
+                {catalog.canEdit && (
+                  <button
+                    type="button"
+                    className="mt-1 text-[11px] text-brand underline"
+                    title="Nye tilbud starter med denne kommisjonen på hybridoppgraderingen. Dette tilbudet endres ikke."
+                    onClick={() =>
+                      updateSettings({
+                        batteryDefaults: {
+                          ...catalog.settings.batteryDefaults,
+                          hybridCommission: up.commission.mode === "auto" ? null : { mode: up.commission.mode, value: up.commission.mode === "percent" ? up.commission.percent : (up.commission.amountOre ?? 0) / 100 },
+                        },
+                      })
+                        .then(() => toast.success("Kommisjonen er lagret som standard for hybridoppgraderinger i nye tilbud."))
+                        .catch((e: Error) => toast.error(e.message))
+                    }
+                  >
+                    Lagre kommisjonen som standard
+                  </button>
+                )}
+              </div>
+              <div>
+                <p className="mb-1 text-xs font-semibold text-ink">Mellomlegg til kunden {taxLabel}</p>
+                <Commit
+                  ariaLabel={`Mellomlegg til kunden ${taxLabel}`}
+                  value={String(Math.round((business ? up.customerOre : up.customerOre * vat) / 100))}
+                  onCommit={(v) => {
+                    const n = Number(v);
+                    if (v === "" || !Number.isFinite(n) || n < 0) return set({ hybridPrice: null });
+                    set({ hybridPrice: String(Math.round((business ? n : n / vat) * 100) / 100) });
+                  }}
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  {up.manualPrice
+                    ? `Manuell pris. ${up.discountOre >= 0 ? `Rabatten (${kr(up.discountOre)} eks. mva.)` : `Tillegget (${kr(-up.discountOre)} eks. mva.)`} tas på grunnlaget, og kommisjonen regnes av det nye grunnlaget, så summen alltid stemmer.`
+                    : "Skriv inn en annen pris for å gi rabatt. Rabatten trekkes fra grunnlaget, og kommisjonen regnes på nytt av det."}
+                </p>
+                {up.manualPrice && (
+                  <button type="button" className="mt-1 text-[11px] text-brand underline" onClick={() => set({ hybridPrice: null })}>
+                    Tilbake til beregnet pris ({shown(up.differenceOre + Math.round(up.commission.mode === "amount" ? (up.commission.amountOre ?? 0) : up.differenceOre * ((up.commission.percent ?? 0) / 100)))})
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          {!offer.hybridIncluded && !hybrid && (
             <p className="mt-3 text-xs text-muted">Ingen hybridinverter valgt.</p>
           )}
+
           <div className="mt-2 flex flex-wrap gap-3 text-xs">
             {offer.stringInverter?.datasheetUrl && (
               <a className="inline-flex items-center gap-1 text-brand underline" href={offer.stringInverter.datasheetUrl} target="_blank" rel="noreferrer">
@@ -426,7 +543,9 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
               className="sk-btn sk-btn-secondary sk-btn-sm"
               title="Nye tilbud starter med disse modellene i denne rekkefølgen, og med batteri/hybrid slått på. Dette tilbudet endres ikke."
               onClick={() =>
-                updateSettings({ batteryDefaults: { offerEnabled: config.enabled, models: offer.models.filter((m) => m.enabled).map((m) => m.productId) } })
+                updateSettings({
+                  batteryDefaults: { ...catalog.settings.batteryDefaults, offerEnabled: config.enabled, models: offer.models.filter((m) => m.enabled).map((m) => m.productId) },
+                })
                   .then(() => toast.success("Lagret som standard for nye tilbud."))
                   .catch((e: Error) => toast.error(e.message))
               }

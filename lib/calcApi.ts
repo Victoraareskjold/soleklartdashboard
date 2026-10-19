@@ -129,6 +129,15 @@ export interface CalcBatteryDefaults {
   offerEnabled?: boolean;
   /** Batterimodeller kunden ser, i rekkefølge */
   models?: string[];
+  /** Standard Soleklart-kommisjon på hybridoppgraderinger. null = grunnkalkylens sats */
+  hybridCommission?: HybridCommission | null;
+}
+
+/** Soleklart-kommisjon på hybridoppgraderingen. auto = samme sats som resten av anlegget */
+export interface HybridCommission {
+  mode: "auto" | "percent" | "amount";
+  /** Prosent av grunnlaget, eller kr eks. mva. */
+  value?: number | string | null;
 }
 
 /** Forutsetninger i tilbudets økonomiberegning (utover strømpris, nettleie og prisvekst) */
@@ -142,6 +151,10 @@ export interface CalcOfferAssumptions {
   maintenancePerYear?: number;
   consumptionFallback?: number;
   periodYears?: 10 | 20 | 30;
+  /** Panelenes produktgaranti, effektgaranti og forventet levetid (år) */
+  productWarrantyYears?: number;
+  powerWarrantyYears?: number;
+  expectedLifetimeYears?: number;
 }
 
 export interface CalcSettings {
@@ -412,6 +425,10 @@ export interface BatteryOfferConfig {
   hybridProductId?: string | null;
   /** Egen hybridinverter som ikke ligger i katalogen. Pris = innkjøp per stk (kr). */
   hybridCustom?: { name: string; price: string; quantity?: number } | null;
+  /** Soleklart-kommisjon på oppgraderingen. null = standarden */
+  hybridCommission?: HybridCommission | null;
+  /** Manuell pris for oppgraderingen, kr eks. mva. Differansen blir rabatt. */
+  hybridPrice?: string | null;
   /** Antall hybridinvertere. null = like mange som stringinvertere */
   hybridQuantity?: number | null;
   /** Rekkefølgen batterimodellene vises i for kunden. null = standardoppsettet */
@@ -463,7 +480,16 @@ export interface BatteryOfferResult {
         preferred: boolean;
       })
     | null;
-  upgrade: { saleOre: number; customerOre: number };
+  /** Mellomlegg, øre eks. mva.: prisforskjell − rabatt = grunnlag (saleOre); grunnlag + kommisjon = kundepris */
+  upgrade: {
+    differenceOre: number;
+    discountOre: number;
+    saleOre: number;
+    commissionOre: number;
+    customerOre: number;
+    commission: { mode: "auto" | "percent" | "amount"; percent: number | null; amountOre: number | null; fromDefault: boolean };
+    manualPrice: boolean;
+  };
   hybridCandidates: { productId: string; name: string; acKw: number | null; supplier: string; purchaseOre: number; fits: boolean; preferred: boolean }[];
   install: (PriceSteps & { workTypeId: string | null; name: string }) | null;
   models: {
