@@ -136,6 +136,33 @@ interface EmailThread {
   subject: string;
 }
 
+/** Lenken kunden får til et tilbud. Ferdigstilt tilbud (?f=1) åpnes med signering tilgjengelig. */
+function estimateUrl(domain: string, estimate: Estimate) {
+  return estimate.finished
+    ? `https://www.${domain}.no/estimat/${estimate.id}?f=1`
+    : `https://www.${domain}.no/estimat/${estimate.id}`;
+}
+
+/** Det nyeste tilbudet i avtalen, med eller uten signering. */
+function latestEstimate(estimates: Estimate[] | undefined) {
+  return [...(estimates ?? [])].sort(
+    (a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime(),
+  )[0];
+}
+
+/**
+ * Setter inn tilbudslenken. Malene bruker {estimateLink} både som
+ * href="{estimateLink}" (eller href={estimateLink}) og som tekst; href får
+ * bare adressen, ellers blir det en lenke inni en lenke.
+ */
+function fillEstimateLink(body: string, url: string) {
+  const link = `<a href="${url}">Åpne oppsett for solcelleanlegg</a>`;
+  return body
+    .replace(/<a\s+href=(["']?)\{estimateLink\}\1\s*>\s*\{estimateLink\}\s*<\/a>/g, link)
+    .replace(/href=(["']?)\{estimateLink\}\1/g, `href="${url}"`)
+    .replace(/\{estimateLink\}/g, link);
+}
+
 export default function LeadEmailSection({
   leadId,
   leadEmail,
@@ -223,21 +250,15 @@ export default function LeadEmailSection({
       );
       if (!template) return;
 
-      const estimateLink = newEstimate.finished
-        ? `https://www.${domain}.no/estimat/${newEstimate.id}?f=1`
-        : `https://www.${domain}.no/estimat/${newEstimate.id}`;
+      const estimateLink = estimateUrl(domain, newEstimate);
 
       const emailSubject = template.subject.replace(
         "{installerName}",
         installerData?.name,
       );
 
-      const emailBody = template.body
+      const emailBody = fillEstimateLink(template.body, estimateLink)
         .replaceAll("{leadName}", leadName)
-        .replaceAll(
-          "{estimateLink}",
-          `<a href="${estimateLink}">Åpne oppsett for solcelleanlegg</a>`,
-        )
         .replaceAll("{installerName}", installerData?.name);
 
       setSubject(emailSubject);
@@ -283,17 +304,10 @@ export default function LeadEmailSection({
       .replaceAll(/{installerName}/g, installerData?.name ?? "");
 
     if (emailBody.includes("{estimateLink}")) {
-      const sortedEstimates = estimates?.sort(
-        (a, b) =>
-          new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime(),
-      );
-      const latestEstimate = sortedEstimates?.[0];
-      if (latestEstimate && domain) {
-        const estimateLink = `https://www.${domain}.no/estimat/${latestEstimate.id}`;
-        emailBody = emailBody.replace(
-          /{estimateLink}/g,
-          `<a href="${estimateLink}">Åpne oppsett for solcelleanlegg</a>`,
-        );
+      // Det nyeste tilbudet i avtalen. Er det ferdigstilt, åpnes det med signering.
+      const latest = latestEstimate(estimates);
+      if (latest && domain) {
+        emailBody = fillEstimateLink(emailBody, estimateUrl(domain, latest));
       } else {
         toast.warn(
           "Kan ikke fylle ut estimatlenke. Ingen estimater funnet for denne leaden.",
