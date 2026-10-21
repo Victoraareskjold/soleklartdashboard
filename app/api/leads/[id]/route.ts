@@ -4,6 +4,10 @@ import {
   createSupabaseClient,
 } from "@/utils/supabase/client";
 import { updateLead } from "@/lib/db/leads";
+import {
+  shouldPurgeImages,
+  purgeEstimateImagesForLeads,
+} from "@/lib/storage/estimateImages";
 
 export async function GET(
   req: Request,
@@ -93,6 +97,21 @@ export async function PATCH(
         to_status: body.status,
         changed_by: user?.id ?? null,
       });
+
+      // «Ikke interessert» / «Nyhetsbrev» → slett estimatbildene for å spare plass i storage.
+      // Feiler dette, skal statusendringen likevel gå gjennom.
+      if (shouldPurgeImages(body.status)) {
+        try {
+          const res = await purgeEstimateImagesForLeads(
+            createSupabaseAdminClient(),
+            [leadId],
+          );
+          if (res.errors.length)
+            console.error("purgeEstimateImages errors:", leadId, res.errors);
+        } catch (e) {
+          console.error("purgeEstimateImages failed:", leadId, e);
+        }
+      }
     }
 
     return NextResponse.json(updatedLead);
@@ -120,6 +139,14 @@ export async function DELETE(
 
     const { data, error } = await client.from("leads").delete().eq("id", id);
     if (error) throw error;
+
+    // Leaden er borte → rydd bort estimatbildene i <leadId>/ så de ikke blir liggende.
+    try {
+      const res = await purgeEstimateImagesForLeads(client, [id]);
+      if (res.errors.length) console.error("purgeEstimateImages errors:", id, res.errors);
+    } catch (e) {
+      console.error("purgeEstimateImages failed:", id, e);
+    }
     return NextResponse.json(data);
   } catch (err) {
     console.error("DELETE /api/leads/[id] error:", err);

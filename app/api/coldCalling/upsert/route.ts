@@ -1,5 +1,9 @@
 import { createSupabaseAdminClient } from "@/utils/supabase/client";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  shouldPurgeImages,
+  purgeEstimateImagesForLeads,
+} from "@/lib/storage/estimateImages";
 
 export async function POST(req: NextRequest) {
   try {
@@ -66,6 +70,19 @@ export async function POST(req: NextRequest) {
       }
 
       results.push(data[0]);
+    }
+
+    // «Ikke interessert» / «Nyhetsbrev» → slett estimatbildene for å spare plass i storage.
+    const notInterestedIds = leads
+      .filter((l: { id?: string; status?: number }) => l.id && shouldPurgeImages(l.status))
+      .map((l: { id: string }) => l.id);
+    if (notInterestedIds.length) {
+      try {
+        const res = await purgeEstimateImagesForLeads(supabase, notInterestedIds);
+        if (res.errors.length) console.error("purgeEstimateImages errors:", res.errors);
+      } catch (e) {
+        console.error("purgeEstimateImages failed:", e);
+      }
     }
 
     return NextResponse.json({

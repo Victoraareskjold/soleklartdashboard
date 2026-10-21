@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import { ImagePlus } from "lucide-react";
 import { SolarData } from "../SolarDataView";
 import { supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/compressImage";
 import { createEstimate } from "@/lib/api";
 import { CreateEstimateInput, Estimate } from "@/lib/types";
 import { PriceOverview } from "@/types/price_table";
@@ -93,8 +94,11 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
 
   const uploadImage = async () => {
     if (!imageFile) return null;
-    const filePath = `${leadId}/${imageFile.name}-${Date.now()}`;
-    const { error: uploadError } = await supabase.storage.from("estimate-images").upload(filePath, imageFile);
+    const file = await compressImage(imageFile);
+    const filePath = `${leadId}/${file.name}-${Date.now()}`;
+    const { error: uploadError } = await supabase.storage
+      .from("estimate-images")
+      .upload(filePath, file, { contentType: file.type || undefined });
     if (uploadError) throw new Error(`Bildeopplasting feilet: ${uploadError.message}`);
     return supabase.storage.from("estimate-images").getPublicUrl(filePath).data.publicUrl;
   };
