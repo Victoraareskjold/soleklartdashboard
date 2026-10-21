@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import { FileText, Lock, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import { FileText, ImagePlus, Lock, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { Estimate } from "@/lib/types";
 import { PriceLineItem, PriceOverview } from "@/types/price_table";
 import { updateEstimate } from "@/lib/api";
 import { getQuoteVersion } from "@/lib/calcApi";
 import SignedBreakdownPanel from "./SignedBreakdownPanel";
 import { supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/compressImage";
+import { ESTIMATE_IMAGES_BUCKET, pathFromPublicUrl } from "@/lib/storage/estimateImages";
 
 /**
  * Detaljert visning av et estimat, som et linjeskjema.
@@ -386,6 +388,39 @@ export default function EstimateDetailModal({
     }
   };
 
+  // ── Estimatbilde ────────────────────────────────────────────────────────────
+  // Bildet slettes når leaden settes til Ikke interessert / Nyhetsbrev, og kunden
+  // ser da «tilbudet har utløpt». Et nytt bilde lagres med en gang (uavhengig av
+  // «Lagre»), og da er tilbudet aktivt igjen.
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const uploadEstimateImage = async (original: File) => {
+    setImageUploading(true);
+    try {
+      const file = await compressImage(original);
+      const filePath = `${estimate.lead_id}/${file.name}-${Date.now()}`;
+      const { error: uploadError } = await supabase.storage
+        .from(ESTIMATE_IMAGES_BUCKET)
+        .upload(filePath, file, { contentType: file.type || undefined });
+      if (uploadError) throw new Error(`Bildeopplasting feilet: ${uploadError.message}`);
+
+      const publicUrl = supabase.storage.from(ESTIMATE_IMAGES_BUCKET).getPublicUrl(filePath).data.publicUrl;
+      const updated = await updateEstimate(estimate.id, { image_url: publicUrl });
+
+      // Rydd bort det gamle bildet, så vi ikke betaler for to.
+      const oldPath = pathFromPublicUrl(draft.image_url);
+      if (oldPath) await supabase.storage.from(ESTIMATE_IMAGES_BUCKET).remove([oldPath]);
+
+      setDraft((p) => ({ ...p, image_url: publicUrl }));
+      onSaved({ ...estimate, ...updated, image_url: publicUrl });
+      toast.success("Bildet er lastet opp. Tilbudet er aktivt igjen.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Kunne ikke laste opp bildet.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
   // ── Produkt- og monteringslinjer ────────────────────────────────────────────
   // Rader legges til og fjernes på samme måte som når estimatet opprettes i
   // priskalkulatoren. Et batteri er bare en rad med kategori "batteri".
@@ -674,6 +709,48 @@ export default function EstimateDetailModal({
                 Ferdigstilt tilbud (klart for signering)
               </label>
             </div>
+          </div>
+
+          {/* ── Estimatbilde ──────────────────────────────────────────── */}
+          <div
+            className={`flex flex-wrap items-center gap-4 rounded-xl border p-3 ${
+              draft.image_url ? "border-line bg-surface" : "border-red-200 bg-red-50"
+            }`}
+          >
+            {draft.image_url ? (
+              <a href={draft.image_url} target="_blank" rel="noreferrer" className="shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={draft.image_url} alt="Estimatbilde" className="h-20 w-32 rounded-lg border border-line object-cover" />
+              </a>
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-ink">Estimatbilde</p>
+              {draft.image_url ? (
+                <p className="text-xs text-muted">Vises i tilbudet under «Hvordan vil dette se ut?».</p>
+              ) : (
+                <p className="text-xs text-red-700">
+                  Ingen bilde. Er leaden satt til Ikke interessert eller Nyhetsbrev, ser kunden at tilbudet har utløpt.
+                  Last opp et nytt bilde for å gjøre tilbudet aktivt igjen.
+                </p>
+              )}
+            </div>
+            {!locked && (
+              <label className={`sk-btn ${draft.image_url ? "sk-btn-secondary" : "sk-btn-primary"} cursor-pointer`}>
+                <ImagePlus size={15} />
+                {imageUploading ? "Laster opp…" : draft.image_url ? "Bytt bilde" : "Last opp bilde"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={imageUploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) uploadEstimateImage(f);
+                  }}
+                />
+              </label>
+            )}
           </div>
 
           {/* ── Takflater ─────────────────────────────────────────────── */}
