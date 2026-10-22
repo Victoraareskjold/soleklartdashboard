@@ -47,6 +47,7 @@ import {
   Sun,
   Trash2,
   X,
+  Zap,
 } from "lucide-react";
 import TeamMemberSelector from "@/app/components/cold-calling/TeamMemberSelector";
 import { useTeam } from "@/context/TeamContext";
@@ -610,6 +611,15 @@ export default function LeadPage() {
             >
               <Trash2 size={15} />
               Slett lead
+            </button>
+            <button
+              className="sk-btn sk-btn-secondary"
+              onClick={() => setActiveRoute("Estimat")}
+              disabled={loading}
+              title="Hopp over kartet og gå rett til kalkulatoren"
+            >
+              <Zap size={16} />
+              Hurtigestimat
             </button>
             <button
               className="sk-btn sk-btn-primary"
