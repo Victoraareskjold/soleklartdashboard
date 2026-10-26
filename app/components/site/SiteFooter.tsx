@@ -52,9 +52,9 @@ export function SiteFooter() {
               <Link href="/#om-soleklart" style={linkStyle}>
                 Om oss
               </Link>
-              <Link href="/partnere" style={linkStyle}>
+              {/* <Link href="/partnere" style={linkStyle}>
                 Partnere
-              </Link>
+              </Link> */}
               <a href={BECOME_PARTNER_MAILTO} style={linkStyle}>
                 Bli partner
               </a>
