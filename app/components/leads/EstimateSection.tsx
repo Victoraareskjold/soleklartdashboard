@@ -31,6 +31,7 @@ import {
 } from "@/lib/calcApi";
 import Kalkulator, { type PreviewExtra } from "../kalkulator/Kalkulator";
 import BatteryOfferSetup from "./BatteryOfferSetup";
+import Naeringsanalyse from "../kalkulator/Naeringsanalyse";
 import EstimateFacilityInfo, { type LeadCustomerInfo } from "./EstimateFacilityInfo";
 import type { QuoteDraft } from "../kalkulator/quote";
 import s from "../kalkulator/kalkulator.module.css";
@@ -61,6 +62,14 @@ function adjustSolarData(solarData: SolarData, draft: QuoteDraft, result: CalcRe
   return { ...solarData, totalPanels: panels, kwp: Number(newKwp.toFixed(2)), yearlyProd, selectedPanelType: panelLine?.name ?? solarData.selectedPanelType };
 }
 
+/** Kalkylens sum kan brukes som solcelleinvestering bare når den ikke inneholder batteri. */
+function businessInvestment(latest: { draft: QuoteDraft; result: CalcResult } | null): { ore: number | null; note?: string } {
+  if (!latest) return { ore: null };
+  if (latest.draft.lines.some((l) => l.productKind === "batteri"))
+    return { ore: null, note: "Kalkylen inneholder batteri – solcelleinvesteringen er uavklart" };
+  return { ore: latest.result.totals.totalExVat };
+}
+
 export default function EstimateSection({ solarData, onEstimateCreated, leadCompany, ownConsumption, customer }: EstimateSectionProps) {
   const params = useParams();
   const leadId = params.leadId as string;
@@ -75,6 +84,8 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
   const [latest, setLatest] = useState<{ draft: QuoteDraft; result: CalcResult; extra: PreviewExtra } | null>(null);
   /** Manuell årsproduksjon (kWh), null = følg kalkylen */
   const [prodOverride, setProdOverride] = useState<number | null>(null);
+  /** Næring: analysen som regnes og låses sammen med estimatet */
+  const [businessAnalysisId, setBusinessAnalysisId] = useState<string | null>(null);
 
   const adjusted = latest ? adjustSolarData(solarData, latest.draft, latest.result) : solarData;
   const finalSolarData = (s: SolarData): SolarData => (prodOverride != null ? { ...s, yearlyProd: prodOverride } : s);
@@ -107,9 +118,13 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
   const handleCreateEstimate = async (draft: QuoteDraft, result: CalcResult) => {
     if (!installerGroupId) throw new Error("Velg installatør først");
 
-    // 1. Kalkyle og låst versjon (serveren regner på nytt, også batteri og hybrid)
-    const calculation = await createCalculation({ installerGroupId, leadId, draft });
-    const version = await saveQuoteVersion(calculation.id, { lockVersion: calculation.lockVersion, draft }, crypto.randomUUID());
+    // 1. Kalkyle og låst versjon (serveren regner på nytt, også batteri og hybrid).
+    //    Næring: næringsanalysen regnes og låses i samme versjon (price_data.businessAnalysis).
+    const sent: QuoteDraft & { businessAnalysisId?: string } = business && businessAnalysisId ? { ...draft, businessAnalysisId } : draft;
+    const calculation = await createCalculation({ installerGroupId, leadId, draft: sent });
+    const version = await saveQuoteVersion(calculation.id, { lockVersion: calculation.lockVersion, draft: sent }, crypto.randomUUID());
+    const analysis = (version.priceData as { businessAnalysis?: { status: string; reason?: string } }).businessAnalysis;
+    if (analysis?.status === "ikke beregnet") toast.warn(`Næringsanalysen er ikke med i tilbudet: ${analysis.reason}`);
 
     // 2. Estimatet, med price_data fra versjonen (inkl. batterySection og economy)
     const imageUrl = await uploadImage();
@@ -192,6 +207,21 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
           />
         </div>
       </div>
+
+      {business && installerGroupId && (
+        <div className={`${s.calc} ${s.embedded}`}>
+          <Naeringsanalyse
+            leadId={leadId}
+            installerGroupId={installerGroupId}
+            kwp={latest?.extra.kwp ?? null}
+            investmentOre={businessInvestment(latest).ore}
+            investmentNote={businessInvestment(latest).note}
+            roofs={solarData.checkedRoofData}
+            address={customer?.address}
+            onAnalysis={setBusinessAnalysisId}
+          />
+        </div>
+      )}
 
       <BatteryOfferSetup
         catalog={catalog}

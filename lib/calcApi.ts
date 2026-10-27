@@ -2,9 +2,9 @@
 // Bruker samme Supabase-innlogging som resten av dashboardet.
 import { getToken } from "./api";
 
-const CALC_API_URL = process.env.NEXT_PUBLIC_CALC_API_URL ?? "http://localhost:4100";
+export const CALC_API_URL = process.env.NEXT_PUBLIC_CALC_API_URL ?? "http://localhost:4100";
 
-async function calcRequest<T>(path: string, method = "GET", body?: unknown, headers: Record<string, string> = {}): Promise<T> {
+export async function calcRequest<T>(path: string, method = "GET", body?: unknown, headers: Record<string, string> = {}): Promise<T> {
   const token = await getToken();
   const res = await fetch(`${CALC_API_URL}${path}`, {
     method,
