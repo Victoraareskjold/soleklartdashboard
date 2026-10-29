@@ -63,10 +63,9 @@ function adjustSolarData(solarData: SolarData, draft: QuoteDraft, result: CalcRe
 }
 
 /** Kalkylens sum kan brukes som solcelleinvestering bare når den ikke inneholder batteri. */
-function businessInvestment(latest: { draft: QuoteDraft; result: CalcResult } | null): { ore: number | null; note?: string } {
+function businessInvestment(latest: { draft: QuoteDraft; result: CalcResult } | null): { ore: number | null } {
   if (!latest) return { ore: null };
-  if (latest.draft.lines.some((l) => l.productKind === "batteri"))
-    return { ore: null, note: "Kalkylen inneholder batteri – solcelleinvesteringen er uavklart" };
+  if (latest.draft.lines.some((l) => l.productKind === "batteri")) return { ore: null };
   return { ore: latest.result.totals.totalExVat };
 }
 
@@ -215,7 +214,8 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
             installerGroupId={installerGroupId}
             kwp={latest?.extra.kwp ?? null}
             investmentOre={businessInvestment(latest).ore}
-            investmentNote={businessInvestment(latest).note}
+            draft={latest ? { ...latest.draft, batteryOffer: batteryConfig } : null}
+            hasBattery={Boolean(latest?.draft.lines.some((l) => l.productKind === "batteri") || (batteryConfig.enabled && latest?.extra.batteryOffer))}
             roofs={solarData.checkedRoofData}
             address={customer?.address}
             onAnalysis={setBusinessAnalysisId}

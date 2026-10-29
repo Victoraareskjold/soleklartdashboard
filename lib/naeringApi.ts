@@ -30,6 +30,15 @@ export interface Surface {
   kwp: number | null;
   tiltDeg: number;
   azimuthDeg: number;
+  /** Eksempelrad (ikke fra tilbudet) – vises som antatt */
+  assumed?: boolean;
+}
+
+export type SourceType = "måledata" | "markedspriser" | "tariffregister" | "simulert" | "oppgitt" | "antatt" | "beregnet";
+export interface AnalysisIssue {
+  level: "feil" | "advarsel" | "antakelse";
+  field: string;
+  message: string;
 }
 
 export interface BusinessSettings {
@@ -45,10 +54,12 @@ export interface BusinessSettings {
     label: string;
     meterId: string;
     tariffId: string | null;
+    tariffConfirmed: boolean;
+    tariffScenario: boolean;
     exportLimitKw: number | null;
     buy: { markupOrePerKwh: number; monthlyFeeNok: number; status: DataStatus };
     sell: { deductionOrePerKwh: number; status: DataStatus };
-    elavgift: { orePerKwh: number | null; taxStatus: "ordinær" | "redusert" | "ukjent"; status: DataStatus };
+    elavgift: { orePerKwh: number | null; taxStatus: "ordinær" | "redusert" | "fritak" | "ukjent"; status: DataStatus };
   };
   economy: {
     years: number;
@@ -56,6 +67,7 @@ export interface BusinessSettings {
     growth: { kraftPct: number; nettleiePct: number; avgiftPct: number; driftPct: number };
     degradationPct: number;
     opex: { name: string; nokPerYear: number }[];
+    replacementSource: "kalkyle" | "manuell" | "ingen";
     replacements: { name: string; year: number; nok: number }[];
     investment: { source: "kalkyle" | "manuell" | "uavklart"; nok: number | null };
   };
@@ -141,20 +153,36 @@ export interface Tariff {
   customerGroup: string;
   validFrom: string;
   validTo: string | null;
-  definition: {
-    fixedNokPerYear: number;
-    energyOrePerKwh: number;
-    power?: { summerNokPerKwMonth: number; winterNokPerKwMonth: number; window: { weekdays: number[]; fromHour: number; toHour: number; excludeHolidays: boolean }; summerMonths: number[] } | null;
-    rateChanges?: { from: string; summerNokPerKwMonth?: number; winterNokPerKwMonth?: number; source: string }[];
-    notes?: string[];
-  };
+  definition: TariffDefinition;
   sourceUrl: string | null;
   lastChecked: string;
   isManual: boolean;
+  owner: "felles" | "egen" | "annen";
+  archived: boolean;
+  parentId: string | null;
+  usage: { analyses: number; locked: number } | null;
+}
+
+export interface TariffDefinition {
+  fixedNokPerYear: number;
+  fixedAllocation?: "per_dag" | "per_måned";
+  energyOrePerKwh: number;
+  power?: {
+    method: "maks_time_i_vindu";
+    summerNokPerKwMonth: number;
+    winterNokPerKwMonth: number;
+    window: { weekdays: number[]; fromHour: number; toHour: number; excludeHolidays: boolean };
+    summerMonths: number[];
+  } | null;
+  rateChanges?: { from: string; energyOrePerKwh?: number; summerNokPerKwMonth?: number; winterNokPerKwMonth?: number; source: string; status?: DataStatus }[];
+  minAnnualKwh?: number | null;
+  maxAnnualKwh?: number | null;
+  includedNote?: string;
+  notes?: string[];
 }
 
 type Cost = { kraft: number; kraftGebyr: number; fastledd: number; energiledd: number; effektledd: number; elavgift: number; salg: number; netto: number };
-type Totals = { loadKwh: number; pvKwh: number; selfKwh: number; importKwh: number; exportKwh: number; curtailedKwh: number; cost: Cost };
+type Totals = { loadKwh: number; pvKwh: number; selfKwh: number; importKwh: number; exportKwh: number; curtailedKwh: number; clippedKwh?: number; cost: Cost };
 
 /** Samme form som price_data.businessAnalysis på et lagret tilbud */
 export interface BusinessSummary {
@@ -170,6 +198,11 @@ export interface BusinessSummary {
   investmentNok: number | null;
   investmentSource: string;
   kpi: { selfConsumptionShare: number; selfSufficiencyShare: number };
+  years?: { price: number; weather: number | null };
+  historical?: { energySaving: number; opex: number; net: number; opexItems: { name: string; nok: number }[] };
+  scope?: { solar: boolean; battery: boolean; batteryOffered: boolean; inverterAcKw: number | null; clippedKwh: number };
+  issues?: AnalysisIssue[];
+  valid?: boolean;
   before: Totals;
   after: Totals;
   savings: { kraft: number; nettleieEnergi: number; effektledd: number; elavgift: number; fastOgGebyr: number; salg: number; total: number };
@@ -201,15 +234,38 @@ export interface BusinessSummary {
       }[]
     | null;
   economyNote: string | null;
-  assumptions: { years: number; discountRatePct: number; growth: BusinessSettings["economy"]["growth"]; degradationPct: number; vat: string; beforeTax: string };
-  basis: { what: string; value: string; status: DataStatus; source: string; period?: string }[];
+  assumptions: {
+    years: number;
+    discountRatePct: number;
+    growth: BusinessSettings["economy"]["growth"];
+    degradationPct: number;
+    replacements?: { name: string; year: number; nok: number }[];
+    opexUsed?: { name: string; nokPerYear: number }[];
+    vat: string;
+    beforeTax: string;
+  };
+  basis: { what: string; value: string; status: DataStatus; sourceType?: SourceType; confirmed?: boolean; source: string; period?: string }[];
   warnings: string[];
   checks: { label: string; ok: boolean }[];
 }
 
+export interface QuoteContext {
+  kwp: number | null;
+  investmentNok: number | null;
+  investmentNote?: string;
+  inverterAcKw: number | null;
+  inverterNok: number | null;
+  inverterNames: string[];
+  batteryOffered: boolean;
+  replacementYear: number;
+  replacementFactor: number;
+  maintenancePerYear: number;
+}
+
 export interface RunResult {
   summary: BusinessSummary;
-  meta: { pvgis: { version: string; weatherYear: number } | null; spot: { area: string; days: number; fetched: number }; notes: string[] };
+  quote: QuoteContext;
+  meta: { pvgis: { version: string; weatherYear: number; fallback?: string } | null; spot: { area: string; days: number; fetched: number }; tariff: { id: string; name: string } };
   quality: QualityReport | null;
 }
 
@@ -246,25 +302,30 @@ export const importBusinessSeries = (
 export const setSeriesActive = (id: string, seriesId: string, active: boolean) =>
   calcRequest<{ id: string; active: boolean }>(`${base}/${enc(id)}/series/${enc(seriesId)}`, "PATCH", { active });
 
-export const runBusinessAnalysis = (id: string, body: { kwp: number | null; investmentOre: number | null; refresh: boolean }) =>
-  calcRequest<RunResult>(`${base}/${enc(id)}/run`, "POST", body);
+/** Beregner med tilbudets utkast (regnes på serveren: kWp, investering, inverter). refresh = hent kildedata på nytt. */
+export const runBusinessAnalysis = (id: string, body: { draft: unknown; refresh: boolean }) => calcRequest<RunResult>(`${base}/${enc(id)}/run`, "POST", body);
 
-export const getTariffs = (installerGroupId: string) => calcRequest<{ tariffs: Tariff[] }>(`${base}/tariffs?installerGroupId=${enc(installerGroupId)}`).then((r) => r.tariffs);
-export const createTariff = (body: {
-  installerGroupId: string;
+export const getTariffs = (installerGroupId: string, opts: { includeArchived?: boolean; selected?: string | null } = {}) =>
+  calcRequest<{ tariffs: Tariff[] }>(
+    `${base}/tariffs?installerGroupId=${enc(installerGroupId)}${opts.includeArchived ? "&includeArchived=1" : ""}${opts.selected ? `&selected=${enc(opts.selected)}` : ""}`,
+  ).then((r) => r.tariffs);
+
+export interface TariffInput {
   gridOwner: string;
   name: string;
   customerGroup?: string;
   validFrom: string;
   validTo: string | null;
   sourceUrl: string | null;
-  definition: {
-    fixedNokPerYear: number;
-    energyOrePerKwh: number;
-    power: { method: "maks_time_i_vindu"; window: { weekdays: number[]; fromHour: number; toHour: number; excludeHolidays: boolean }; summerMonths: number[]; summerNokPerKwMonth: number; winterNokPerKwMonth: number } | null;
-    notes?: string[];
-  };
-}) => calcRequest<Tariff>(`${base}/tariffs`, "POST", body);
+  definition: TariffDefinition;
+}
+export const createTariff = (body: TariffInput & { installerGroupId: string; parentId?: string | null }) => calcRequest<Tariff>(`${base}/tariffs`, "POST", body);
+export const updateTariff = (id: string, body: Partial<TariffInput> & { installerGroupId: string; archived?: boolean }) =>
+  calcRequest<Tariff>(`${base}/tariffs/${enc(id)}`, "PATCH", body);
+export const deleteTariff = (id: string, installerGroupId: string) =>
+  calcRequest<{ archived: boolean; deleted: boolean; usage: { analyses: number; locked: number } }>(`${base}/tariffs/${enc(id)}?installerGroupId=${enc(installerGroupId)}`, "DELETE");
+export const duplicateTariff = (id: string, installerGroupId: string, name?: string) =>
+  calcRequest<Tariff>(`${base}/tariffs/${enc(id)}/duplicate`, "POST", { installerGroupId, name });
 
 export const geocodeAddress = (address: string) =>
   calcRequest<{ address: string; lat: number; lon: number; municipality: string; priceArea: PriceArea | null }>(`${base}/geocode`, "POST", { address });

@@ -258,3 +258,17 @@ select.input {
 .legend { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 8px; vertical-align: -1px; }
 .details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .details summary { cursor: pointer; font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+
+/* næringsanalyse runde A */
+.notyet { color: var(--muted, #6b7280); font-style: italic; }
+.assumedrow { background: #fffaf0; }
+.assumedtext { color: #8a5414; font-size: 11px; }
+.fieldlabel { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.hint { display: block; font-size: 11px; font-weight: 400; color: var(--muted, #6b7280); margin-top: 3px; line-height: 1.4; }
+.tariffcard { margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line, #dcdcd4); border-radius: 8px; background: #fff; display: flex; flex-direction: column; gap: 4px; }
+.tariffhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tariffrow { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line, #ececE4); }
+.resulthead { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; font-size: 12.5px; color: var(--muted, #6b7280); margin-bottom: 10px; }
+.resulthead strong { color: var(--text, #1f2a1d); }
+.issuebox { border: 1px solid var(--line, #dcdcd4); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; background: #fcfcfa; }
+.plainlist { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 3px; }
