@@ -4,9 +4,29 @@ import { getToken } from "./api";
 
 export const CALC_API_URL = process.env.NEXT_PUBLIC_CALC_API_URL ?? "http://localhost:4100";
 
+/** Forventet tjeneste i produksjon. Peker NEXT_PUBLIC_CALC_API_URL et annet sted, sier feilmeldingen fra. */
+const EXPECTED_SERVICE = "soleklartpriskalkulator-main";
+
+/**
+ * fetch mot kalkulatortjenesten. Nettverksfeil («Failed to fetch») viser hvilken adresse som ble brukt,
+ * så det er lett å se om dashboardet er deployet med feil NEXT_PUBLIC_CALC_API_URL.
+ */
+export async function calcFetch(path: string, init: RequestInit): Promise<Response> {
+  const url = `${CALC_API_URL}${path}`;
+  try {
+    return await fetch(url, init);
+  } catch (e) {
+    const local = /localhost|127\.0\.0\.1/.test(CALC_API_URL);
+    const hint = CALC_API_URL.includes(EXPECTED_SERVICE)
+      ? "Tjenesten svarte ikke. Sjekk at den kjører og at CORS tillater dette domenet."
+      : `Riktig tjeneste er ${EXPECTED_SERVICE}${local ? " (eller lokal tjeneste på denne adressen)" : ""}. Sjekk NEXT_PUBLIC_CALC_API_URL i deployen.`;
+    throw new Error(`Fikk ikke kontakt med kalkulatortjenesten på ${CALC_API_URL} (${(e as Error).message}). ${hint}`);
+  }
+}
+
 export async function calcRequest<T>(path: string, method = "GET", body?: unknown, headers: Record<string, string> = {}): Promise<T> {
   const token = await getToken();
-  const res = await fetch(`${CALC_API_URL}${path}`, {
+  const res = await calcFetch(path, {
     method,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...headers },
     body: body ? JSON.stringify(body) : undefined,
@@ -39,6 +59,10 @@ export interface ProductSpecs {
   batteryClass?: "HV" | "LV";
   capacityKwh?: number;
   powerKw?: number;
+  /** Batteri: brukbar andel (%), tur-retur-virkningsgrad (%), levetid (år) */
+  usablePct?: number;
+  roundTripPct?: number;
+  lifeYears?: number;
   /** Batteri: BMS/base-produkt som hører til modulen */
   bmsProductId?: string | null;
   /** Batteri: moduler per BMS/base, og min/maks moduler kunden kan velge */

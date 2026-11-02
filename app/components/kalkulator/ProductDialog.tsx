@@ -84,6 +84,10 @@ export function ProductDialog({
   const [batteryClass, setBatteryClass] = useState(sp0.batteryClass ?? "");
   const [capacityKwh, setCapacityKwh] = useState(str(sp0.capacityKwh));
   const [powerKw, setPowerKw] = useState(str(sp0.powerKw));
+  // Batteri: tekniske data for næringsanalysen
+  const [usablePct, setUsablePct] = useState(str(sp0.usablePct));
+  const [roundTripPct, setRoundTripPct] = useState(str(sp0.roundTripPct));
+  const [lifeYears, setLifeYears] = useState(str(sp0.lifeYears));
   // Batteri: BMS-kobling og antall moduler
   const [isBms, setIsBms] = useState(sp0.bms ?? BMS_PATTERN.test(product?.name ?? ""));
   const [bmsProductId, setBmsProductId] = useState(sp0.bmsProductId ?? "");
@@ -100,7 +104,7 @@ export function ProductDialog({
   const buildSpecs = (): ProductSpecs => {
     // Beholder ukjente felt, men fjerner "derived" fordi dataene nå er kontrollert/lagret av en person
     const rest = { ...sp0 };
-    for (const k of ["wp", "acKw", "maxPvKwp", "grid", "phases", "hybrid", "batteryClass", "capacityKwh", "powerKw", "derived", "bms", "bmsProductId", "modulesPerBase", "minModules", "maxModules"])
+    for (const k of ["wp", "acKw", "maxPvKwp", "grid", "phases", "hybrid", "batteryClass", "capacityKwh", "powerKw", "usablePct", "roundTripPct", "lifeYears", "derived", "bms", "bmsProductId", "modulesPerBase", "minModules", "maxModules"])
       delete rest[k];
     if (kind === "panel") return { ...rest, wp: numOrUndef(wp) };
     if (kind === "inverter")
@@ -120,6 +124,10 @@ export function ProductDialog({
             ...rest,
             bms: false,
             capacityKwh: numOrUndef(capacityKwh),
+            powerKw: numOrUndef(powerKw),
+            usablePct: numOrUndef(usablePct),
+            roundTripPct: numOrUndef(roundTripPct),
+            lifeYears: numOrUndef(lifeYears),
             batteryClass: (batteryClass || undefined) as ProductSpecs["batteryClass"],
             bmsProductId: bmsProductId || undefined,
             modulesPerBase: numOrUndef(modulesPerBase),
@@ -326,6 +334,22 @@ export function ProductDialog({
                     <label>
                       <span>Kapasitet (kWh) <Help text="Per modul for modulære batterier, ellers per enhet." /></span>
                       <input className={s.input} inputMode="decimal" value={capacityKwh} onChange={(e) => setCapacityKwh(e.target.value)} />
+                    </label>
+                    <label>
+                      <span>Effekt (kW) <Help text="Lade- og utladeeffekt per modul (eller enhet), fra produktbladet. Brukes i næringsanalysens batteriberegning. Begrenses også av hybridinverteren." /></span>
+                      <input className={s.input} inputMode="decimal" value={powerKw} onChange={(e) => setPowerKw(e.target.value)} />
+                    </label>
+                    <label>
+                      <span>Brukbar andel (%) <Help text="Hvor stor del av den nominelle kapasiteten som kan brukes (f.eks. 90 %). Fra produktbladet." /></span>
+                      <input className={s.input} inputMode="decimal" value={usablePct} onChange={(e) => setUsablePct(e.target.value)} />
+                    </label>
+                    <label>
+                      <span>Virkningsgrad tur-retur (%) <Help text="Energi ut / energi inn for en full lading og utlading (f.eks. 90 %). Fra produktbladet." /></span>
+                      <input className={s.input} inputMode="decimal" value={roundTripPct} onChange={(e) => setRoundTripPct(e.target.value)} />
+                    </label>
+                    <label>
+                      <span>Levetid (år) <Help text="Forventet levetid før batteriet regnes byttet i næringsanalysen." /></span>
+                      <input className={s.input} inputMode="numeric" value={lifeYears} onChange={(e) => setLifeYears(e.target.value)} />
                     </label>
                     <label>
                       <span>BMS / base <Help text="Velg BMS-produktet som hører til dette batteriet. Da blir batteriet modulært, og BMS-prisen tas med i tilbudet. Tom = finnes automatisk etter merke, eller hel enhet uten BMS." /></span>

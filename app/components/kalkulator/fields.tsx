@@ -1,7 +1,7 @@
 "use client";
 
 // Felt som lagrer seg selv når man forlater dem (blur/Enter), som i prototypen.
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { formatOre, oreToInput, parseKroner } from "@/lib/calcApi";
 import s from "./kalkulator.module.css";
@@ -99,10 +99,50 @@ export async function saveAndReload(action: () => Promise<unknown>, reload: () =
 }
 
 /** Lite «?»-merke med forklaring ved peker/fokus. */
-export function Help({ text }: { text: string }) {
+/**
+ * Hjelp ved feltet: åpnes ved trykk (også mobil og tastatur), blir stående til den lukkes
+ * (× , Esc eller trykk utenfor), og teksten kan merkes og kopieres. Ikke avhengig av musepekeren.
+ */
+export function Help({ text, more, label = "Hva betyr dette?" }: { text: string; more?: string; label?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
   return (
-    <span className={s.help} tabIndex={0} title={text} aria-label={text} role="img">
-      ?
+    <span ref={ref} className={s.helpwrap}>
+      <button
+        type="button"
+        className={s.help}
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+      >
+        ?
+      </button>
+      {open && (
+        <span id={id} role="note" className={s.helppop} onClick={(e) => e.preventDefault()}>
+          <button type="button" className={s.helpclose} aria-label="Lukk hjelp" onClick={(e) => (e.preventDefault(), e.stopPropagation(), setOpen(false))}>
+            ×
+          </button>
+          <span>{text}</span>
+          {more && <span className={s.helpmore}>{more}</span>}
+        </span>
+      )}
     </span>
   );
 }

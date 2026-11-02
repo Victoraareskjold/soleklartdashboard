@@ -1,5 +1,5 @@
 // Klient for næringsanalysen i kalkulatortjenesten (soleklart-kalkulator, /api/business).
-import { CALC_API_URL, calcRequest } from "./calcApi";
+import { calcFetch, calcRequest } from "./calcApi";
 import { getToken } from "./api";
 
 export type DataStatus = "målt" | "beregnet" | "antatt";
@@ -32,6 +32,58 @@ export interface Surface {
   azimuthDeg: number;
   /** Eksempelrad (ikke fra tilbudet) – vises som antatt */
   assumed?: boolean;
+  /** Målepunktet flaten er koblet til (null = hovedmåleren) */
+  meteringPointId?: string | null;
+  /** Skyggetap (%) i tillegg til terrenget PVGIS regner med */
+  shadingPct?: number;
+}
+
+export type Hours = [number, number] | null;
+export type ExportLimitMode = "ukjent" | "ingen_grense" | "grense" | "ingen_eksport";
+export interface ConsumptionSettings {
+  level: 1 | 2 | 3;
+  annualKwh: number | null;
+  annualKwhStatus: DataStatus;
+  monthlyKwh: number[] | null;
+  source?: "anslag" | "kunde" | "faktura" | "målefil" | null;
+}
+export interface OtherMeter {
+  id: string;
+  label: string;
+  meterId: string;
+  tariffId: string | null;
+  tariffConfirmed: boolean;
+  tariffScenario: boolean;
+  exportLimitMode: ExportLimitMode;
+  exportLimitKw: number | null;
+  importLimitKw: number | null;
+  consumption: ConsumptionSettings;
+}
+export interface Charger {
+  label: string;
+  count: number;
+  kw: number;
+  kwhPerDay: number;
+  window: [number, number];
+  days: "hverdager" | "alle";
+}
+export interface BatterySettings {
+  include: "auto" | "ja" | "nei";
+  capacityKwh: number | null;
+  usablePct: number | null;
+  powerKw: number | null;
+  dischargeKw: number | null;
+  roundTripPct: number | null;
+  reservePct: number | null;
+  auxKw: number;
+  gridCharge: boolean;
+  gridExport: boolean;
+  degradationPct: number;
+  lifeYears: number;
+  investmentNok: number | null;
+  smartFeeNokPerYear: number | null;
+  smartFeeOnceNok: number;
+  wearOrePerKwh: number;
 }
 
 export type SourceType = "måledata" | "markedspriser" | "tariffregister" | "simulert" | "oppgitt" | "antatt" | "beregnet";
@@ -44,10 +96,14 @@ export interface AnalysisIssue {
 export interface BusinessSettings {
   businessType: BusinessType;
   openHours: [number, number] | null;
+  schedule: { weekdays: Hours; saturday: Hours; sunday: Hours; closedMonths?: number[] } | null;
   goals: string[];
-  period: { kind: "år"; year: number } | { kind: "hittil"; year: number; toMonth: number; toDay: number };
+  period:
+    | { kind: "år"; year: number }
+    | { kind: "hittil"; year: number; toMonth: number; toDay: number }
+    | { kind: "egendefinert"; year: number; from: string; to: string };
   location: { address: string; lat: number | null; lon: number | null; priceArea: PriceArea | null; priceAreaSource: "foreslått" | "valgt" };
-  consumption: { level: 1 | 2 | 3; annualKwh: number | null; annualKwhStatus: DataStatus; monthlyKwh: number[] | null };
+  consumption: ConsumptionSettings;
   production: { source: "pvgis" | "fil"; pvgisVersion: "auto" | "v5_3" | "v6"; weatherYear: number | null; lossPct: number; surfaces: Surface[] };
   meteringPoint: {
     id: string;
@@ -56,9 +112,12 @@ export interface BusinessSettings {
     tariffId: string | null;
     tariffConfirmed: boolean;
     tariffScenario: boolean;
+    exportLimitMode: ExportLimitMode;
     exportLimitKw: number | null;
-    buy: { markupOrePerKwh: number; monthlyFeeNok: number; status: DataStatus };
-    sell: { deductionOrePerKwh: number; status: DataStatus };
+    importLimitKw: number | null;
+    buy: { type: "spot" | "fastpris"; fixedOrePerKwh: number | null; markupOrePerKwh: number; monthlyFeeNok: number; status: DataStatus };
+    sell: { type: "spot" | "fastpris"; fixedOrePerKwh: number | null; deductionOrePerKwh: number; floorOrePerKwh: number | null; status: DataStatus };
+    settlement: "time" | "kvarter";
     elavgift: { orePerKwh: number | null; taxStatus: "ordinær" | "redusert" | "fritak" | "ukjent"; status: DataStatus };
   };
   economy: {
@@ -68,9 +127,13 @@ export interface BusinessSettings {
     degradationPct: number;
     opex: { name: string; nokPerYear: number }[];
     replacementSource: "kalkyle" | "manuell" | "ingen";
+    vatDeductible: "ja" | "nei" | "ukjent";
     replacements: { name: string; year: number; nok: number }[];
     investment: { source: "kalkyle" | "manuell" | "uavklart"; nok: number | null };
   };
+  otherMeters: OtherMeter[];
+  charging: { enabled: boolean; inConsumption: boolean; meteringPointId: string | null; chargers: Charger[] };
+  battery: BatterySettings;
   scenarios: { name: string; kraftGrowthPct: number }[];
 }
 
@@ -173,6 +236,7 @@ export interface TariffDefinition {
     winterNokPerKwMonth: number;
     window: { weekdays: number[]; fromHour: number; toHour: number; excludeHolidays: boolean };
     summerMonths: number[];
+    resolution?: "time" | "kvarter";
   } | null;
   rateChanges?: { from: string; energyOrePerKwh?: number; summerNokPerKwMonth?: number; winterNokPerKwMonth?: number; source: string; status?: DataStatus }[];
   minAnnualKwh?: number | null;
@@ -247,6 +311,62 @@ export interface BusinessSummary {
   basis: { what: string; value: string; status: DataStatus; sourceType?: SourceType; confirmed?: boolean; source: string; period?: string }[];
   warnings: string[];
   checks: { label: string; ok: boolean }[];
+  offerLabel?: string;
+  vat?: "eks" | "inkl";
+  meters?: { id: string; label: string; tariff: string; before: MeterTotals; after: MeterTotals; saving: number }[];
+  charging?: { kwh: number; solarKwh: number; effektleddIncrease: number } | null;
+  battery?: BatterySummary | null;
+}
+
+type MeterTotals = { loadKwh: number; pvKwh: number; selfKwh: number; importKwh: number; exportKwh: number; netto: number };
+export type Economy = {
+  name: string;
+  kraftGrowth: number;
+  npv: number | null;
+  pvOfOperations: number;
+  paybackYears: number | null;
+  discountedPaybackYears: number | null;
+  irr: number | null;
+  irrNote: string | null;
+  firstYearNet: number;
+  rows: { year: number; netto: number; akkumulert: number | null; utskifting: number; drift: number }[];
+};
+export interface BatteryStats {
+  chargeKwh: number;
+  solarChargeKwh: number;
+  gridChargeKwh: number;
+  dischargeKwh: number;
+  toLoadKwh: number;
+  toGridKwh: number;
+  lossKwh: number;
+  auxKwh: number;
+  cycles: number;
+  avgChargePrice: number | null;
+  avgSellPrice: number | null;
+}
+export interface BatterySummary {
+  label: string;
+  investmentNok: number | null;
+  config: { usableKwh: number; powerKw: number; dischargeKw?: number; sharedAcKw?: number | null; roundTrip: number; reserveShare: number; gridCharge: boolean; gridExport: boolean; lifeYears: number };
+  alternatives: {
+    key: "sol" | "grunn" | "smart";
+    name: string;
+    energySaving: number;
+    savings: Record<string, number>;
+    opex: number;
+    net: number;
+    importKwh: number;
+    exportKwh: number;
+    selfKwh: number;
+    costAfter: number;
+    investmentNok: number | null;
+    economy: Economy[] | null;
+    battery: BatteryStats | null;
+  }[];
+  value: { grunn: number; smart: number; smartFee: number };
+  perfectForesightNet: number;
+  months: { month: string; gain: number; chargeKwh: number; gridChargeKwh: number; dischargeKwh: number; toGridKwh: number; lossKwh: number; cycles: number; peakBeforeKw: number; peakAfterKw: number }[];
+  day: { date: string; hours: { hour: number; price: number; soc: number; battery: number; load: number; pv: number }[] } | null;
 }
 
 export interface QuoteContext {
@@ -257,6 +377,19 @@ export interface QuoteContext {
   inverterNok: number | null;
   inverterNames: string[];
   batteryOffered: boolean;
+  battery: {
+    source: "kalkyle" | "tillegg";
+    label: string;
+    capacityKwh: number | null;
+    powerKw: number | null;
+    powerNote: string;
+    usablePct: number | null;
+    roundTripPct: number | null;
+    lifeYears: number | null;
+    investmentNok: number | null;
+    investmentNote: string;
+    sharedAcKw?: number | null;
+  } | null;
   replacementYear: number;
   replacementFactor: number;
   maintenancePerYear: number;
@@ -283,7 +416,7 @@ export const saveBusinessAnalysis = (id: string, lockVersion: number, settings: 
 /** Laster opp filen som rå bytes (ikke JSON), så store eksporter ikke blir 33 % større. */
 export async function uploadBusinessFile(id: string, file: File): Promise<UploadResult> {
   const token = await getToken();
-  const res = await fetch(`${CALC_API_URL}${base}/${enc(id)}/files`, {
+  const res = await calcFetch(`${base}/${enc(id)}/files`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/octet-stream", "X-File-Name": enc(file.name) },
     body: file,
@@ -296,7 +429,7 @@ export async function uploadBusinessFile(id: string, file: File): Promise<Upload
 export const importBusinessSeries = (
   id: string,
   fileId: string,
-  body: { candidateId: string; kind: "forbruk" | "produksjon"; unit?: string; convention?: "start" | "slutt" | "auto"; confirm: boolean },
+  body: { candidateId: string; kind: "forbruk" | "produksjon"; unit?: string; convention?: "start" | "slutt" | "auto"; confirm: boolean; meteringPointId?: string },
 ) => calcRequest<{ report: QualityReport; preview?: true; series?: BusinessSeries }>(`${base}/${enc(id)}/files/${enc(fileId)}/import`, "POST", body);
 
 export const setSeriesActive = (id: string, seriesId: string, active: boolean) =>
