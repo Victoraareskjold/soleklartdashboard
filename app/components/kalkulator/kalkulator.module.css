@@ -33,7 +33,7 @@
 .embedded .pagehead h1 { font-size: 19px; }
 .embedded .panel { margin-bottom: 10px; }
 .embedded .layout { gap: 14px; grid-template-columns: minmax(0, 1fr) 300px; }
-@media (max-width: 1100px) { .embedded .layout { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .embedded .layout { grid-template-columns: minmax(0, 1fr); } }
 .embedded .pricing { min-width: 760px; }
 .embedded .pricing td:first-child { width: auto; min-width: 200px; }
 .embedded .calc td, .embedded td { padding: 6px 8px; }
@@ -48,13 +48,15 @@
 .toolbar .input:first-child { width: 320px; max-width: 100%; }
 
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
-@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .layout { grid-template-columns: minmax(0, 1fr); } }
 @media (min-width: 1250px) { .side { position: sticky; top: 16px; } }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-@media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+/* minmax(0, …) og min-width: 0: en bred tabell skal rulle inne i panelet, ikke presse kolonnen ut av skjermen */
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.grid > *, .layout > * { min-width: 0; }
+@media (max-width: 1100px) { .grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* Paneler */
-.panel { background: #fff; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+.panel { background: #fff; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; overflow-x: auto; overflow-y: hidden; }
 .panelhead { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); }
 .panelhead h2 { font-size: 15px; letter-spacing: -0.1px; margin: 0; font-weight: 700; }
 .panelbody { padding: 14px 16px; }
@@ -138,7 +140,7 @@ select.input {
 .quantity { width: 60px; text-align: right; }
 .suffix { font-size: 11px; color: var(--muted); }
 .fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.two { grid-template-columns: 1fr 1fr; }
+.two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .fields label, .formrow label, .panelbody > label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; }
 .fields .input, .panelbody > label .input { width: 100%; }
 .wide { grid-column: 1 / -1; }
@@ -228,8 +230,8 @@ select.input {
 .grouprow td > span { margin-right: 12px; }
 
 /* Næringsanalyse */
-.nagrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 1100px) { .nagrid { grid-template-columns: 1fr; } }
+.nagrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 1100px) { .nagrid { grid-template-columns: minmax(0, 1fr); } }
 .nabox { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px 12px; margin: 0; min-width: 0; }
 .nabox legend { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 0 6px; }
 .monthgrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
@@ -300,7 +302,7 @@ button.help:focus-visible { outline: 2px solid var(--green, #2f4a2c); outline-of
 .fields2 > label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; min-width: 0; }
 .fields2 > label > span:first-child { display: inline-flex; align-items: center; gap: 2px; }
 .fields2 .input { max-width: 100%; }
-@media (max-width: 760px) { .fields2 { grid-template-columns: 1fr; } .monthgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .fields2 { grid-template-columns: minmax(0, 1fr); } .monthgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .morebtn { margin-top: 12px; border: 0; background: none; color: var(--green, #2f4a2c); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
 .moreinner { margin-top: 6px; padding: 10px 12px; background: #fafbf8; border-radius: 8px; }
 .subbox { border-top: 1px dashed var(--line, #dcdcd4); padding-top: 10px; margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }

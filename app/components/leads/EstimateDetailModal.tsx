@@ -169,13 +169,13 @@ function InfoField({
 }
 
 /** Kostnad / påslag-cellene for en rad. sale = radens sum eks. mva. */
-function CostCells({ cost, sale, quantity }: { cost?: { base: number; baseUnit?: number }; sale: number; quantity: number }) {
+function CostCells({ cost, sale, quantity, missing }: { cost?: { base: number; baseUnit?: number }; sale: number; quantity: number; missing?: string }) {
   const perUnit = quantity > 0 ? sale / quantity : null;
   if (!cost) {
     return (
       <>
-        <td className="px-2 py-1.5 text-right tabular-nums text-white/35">—</td>
-        <td className="px-2 py-1.5 text-right tabular-nums text-white/35">—</td>
+        <td className="px-2 py-1.5 text-right tabular-nums text-white/35" title={missing}>—</td>
+        <td className="px-2 py-1.5 text-right tabular-nums text-white/35" title={missing}>—</td>
         <td className="px-2 py-1.5 text-right tabular-nums text-white/70">{perUnit == null ? "—" : nok(perUnit)}</td>
       </>
     );
@@ -530,6 +530,15 @@ export default function EstimateDetailModal({
     };
   }, [quoteVersionId]);
 
+  // Forklaring når en rad mangler kostnad. Vi viser aldri dagens katalogpriser her:
+  // kostnad og påslag skal være det som gjaldt da tilbudet ble laget.
+  const missingCost =
+    costState === "ok"
+      ? "Raden ble lagt til eller endret etter at tilbudet ble laget, så den har ingen lagret kostnad"
+      : costState === "none"
+        ? "Tilbudet ble laget før kostnad og påslag ble lagret i tilbudene"
+        : undefined;
+
   const totalCost = useMemo(() => {
     if (costState !== "ok") return null;
     const items = [
@@ -574,7 +583,7 @@ export default function EstimateDetailModal({
           />
           {cost?.unit && <span className="block pr-2 text-right text-[11px] text-white/40">{cost.unit}</span>}
         </td>
-        <CostCells cost={cost} sale={sale} quantity={Number(item.quantity || 0)} />
+        <CostCells cost={cost} sale={sale} quantity={Number(item.quantity || 0)} missing={missingCost} />
         <td className="px-1 py-1.5">
           <CommitNumber className={`${sheetNum} font-semibold`} value={sale} disabled={locked} ariaLabel="Sum eks. mva" onCommit={(v) => updateLine(key, i, { priceWithMarkup: v ?? 0 })} />
         </td>
@@ -791,7 +800,8 @@ export default function EstimateDetailModal({
               <span className="text-xs text-white/55">
                 Alle beløp i kr eks. mva der ikke annet står.
                 {costState === "loading" && " Henter kostnad og påslag fra kalkylen …"}
-                {costState === "none" && " Kostnad og påslag finnes bare for estimater laget med den nye kalkulatoren."}
+                {costState === "none" && " Kostnad og påslag ble ikke lagret for tilbud laget før den nye kalkulatoren. Vi viser ikke dagens priser her, fordi de kan ha endret seg siden tilbudet ble laget."}
+                {costState === "ok" && " Kostnad og påslag er prisene fra da tilbudet ble laget. Senere endringer i katalogen påvirker dem ikke."}
                 {costState === "error" && " Fikk ikke hentet kostnad og påslag fra kalkylen."}
               </span>
             </div>
@@ -837,7 +847,7 @@ export default function EstimateDetailModal({
                           <tr key={key} className="border-b border-white/5 hover:bg-white/[0.03]">
                             <td className="px-3 py-1.5 font-semibold">{label}</td>
                             <td className="px-2 py-1.5 text-right text-white/40">—</td>
-                            <CostCells cost={groupCosts[group]} sale={sale} quantity={1} />
+                            <CostCells cost={groupCosts[group]} sale={sale} quantity={1} missing={missingCost} />
                             <td className="px-1 py-1.5">
                               <CommitNumber className={`${sheetNum} font-semibold`} value={sale} disabled={locked} ariaLabel={`${label} eks. mva`} onCommit={(v) => updateInstallation(key, v ?? 0)} />
                             </td>
@@ -859,7 +869,7 @@ export default function EstimateDetailModal({
                             <td className="px-1 py-1.5">
                               <input type="number" step="any" className={sheetNum} value={cost.quantity ?? ""} disabled={locked} aria-label="Antall" onChange={(e) => updateAdditionalCost(i, { quantity: toNumberOrNull(e.target.value) ?? 0 })} />
                             </td>
-                            <CostCells cost={lineCosts[cost.id]} sale={sale} quantity={Number(cost.quantity || 0)} />
+                            <CostCells cost={lineCosts[cost.id]} sale={sale} quantity={Number(cost.quantity || 0)} missing={missingCost} />
                             <td className="px-1 py-1.5">
                               <CommitNumber className={`${sheetNum} font-semibold`} value={sale} disabled={locked} ariaLabel="Sum eks. mva" onCommit={(v) => updateAdditionalCost(i, { priceWithMarkup: v ?? 0 })} />
                             </td>

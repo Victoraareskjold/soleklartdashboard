@@ -34,6 +34,10 @@ interface Props {
   prodOverride: number | null;
   onProdOverride: (value: number | null) => void;
   ownConsumption?: number | null;
+  /** Årsforbruk når det mangler = årsproduksjon × faktor (Beregningsregler). 0 = fast standardforbruk */
+  consumptionFactor?: number;
+  /** Fast standardforbruk når produksjonen mangler (Beregningsregler) */
+  consumptionFallback?: number;
   /** Støtte fra kalkylen i kroner (auto/manuell), null = ikke beregnet */
   support: number | null;
   business: boolean;
@@ -63,13 +67,18 @@ export default function EstimateFacilityInfo({
   prodOverride,
   onProdOverride,
   ownConsumption,
+  consumptionFactor = 1.4,
+  consumptionFallback = 20000,
   support,
   business,
 }: Props) {
   const yearlyProd = prodOverride ?? solarData.yearlyProd ?? 0;
   const kwp = solarData.kwp ?? 0;
   const specific = originalKwp && originalYearlyProd ? originalYearlyProd / originalKwp : kwp > 0 ? yearlyProd / kwp : null;
-  const selfProduced = ownConsumption ? (yearlyProd / ownConsumption) * 100 : null;
+  // Mangler forbruk i «Teknisk info» regner tilbudet med årsproduksjon × faktor (som her)
+  const estimatedConsumption = yearlyProd > 0 && consumptionFactor > 0 ? Math.round(yearlyProd * consumptionFactor) : consumptionFallback;
+  const consumption = ownConsumption || estimatedConsumption;
+  const selfProduced = consumption ? (yearlyProd / consumption) * 100 : null;
   const enova = support ?? (business ? 0 : Math.min(kwp, 15) * 2500);
   const roofs = solarData.checkedRoofData ?? [];
   const hasMapData = Boolean(solarData.yearlyProd);
@@ -136,7 +145,12 @@ export default function EstimateFacilityInfo({
       <Row label="kWp">{fmt(kwp, 2)}</Row>
       <Row label="Paneler">{fmt(solarData.totalPanels)}</Row>
       <Row label="kWh per kWp" hint="Spesifikk produksjon fra solkartet">{fmt(specific)}</Row>
-      <Row label="Eget forbruk">{ownConsumption ? `${fmt(ownConsumption)} kWh` : "—"}</Row>
+      <Row
+        label="Eget forbruk"
+        hint={ownConsumption ? undefined : yearlyProd > 0 && consumptionFactor > 0 ? `Ikke oppgitt. Anslått som årsproduksjon × ${consumptionFactor.toLocaleString("nb-NO")}` : "Ikke oppgitt. Standard årsforbruk"}
+      >
+        {ownConsumption ? `${fmt(ownConsumption)} kWh` : `≈ ${fmt(estimatedConsumption)} kWh`}
+      </Row>
       <Row label="Selvprodusert">{selfProduced == null ? "—" : `${fmt(selfProduced, 1)} %`}</Row>
       {solarData.desiredKwh ? <Row label="Ønsket kWh">{fmt(solarData.desiredKwh)}</Row> : null}
       {solarData.coveragePercentage ? <Row label="Dekningsgrad">{`${fmt(solarData.coveragePercentage, 0)} %`}</Row> : null}

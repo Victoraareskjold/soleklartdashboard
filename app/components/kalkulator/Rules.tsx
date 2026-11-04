@@ -26,6 +26,10 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
     replacementFactor: 1.4,
     maintenancePerYear: 0,
     consumptionFallback: 20000,
+    consumptionFactor: 1.4,
+    backupCircuitBaseEx: 2500,
+    backupCircuitUnitEx: 1500,
+    backupWholeEx: 24000,
     periodYears: 30 as 10 | 20 | 30,
     productWarrantyYears: 25,
     powerWarrantyYears: 30,
@@ -286,7 +290,19 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
                     </td>
                   </tr>
                   <tr>
-                    <td className={s.small}>Årsforbruk når kunden ikke har oppgitt det</td>
+                    <td className={s.small}>
+                      Årsforbruk når kunden ikke har oppgitt det = årsproduksjon ×
+                      <div className={s.muted}>Brukes når «Eget forbruk» mangler i Teknisk info. 0 = bruk standard årsforbruk under</div>
+                    </td>
+                    <td className={s.num}>
+                      <NumberField label="Faktor årsforbruk" value={oa.consumptionFactor} editable={edit} max={10} onSave={(v) => saveOa({ consumptionFactor: v })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>
+                      Standard årsforbruk
+                      <div className={s.muted}>Når både forbruk og årsproduksjon mangler</div>
+                    </td>
                     <td className={s.num}>
                       <NumberField label="Standard årsforbruk" value={oa.consumptionFallback} unit="kWh" editable={edit} min={500} max={1_000_000} onSave={(v) => saveOa({ consumptionFallback: Math.round(v) })} />
                     </td>
@@ -326,6 +342,29 @@ export function Rules({ catalog, reload }: { catalog: CalcCatalog; reload: () =>
                     <td className={s.small}>Forventet levetid (vises som «over N år»)</td>
                     <td className={s.num}>
                       <NumberField label="Forventet levetid" value={oa.expectedLifetimeYears} unit="år" editable={edit} min={1} max={80} onSave={(v) => saveOa({ expectedLifetimeYears: Math.round(v) })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small} colSpan={2} style={{ paddingTop: 14 }}>
+                      <strong>Nødstrøm</strong> (valgene under batteri i tilbudet, legges til totalprisen. Beløp eks. mva.)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Nødstrøm på utvalgte kurser, grunnbeløp</td>
+                    <td className={s.num}>
+                      <NumberField label="Nødstrøm grunnbeløp" value={oa.backupCircuitBaseEx} unit="kr" editable={edit} max={1_000_000} onSave={(v) => saveOa({ backupCircuitBaseEx: Math.round(v) })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Nødstrøm, tillegg per kurs</td>
+                    <td className={s.num}>
+                      <NumberField label="Nødstrøm per kurs" value={oa.backupCircuitUnitEx} unit="kr" editable={edit} max={1_000_000} onSave={(v) => saveOa({ backupCircuitUnitEx: Math.round(v) })} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className={s.small}>Full nødstrøm (hele boligen)</td>
+                    <td className={s.num}>
+                      <NumberField label="Full nødstrøm" value={oa.backupWholeEx} unit="kr" editable={edit} max={10_000_000} onSave={(v) => saveOa({ backupWholeEx: Math.round(v) })} />
                     </td>
                   </tr>
                 </tbody>

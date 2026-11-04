@@ -38,7 +38,7 @@ export default function DashboardLayout({
         <RoleProvider>
           <div className="sk-dash flex min-h-screen flex-row">
             <Navbar />
-            <main className="ml-64 flex min-h-screen w-[calc(100%-16rem)] flex-col">
+            <main className="ml-64 flex min-h-screen w-[calc(100%-16rem)] min-w-0 flex-col">
               {children}
             </main>
           </div>

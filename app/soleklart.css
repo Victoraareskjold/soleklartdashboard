@@ -370,3 +370,10 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+
+/* Dashboardet: innhold som er bredere enn vinduet skal kunne rulles sidelengs,
+   ikke kuttes av body { overflow-x: hidden } fra rotlayouten. */
+body:has(.sk-dash) {
+  overflow-x: auto;
+}

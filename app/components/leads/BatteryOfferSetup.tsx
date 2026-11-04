@@ -274,7 +274,7 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
               Hybridinverteren ({hybrid?.name}) er valgt i grunnpakken. «Klargjør for batteri» koster da 0 kr ekstra.
             </p>
           ) : hybrid ? (
-            <table className="mt-3 w-full text-xs tabular-nums">
+            <div className="mt-3 overflow-x-auto"><table className="w-full text-xs tabular-nums">
               <tbody>
                 <tr>
                   <td className="py-0.5 text-muted">Stringinverter i grunnpakken</td>
@@ -345,7 +345,7 @@ export default function BatteryOfferSetup({ catalog, config, onChange, offer, bu
                   <td className="pt-1 text-right text-sm">{shown(up.customerOre)}</td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           ) : null}
 
           {!offer.hybridIncluded && hybrid && (

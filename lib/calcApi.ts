@@ -174,6 +174,12 @@ export interface CalcOfferAssumptions {
   replacementFactor?: number;
   maintenancePerYear?: number;
   consumptionFallback?: number;
+  /** Årsforbruk når det mangler = årsproduksjon × faktor. 0 = bruk consumptionFallback */
+  consumptionFactor?: number;
+  /** Nødstrøm eks. mva. (kr): grunnbeløp, per kurs og hele boligen */
+  backupCircuitBaseEx?: number;
+  backupCircuitUnitEx?: number;
+  backupWholeEx?: number;
   periodYears?: 10 | 20 | 30;
   /** Panelenes produktgaranti, effektgaranti og forventet levetid (år) */
   productWarrantyYears?: number;

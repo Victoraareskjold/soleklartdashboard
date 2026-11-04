@@ -184,6 +184,8 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
           prodOverride={prodOverride}
           onProdOverride={setProdOverride}
           ownConsumption={ownConsumption}
+          consumptionFactor={catalog.settings.offerAssumptions?.consumptionFactor ?? 1.4}
+          consumptionFallback={catalog.settings.offerAssumptions?.consumptionFallback ?? 20000}
           support={latest ? latest.result.support.amount / 100 : null}
           business={business}
         />

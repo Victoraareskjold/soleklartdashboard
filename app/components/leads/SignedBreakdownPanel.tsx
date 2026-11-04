@@ -52,7 +52,7 @@ export default function SignedBreakdownPanel({ estimateId }: { estimateId: strin
                 <span className="text-muted"> · ikke signert ennå</span>
               )}
             </p>
-            <table className="w-full text-xs tabular-nums">
+            <div className="overflow-x-auto"><table className="w-full text-xs tabular-nums">
               <thead className="text-left text-[11px] uppercase tracking-wide text-muted">
                 <tr>
                   <th className="py-1.5">Post</th>
@@ -93,7 +93,7 @@ export default function SignedBreakdownPanel({ estimateId }: { estimateId: strin
                   <td className="py-1.5 text-right">{kr(data.totalExVatOre)}</td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </div>
           <div className="space-y-1.5 rounded-lg bg-gray-50 p-3 text-sm">
             <Row label="Endelig Soleklart-kommisjon" value={kr(data.commissionOre)} strong />

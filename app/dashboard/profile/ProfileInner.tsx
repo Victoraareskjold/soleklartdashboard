@@ -155,11 +155,12 @@ export default function ProfilePageInner() {
         {/* Brukerinfo Kort */}
         <div className="space-y-4 md:col-span-1">
           <div className="sk-card overflow-hidden">
-            <div className="relative h-20 bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500">
-              <div className="absolute -top-6 right-0 size-24 rounded-full bg-orange-400/40 blur-2xl" />
+            {/* Designfiguren ligger bak (z-0); avataren skal ligge over den */}
+            <div className="relative z-0 h-20 bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500">
+              <div className="pointer-events-none absolute -top-6 right-0 size-24 rounded-full bg-orange-400/40 blur-2xl" />
             </div>
-            <div className="-mt-8 px-6 pb-6">
-              <span className="inline-flex size-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 font-display text-lg font-semibold text-white ring-4 ring-white shadow-card">
+            <div className="relative z-10 -mt-8 px-6 pb-6">
+              <span className="relative inline-flex size-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 font-display text-lg font-semibold text-white ring-4 ring-white shadow-card">
                 {initials}
               </span>
               <p className="mt-3 font-display text-base font-semibold text-ink">
