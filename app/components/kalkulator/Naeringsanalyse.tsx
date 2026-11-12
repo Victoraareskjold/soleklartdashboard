@@ -40,6 +40,17 @@ import {
   type ExportLimitMode,
   type OtherMeter,
   type BatterySummary,
+  type ChargeSale,
+  type ChargerSummary,
+  type GridDefinition,
+  type GridSide,
+  type GridSummary,
+  type GridVersion,
+  type TariffChoice,
+  type TariffSource,
+  type TariffSuggestion,
+  isGridDefinition,
+  suggestTariff,
 } from "@/lib/naeringApi";
 import type { Roof } from "../SolarDataView";
 import { Dialog } from "./Dialog";
@@ -62,6 +73,11 @@ interface Props {
   address?: string;
   /** Analysen som skal låses med estimatet (null = ingen) */
   onAnalysis?: (id: string | null) => void;
+  /** Årsproduksjonen i tilbudet (kWh/år) og om den er lagt inn manuelt */
+  offerYearlyKwh?: number | null;
+  offerYearlyManual?: boolean;
+  /** Støtte registrert i tilbudet (øre), for visning */
+  supportOre?: number | null;
 }
 
 const nf = (n: number, d = 0) => n.toLocaleString("nb-NO", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -274,13 +290,23 @@ function TariffSelect({ id, value, tariffs, onChange }: { id: string; value: str
   return (
     <select id={id} className={s.input} style={{ flex: 1, minWidth: 220 }} value={value ?? ""} onChange={(e) => onChange(e.target.value || null)}>
       <option value="">Velg tariff …</option>
-      {tariffs.map((t) => (
-        <option key={t.id} value={t.id}>
-          {t.gridOwner} – {t.name} ({t.validFrom.slice(0, 4)}
-          {t.validTo && t.validTo.slice(0, 4) !== t.validFrom.slice(0, 4) ? `–${t.validTo.slice(0, 4)}` : ""})
-          {t.owner === "egen" ? " · egen" : ""}
-          {t.archived ? " · arkivert" : ""}
-        </option>
+      {[...new Set(tariffs.map((t) => t.gridOwner))].map((owner) => (
+        <optgroup key={owner} label={owner}>
+          {tariffs
+            .filter((t) => t.gridOwner === owner)
+            .map((t) => {
+              const g = isGridDefinition(t.definition) ? t.definition : null;
+              return (
+                <option key={t.id} value={t.id}>
+                  {g ? t.name : `${t.gridOwner} – ${t.name} (${t.validFrom.slice(0, 4)}${t.validTo && t.validTo.slice(0, 4) !== t.validFrom.slice(0, 4) ? `–${t.validTo.slice(0, 4)}` : ""})`}
+                  {g && g.product.valgtype !== "ordinaer" ? " · krever avtale" : ""}
+                  {g && g.versions.some((v) => v.status !== "kildebelagt") ? " · må avklares" : ""}
+                  {t.owner === "egen" ? " · egen" : ""}
+                  {t.archived ? " · arkivert" : ""}
+                </option>
+              );
+            })}
+        </optgroup>
       ))}
     </select>
   );
@@ -398,7 +424,7 @@ function ConsumptionInput({
   );
 }
 
-export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, investmentOre, hasBattery, roofs, address, onAnalysis }: Props) {
+export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, investmentOre, hasBattery, roofs, address, onAnalysis, offerYearlyKwh, offerYearlyManual, supportOre }: Props) {
   const [analysis, setAnalysis] = useState<BusinessAnalysis | null>(null);
   const [settings, setSettings] = useState<BusinessSettings | null>(null);
   const [series, setSeries] = useState<BusinessSeries[]>([]);
@@ -492,6 +518,18 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
   const eco = (patch: Partial<BusinessSettings["economy"]>) => update((x) => ({ ...x, economy: { ...x.economy, ...patch } }));
   const bat = (patch: Partial<BusinessSettings["battery"]>) => update((x) => ({ ...x, battery: { ...x.battery, ...patch } }));
 
+  // Årsproduksjonen i tilbudet følger med inn i analysen. Er den lagt inn manuelt, brukes den (kan endres under «Anlegget»).
+  useEffect(() => {
+    const cur = settingsRef.current;
+    if (!cur || offerYearlyKwh === undefined) return;
+    const a = cur.production.annual ?? { source: "pvgis" as const, kwh: null, offerKwh: null, offerManual: false };
+    const kwhNow = offerYearlyKwh && offerYearlyKwh > 0 ? Math.round(offerYearlyKwh) : null;
+    if (a.offerKwh === kwhNow && a.offerManual === Boolean(offerYearlyManual)) return;
+    const source = offerYearlyManual && kwhNow && a.source === "pvgis" && a.offerKwh !== kwhNow ? "tilbud" : a.source;
+    update((x) => ({ ...x, production: { ...x.production, annual: { ...a, offerKwh: kwhNow, offerManual: Boolean(offerYearlyManual), source } } }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offerYearlyKwh, offerYearlyManual, settings != null]);
+
   const doRun = async (refresh: boolean) => {
     if (!analysis) return;
     // Felt som lagres ved blur: avslutt redigeringen først, så siste verdi kommer med
@@ -563,6 +601,18 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
   const meterIds = [{ id: st.meteringPoint.id, label: st.meteringPoint.label }, ...st.otherMeters.map((m) => ({ id: m.id, label: m.label }))];
 
   const setOther = (i: number, fn: (m: OtherMeter) => OtherMeter) => update((x) => ({ ...x, otherMeters: x.otherMeters.map((m, j) => (j === i ? fn(m) : m)) }));
+  /** Årsforbruk for et målepunkt (til tariffforslag og ladeandel): oppgitt, sum av måneder eller målt serie */
+  const annualOf = (c: ConsumptionSettings, mpId: string) =>
+    c.level === 1 ? c.annualKwh : c.level === 2 ? (c.monthlyKwh?.reduce((a, b) => a + b, 0) ?? null) : (activeFor(mpId, "forbruk")?.sumKwh ?? null);
+  const sale = st.charging.sale;
+  const setSale = (fn: (c: ChargeSale) => ChargeSale) => update((x) => ({ ...x, charging: { ...x.charging, sale: fn(x.charging.sale ?? DEFAULT_SALE) } }));
+  const annual = st.production.annual ?? { source: "pvgis" as const, kwh: null, offerKwh: null, offerManual: false };
+  const setAnnual = (patch: Partial<NonNullable<BusinessSettings["production"]["annual"]>>) => update((x) => ({ ...x, production: { ...x.production, annual: { ...annual, ...(x.production.annual ?? {}), ...patch } } }));
+  const support = st.economy.support ?? { source: "tilbud" as const, nok: null };
+  const quoteSupport = run?.quote.supportNok ?? (supportOre != null ? supportOre / 100 : 0);
+  const grossInvestment =
+    st.economy.investment.source === "manuell" ? st.economy.investment.nok : st.economy.investment.source === "kalkyle" ? (run?.quote.investmentNok ?? (investmentOre != null ? investmentOre / 100 : null)) : null;
+  const supportUsed = support.source === "ingen" ? 0 : support.source === "manuell" ? (support.nok ?? 0) : quoteSupport;
 
   return (
     <section className={s.panel}>
@@ -776,7 +826,7 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
                     <div className={s.inline} style={{ width: "100%", flexWrap: "wrap" }}>
                       <input className={s.input} style={{ width: 160 }} aria-label="Navn på måleren" defaultValue={m.label} onBlur={(e) => setOther(i, (x) => ({ ...x, label: e.target.value || "Måler" }))} />
                       <input className={s.input} style={{ width: 170 }} aria-label="Målepunkt-ID" placeholder="målepunkt-ID" defaultValue={m.meterId} onBlur={(e) => setOther(i, (x) => ({ ...x, meterId: e.target.value.trim() }))} />
-                      <TariffSelect id={`na-tariff-${m.id}`} value={m.tariffId} tariffs={tariffs} onChange={(v) => setOther(i, (x) => ({ ...x, tariffId: v, tariffConfirmed: false, tariffScenario: false }))} />
+                      <TariffSelect id={`na-tariff-${m.id}`} value={m.tariffId} tariffs={tariffs} onChange={(v) => setOther(i, (x) => ({ ...x, tariffId: v, tariffConfirmed: false, tariffScenario: false, tariffSource: "valgt", tariffReason: null }))} />
                       <label className={s.check} style={{ fontWeight: 400, fontSize: 12 }}>
                         <input type="checkbox" checked={m.tariffConfirmed} onChange={(e) => setOther(i, (x) => ({ ...x, tariffConfirmed: e.target.checked }))} /> kontrollert mot faktura
                       </label>
@@ -787,6 +837,17 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
                         Fjern måler
                       </button>
                     </div>
+                    <TariffSuggest
+                      installerGroupId={installerGroupId}
+                      address={st.location.address}
+                      lat={st.location.lat}
+                      lon={st.location.lon}
+                      annualKwh={annualOf(m.consumption, m.id)}
+                      choice={{ ...m, connection: m.connection ?? { level: null, mainFuseA: null, voltageV: null }, tariffSource: m.tariffSource ?? "valgt", tariffReason: m.tariffReason ?? null }}
+                      hasTariff={!!m.tariffId}
+                      onConnection={(c) => setOther(i, (x) => ({ ...x, connection: c }))}
+                      onChoose={(id, source, reason) => setOther(i, (x) => ({ ...x, tariffId: id, tariffSource: source, tariffReason: reason, tariffConfirmed: false, tariffScenario: false }))}
+                    />
                     <ConsumptionInput
                       c={m.consumption}
                       onChange={(fn) => setOther(i, (x) => ({ ...x, consumption: fn(x.consumption) }))}
@@ -823,6 +884,11 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
                           tariffId: null,
                           tariffConfirmed: false,
                           tariffScenario: false,
+                          tariffSource: "valgt",
+                          tariffReason: null,
+                          connection: { level: null, mainFuseA: null, voltageV: null },
+                          contractedKw: null,
+                          feedIn: false,
                           exportLimitMode: "ukjent",
                           exportLimitKw: null,
                           importLimitKw: null,
@@ -1001,9 +1067,9 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
                   const on = st.goals.includes(g.value);
                   const note =
                     g.value === "lading"
-                      ? st.charging.enabled && st.charging.chargers.length
+                      ? (st.charging.enabled && st.charging.chargers.length) || st.charging.sale?.enabled
                         ? "· regnes med"
-                        : "· legg inn ladepunkter"
+                        : "· legg inn ladepunkter eller DC-lader"
                       : g.value === "nødstrøm"
                         ? batteryOn
                           ? "· reserve i batteriet"
@@ -1167,6 +1233,32 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
               panelantall).
             </p>
           )}
+          <div className={s.fields2} style={{ marginBottom: 8 }}>
+            <F
+              wide
+              label="Estimert årsproduksjon brukt i analysen"
+              help="Årsproduksjonen timeberegningen og rapporten bruker. Fra tilbudet, PVGIS-estimatet eller et eget tall."
+              more="Med tilbudets eller et eget tall brukes timefordelingen fra PVGIS, skalert slik at året summerer til tallet som vises. Leverandørens produksjonsfil brukes som den er."
+              hint={
+                <>
+                  {annual.offerKwh ? `Tilbudet: ${kwh(annual.offerKwh)}/år (${annual.offerManual ? "lagt inn manuelt" : "solkartets anslag"})` : "Tilbudet har ingen årsproduksjon"}
+                  {run?.summary.production?.pvgisKwh != null ? ` · PVGIS-estimat: ${kwh(run.summary.production.pvgisKwh)}/år` : ""}
+                  {run?.summary.production ? ` · brukt i siste beregning: ${kwh(run.summary.production.annualKwh)}/år` : ""}
+                </>
+              }
+            >
+              <span className={s.inline}>
+                <select className={s.input} value={annual.source} onChange={(e) => setAnnual({ source: e.target.value as "pvgis" | "tilbud" | "manuell" })} disabled={st.production.source === "fil"}>
+                  <option value="tilbud">Fra tilbudet</option>
+                  <option value="pvgis">PVGIS-estimat</option>
+                  <option value="manuell">Eget tall</option>
+                </select>
+                {annual.source === "manuell" && <NumField value={annual.kwh} width={110} suffix="kWh/år" onCommit={(v) => setAnnual({ kwh: v })} />}
+                {annual.source === "tilbud" && <strong className={s.small}>{annual.offerKwh ? `${kwh(annual.offerKwh)}/år` : "mangler – PVGIS brukes"}</strong>}
+                {st.production.source === "fil" && <span className={`${s.small} ${s.muted}`}>Leverandørens fil brukes som den er</span>}
+              </span>
+            </F>
+          </div>
           {st.production.source === "pvgis" ? (
             <>
               <div className={s.tablewrap}>
@@ -1326,6 +1418,15 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
               Legg til batteri i analysen
             </button>
           )}
+          <ChargeSaleCard
+            sale={sale}
+            onChange={setSale}
+            inConsumption={st.charging.inConsumption}
+            onInConsumption={(v) => update((x) => ({ ...x, charging: { ...x.charging, inConsumption: v } }))}
+            buildingKwh={annualOf(st.consumption, st.meteringPoint.id)}
+            year={st.period.year}
+            issues={allIssues.filter((i) => i.field === "lading")}
+          />
         </Group>
 
         {/* ================= 3 Strøm og nettleie */}
@@ -1407,6 +1508,21 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
               >
                 <NumField value={st.meteringPoint.importLimitKw} width={80} placeholder="ukjent" suffix="kW" onCommit={(v) => mp({ importLimitKw: v })} />
               </F>
+              <F
+                label="Påstemplet effekt"
+                help="Bare for avtaler der effektleddet følger en avtalt (påstemplet) effekt, f.eks. utkoblbare avtaler. Da gir lavere målte topper ingen besparelse i effektleddet."
+              >
+                <NumField value={st.meteringPoint.contractedKw ?? null} width={80} placeholder="ikke aktuelt" suffix="kW" onCommit={(v) => mp({ contractedKw: v })} />
+              </F>
+              <F
+                label="Innmatingstariff (plusskunde)"
+                help="Kunden har plusskundeavtale: innmatingens energiledd i nettleien (kreditt per kWh som mates ut) regnes med, separat fra strømsalget."
+                more="Satsen hentes fra tariffregisteret for nettselskapet og må bekreftes mot avtalen. Fastledd for innmating er ikke med."
+              >
+                <label className={s.check} style={{ fontWeight: 400 }}>
+                  <input type="checkbox" checked={st.meteringPoint.feedIn ?? false} onChange={(e) => mp({ feedIn: e.target.checked })} /> Ta med innmatingskreditt
+                </label>
+              </F>
             </div>
           }
         >
@@ -1420,13 +1536,24 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
                 />
               </label>
               <div className={s.inline} style={{ width: "100%", flexWrap: "wrap" }}>
-                <TariffSelect id="na-tariff" value={st.meteringPoint.tariffId} tariffs={tariffs} onChange={(v) => mp({ tariffId: v, tariffConfirmed: false, tariffScenario: false })} />
-                <ManualTariff installerGroupId={installerGroupId} onCreated={(t) => (setTariffs((l) => [...l, t]), mp({ tariffId: t.id, tariffConfirmed: false, tariffScenario: false }))} />
+                <TariffSelect id="na-tariff" value={st.meteringPoint.tariffId} tariffs={tariffs} onChange={(v) => mp({ tariffId: v, tariffConfirmed: false, tariffScenario: false, tariffSource: "valgt", tariffReason: null })} />
+                <ManualTariff installerGroupId={installerGroupId} onCreated={(t) => (setTariffs((l) => [...l, t]), mp({ tariffId: t.id, tariffConfirmed: false, tariffScenario: false, tariffSource: "faktura", tariffReason: null }))} />
                 <button type="button" className={`${s.btn} ${s.small2}`} onClick={() => setShowAdmin(true)}>
                   Administrer tariffer
                 </button>
               </div>
-              {!st.meteringPoint.tariffId && <span className={s.hint}>Ingen tariff er valgt. Velg kundens tariff, eller legg inn satsene fra nettleiefakturaen.</span>}
+              {!st.meteringPoint.tariffId && <span className={s.hint}>Ingen tariff er valgt. Trykk «Foreslå tariff», velg kundens tariff, eller legg inn satsene fra nettleiefakturaen.</span>}
+              <TariffSuggest
+                installerGroupId={installerGroupId}
+                address={st.location.address}
+                lat={st.location.lat}
+                lon={st.location.lon}
+                annualKwh={annualOf(st.consumption, st.meteringPoint.id)}
+                choice={{ ...st.meteringPoint, connection: st.meteringPoint.connection ?? { level: null, mainFuseA: null, voltageV: null }, tariffSource: st.meteringPoint.tariffSource ?? "valgt", tariffReason: st.meteringPoint.tariffReason ?? null }}
+                hasTariff={!!st.meteringPoint.tariffId}
+                onConnection={(c) => mp({ connection: c })}
+                onChoose={(id, source, reason) => mp({ tariffId: id, tariffSource: source, tariffReason: reason, tariffConfirmed: false, tariffScenario: false })}
+              />
               <TariffCard
                 tariff={tariff}
                 period={st.period}
@@ -1435,7 +1562,7 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
                 scenario={st.meteringPoint.tariffScenario}
                 onConfirmed={(v) => mp({ tariffConfirmed: v })}
                 onScenario={(v) => mp({ tariffScenario: v })}
-                onCopied={(t) => (setTariffs((l) => [...l, t]), mp({ tariffId: t.id, tariffConfirmed: false, tariffScenario: false }))}
+                onCopied={(t) => (setTariffs((l) => [...l, t]), mp({ tariffId: t.id, tariffConfirmed: false, tariffScenario: false, tariffSource: "egen", tariffReason: null }))}
                 onChooseOther={() => document.getElementById("na-tariff")?.focus()}
               />
             </div>
@@ -1603,8 +1730,8 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
         >
           <div className={s.fields2}>
             <F
-              label="Investering i solcelleanlegget"
-              help="Kostnaden for utstyr og arbeid i det valgte tilbudsalternativet, eks. mva. Hentes fra tilbudet."
+              label="Tilbudssum før støtte"
+              help="Kostnaden for utstyr og arbeid i det valgte tilbudsalternativet, eks. mva., før Enova-støtte. Hentes fra tilbudet."
               more="Når tilbudet også har batteri, vises batteriets del separat i batterikortet."
               hint={
                 st.economy.investment.source === "kalkyle"
@@ -1627,6 +1754,29 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
                 {st.economy.investment.source === "manuell" && <NumField value={st.economy.investment.nok} width={110} suffix="kr" onCommit={(v) => eco({ investment: { ...st.economy.investment, nok: v } })} />}
               </span>
             </F>
+            <F
+              label="Enova-støtte"
+              help="Støtten trekkes fra tilbudssummen én gang. Hentes fra tilbudet når den er fylt inn der, så du bare trenger å legge den inn ett sted."
+              more="Uten støtte brukes hele tilbudssummen. Nettoinvesteringen brukes til tilbakebetaling og nåverdi."
+              hint={support.source === "tilbud" ? (quoteSupport > 0 ? `Fra tilbudet: ${kr(quoteSupport)}${run?.quote.supportProvider ? ` (${run.quote.supportProvider})` : ""}` : "Ingen støtte registrert i tilbudet") : undefined}
+            >
+              <span className={s.inline}>
+                <select className={s.input} value={support.source} onChange={(e) => eco({ support: { ...support, source: e.target.value as "tilbud" | "manuell" | "ingen" } })}>
+                  <option value="tilbud">Fra tilbudet</option>
+                  <option value="manuell">Annet beløp</option>
+                  <option value="ingen">Uten støtte</option>
+                </select>
+                {support.source === "manuell" && <NumField value={support.nok} width={110} suffix="kr" onCommit={(v) => eco({ support: { ...support, nok: v } })} />}
+              </span>
+            </F>
+            <div className={`${s.wide} ${s.fromquote}`}>
+              <span>
+                Tilbudssum før støtte <strong>{grossInvestment == null ? "uavklart" : kr(grossInvestment * (st.economy.vatDeductible === "nei" ? 1.25 : 1))}</strong> − støtte{" "}
+                <strong>{kr(supportUsed)}</strong> = netto investering brukt i beregningen{" "}
+                <strong>{grossInvestment == null ? "uavklart" : kr(Math.max(0, grossInvestment * (st.economy.vatDeductible === "nei" ? 1.25 : 1) - supportUsed))}</strong> (
+                {st.economy.vatDeductible === "nei" ? "inkl. mva." : "eks. mva."})
+              </span>
+            </div>
             <F label="Analyseperiode" help="Hvor mange år fremover økonomien beregnes. Betyr ikke at alle komponentene varer like lenge." more="Eksempel: 20 eller 30 år. Inverter og batteri byttes underveis etter forutsetningene.">
               <select className={s.input} value={st.economy.years} onChange={(e) => eco({ years: Number(e.target.value) })}>
                 {[10, 15, 20, 25, 30, 35, 40].map((y) => (
@@ -1736,7 +1886,7 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
             setShowAdmin(false);
             setTariffs(await getTariffs(installerGroupId, { selected: settingsRef.current?.meteringPoint.tariffId }));
           }}
-          onSelect={(id) => mp({ tariffId: id, tariffConfirmed: false, tariffScenario: false })}
+          onSelect={(id) => mp({ tariffId: id, tariffConfirmed: false, tariffScenario: false, tariffSource: "valgt", tariffReason: null })}
         />
       )}
     </section>
@@ -2012,8 +2162,10 @@ function TariffCard({
   onChooseOther: () => void;
 }) {
   const [copying, setCopying] = useState(false);
+  const [rates, setRates] = useState(false);
   if (!tariff) return null;
-  const d = tariff.definition;
+  const g = isGridDefinition(tariff.definition) ? tariff.definition : null;
+  const d = (g ? {} : tariff.definition) as TariffDefinition;
   const [from, to] = PERIOD_RANGE(period);
   const covers = tariff.validFrom <= from && (tariff.validTo == null || tariff.validTo >= to);
   const copy = async () => {
@@ -2031,10 +2183,9 @@ function TariffCard({
   return (
     <div className={s.tariffcard}>
       <div className={s.tariffhead}>
-        <strong>
-          {tariff.gridOwner} – {tariff.name}
-        </strong>
+        <strong>{g ? tariff.name : `${tariff.gridOwner} – ${tariff.name}`}</strong>
         <span className={`${s.pill} ${tariff.owner === "felles" ? s.st_calculated : s.st_assumed}`}>{OWNER_LABEL[tariff.owner]}</span>
+        {g && g.product.valgtype !== "ordinaer" && <span className={`${s.pill} ${s.st_assumed}`}>Krever særskilt avtale</span>}
         {tariff.archived && <span className={`${s.pill} ${s.st_assumed}`}>Arkivert</span>}
       </div>
       <div className={s.small}>
@@ -2049,13 +2200,29 @@ function TariffCard({
           </>
         )}
       </div>
-      <div className={s.small}>{tariffRates(d)}</div>
-      {d.rateChanges?.length ? (
+      {g ? (
+        <>
+          <div className={s.small}>
+            {g.product.vilkaar} · {g.versions.length} prisversjon{g.versions.length === 1 ? "" : "er"} i {g.coveredYear}
+            {g.areaLabel ? ` · ${g.areaLabel}` : ""} · effekt: {powerBasisText(g.versions[g.versions.length - 1]?.kapasitet_eller_effekt.grunnlag)}{" "}
+            <button type="button" className={`${s.btn} ${s.ghost} ${s.small2}`} onClick={() => setRates((v) => !v)}>
+              {rates ? "Skjul satser" : "Vis satser"}
+            </button>
+          </div>
+          {g.versions.some((v) => v.sperre) && (
+            <div className={`${s.small} ${s.issuewarn}`}>Må avklares: {[...new Set(g.versions.map((v) => v.sperre).filter(Boolean))].join(" ")}</div>
+          )}
+          {rates && <GridRates def={g} />}
+        </>
+      ) : (
+        <div className={s.small}>{tariffRates(d)}</div>
+      )}
+      {!g && d.rateChanges?.length ? (
         <div className={`${s.small} ${s.muted}`}>
           Satsendring: {d.rateChanges.map((c) => `fra ${c.from}${c.energyOrePerKwh != null ? ` energiledd ${nf(c.energyOrePerKwh, 2)} øre` : ""}`).join("; ")}
         </div>
       ) : null}
-      {(d.minAnnualKwh != null || d.maxAnnualKwh != null || d.includedNote) && (
+      {!g && (d.minAnnualKwh != null || d.maxAnnualKwh != null || d.includedNote) && (
         <div className={`${s.small} ${s.muted}`}>
           {d.minAnnualKwh != null || d.maxAnnualKwh != null ? `Gjelder årsforbruk ${d.minAnnualKwh != null ? `fra ${nf(d.minAnnualKwh)}` : ""} ${d.maxAnnualKwh != null ? `til ${nf(d.maxAnnualKwh)}` : ""} kWh. ` : ""}
           {d.includedNote}
@@ -2064,7 +2231,19 @@ function TariffCard({
 
       {!covers && (
         <div className={`${s.notice} ${scenario ? s.info : s.error}`} style={{ margin: "8px 0 0" }}>
-          {scenario ? (
+          {g ? (
+            scenario ? (
+              <>
+                Tariffregisteret har satser for {g.coveredYear}. For analyseperioden ({from} – {to}) brukes {g.coveredYear}-satsene for samme dato, og resultatet merkes «Anslag
+                basert på {g.coveredYear}-priser».
+              </>
+            ) : (
+              <>
+                <strong>Tariffregisteret har bare satser for {g.coveredYear}.</strong> Analyseperioden er {from} – {to}. Bruk {g.coveredYear}-satsene som et merket anslag, eller legg
+                inn satsene fra kundens nettleiefaktura for perioden.
+              </>
+            )
+          ) : scenario ? (
             <>Tariffen gjelder ikke analyseperioden ({from} – {to}). Nettleien regnes som et scenario og merkes slik i resultatet.</>
           ) : (
             <>
@@ -2077,7 +2256,7 @@ function TariffCard({
               Velg annen tariff
             </button>
             <label className={s.inline} style={{ fontWeight: 600 }}>
-              <input type="checkbox" checked={scenario} onChange={(e) => onScenario(e.target.checked)} /> Bruk som scenario
+              <input type="checkbox" checked={scenario} onChange={(e) => onScenario(e.target.checked)} /> {g ? `Bruk ${g.coveredYear}-satser som anslag` : "Bruk som scenario"}
             </label>
           </div>
         </div>
@@ -2087,7 +2266,7 @@ function TariffCard({
         <label className={s.inline} style={{ fontWeight: 600 }}>
           <input type="checkbox" checked={confirmed} onChange={(e) => onConfirmed(e.target.checked)} /> Kontrollert mot kundens nettleiefaktura
         </label>
-        {tariff.owner === "felles" && (
+        {tariff.owner === "felles" && !g && (
           <button type="button" className={`${s.btn} ${s.ghost} ${s.small2}`} disabled={copying} onClick={copy} title="Lag en kopi teamet kan redigere, f.eks. med satsene fra fakturaen.">
             {copying ? "Kopierer …" : "Lag redigerbar kopi"}
           </button>
@@ -2115,7 +2294,7 @@ type TariffFormValues = {
 };
 
 const toForm = (t?: Tariff): TariffFormValues => {
-  const d = t?.definition;
+  const d = t && !isGridDefinition(t.definition) ? t.definition : undefined;
   const str = (n: number | null | undefined) => (n == null ? "" : String(n).replace(".", ","));
   return {
     gridOwner: t?.gridOwner ?? "",
@@ -2152,7 +2331,7 @@ function TariffForm({ installerGroupId, existing, onSaved, onCancel }: { install
     setSaving(true);
     try {
       const hasPower = f.summer.trim() !== "" || f.winter.trim() !== "";
-      const prev = existing?.definition;
+      const prev = existing && !isGridDefinition(existing.definition) ? existing.definition : undefined;
       const definition: TariffDefinition = {
         ...(prev ?? {}),
         fixedNokPerYear: num(f.fixed || "0"),
@@ -2339,16 +2518,18 @@ function TariffAdmin({ installerGroupId, selectedId, onClose, onSelect }: { inst
           {rows.map((t) => (
             <div key={t.id} className={s.tariffrow} style={{ opacity: t.archived ? 0.65 : 1 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <strong>
-                  {t.gridOwner} – {t.name}
-                </strong>
+                <strong>{isGridDefinition(t.definition) ? t.name : `${t.gridOwner} – ${t.name}`}</strong>
                 {t.id === selectedId && <span className={`${s.pill} ${s.st_measured}`} style={{ marginLeft: 6 }}>Valgt</span>}
                 {t.archived && <span className={`${s.pill} ${s.st_assumed}`} style={{ marginLeft: 6 }}>Arkivert</span>}
                 <div className={`${s.small} ${s.muted}`}>
                   Gyldig {validity(t)} · kontrollert {t.lastChecked}
                   {usageText(t) ? ` · ${usageText(t)}` : ""}
                 </div>
-                <div className={`${s.small} ${s.muted}`}>{tariffRates(t.definition)}</div>
+                <div className={`${s.small} ${s.muted}`}>
+                  {isGridDefinition(t.definition)
+                    ? `${t.definition.versions.length} prisversjoner · effekt: ${powerBasisText(t.definition.versions[t.definition.versions.length - 1]?.kapasitet_eller_effekt.grunnlag)} · tariffregisteret ${t.definition.dataVersion}`
+                    : tariffRates(t.definition)}
+                </div>
                 {editing === t.id && (
                   <TariffForm installerGroupId={installerGroupId} existing={t} onSaved={() => (setEditing(null), load())} onCancel={() => setEditing(null)} />
                 )}
@@ -2381,7 +2562,7 @@ function TariffAdmin({ installerGroupId, selectedId, onClose, onSelect }: { inst
                     Velg
                   </button>
                 )}
-                {t.owner === "egen" && !t.archived && editing !== t.id && (
+                {t.owner === "egen" && !t.archived && editing !== t.id && !isGridDefinition(t.definition) && (
                   <button
                     type="button"
                     className={`${s.btn} ${s.ghost} ${s.small2}`}
@@ -2392,9 +2573,11 @@ function TariffAdmin({ installerGroupId, selectedId, onClose, onSelect }: { inst
                     Rediger
                   </button>
                 )}
-                <button type="button" className={`${s.btn} ${s.ghost} ${s.small2}`} disabled={busy} onClick={() => act(async () => toast.success(`Kopien «${(await duplicateTariff(t.id, installerGroupId)).name}» er laget.`))}>
-                  Kopier
-                </button>
+                {!isGridDefinition(t.definition) && (
+                  <button type="button" className={`${s.btn} ${s.ghost} ${s.small2}`} disabled={busy} onClick={() => act(async () => toast.success(`Kopien «${(await duplicateTariff(t.id, installerGroupId)).name}» er laget.`))}>
+                    Kopier
+                  </button>
+                )}
                 {t.owner === "egen" && !t.archived && (
                   <button type="button" className={`${s.btn} ${s.ghost} ${s.small2}`} onClick={() => setConfirmDelete(t)}>
                     Slett
@@ -2454,6 +2637,7 @@ function Result({ r, quote, stale }: { r: BusinessSummary; quote: QuoteContext; 
     { label: "Spart nettleie, effektledd (lavere topper)", v: sv.effektledd },
     { label: "Spart elavgift", v: sv.elavgift },
     ...(sv.fastOgGebyr ? [{ label: "Fastledd og faste gebyrer", v: sv.fastOgGebyr }] : []),
+    ...(sv.innmating ? [{ label: "Kreditt for innmating (nettleie)", v: sv.innmating }] : []),
     { label: "Salg av overskudd", v: sv.salg },
   ];
   const selfKwh = r.after.selfKwh;
@@ -2475,7 +2659,16 @@ function Result({ r, quote, stale }: { r: BusinessSummary; quote: QuoteContext; 
         <strong>Beregnet {calculated}</strong>
         {r.offerLabel && <span>{r.offerLabel}</span>}
         <span>{nf(r.system.kwp, 1)} kWp</span>
-        <span>Investering {r.investmentNok == null ? "uavklart" : `${kr(r.investmentNok)} eks. mva.`}</span>
+        <span>
+          {r.investment
+            ? `Tilbudssum ${r.investment.grossNok == null ? "uavklart" : kr(r.investment.grossNok)} − støtte ${kr(r.investment.supportNok)} = netto ${r.investment.netNok == null ? "uavklart" : kr(r.investment.netNok)} ${r.investment.vat === "inkl" ? "inkl." : "eks."} mva.`
+            : `Investering ${r.investmentNok == null ? "uavklart" : `${kr(r.investmentNok)} eks. mva.`}`}
+        </span>
+        {r.production && (
+          <span title={r.production.source}>
+            Estimert årsproduksjon brukt i analysen {kwh(r.production.annualKwh)}/år ({r.production.scaled ? r.production.source.split(";")[0] : "PVGIS-estimat"})
+          </span>
+        )}
         <span>
           Prisår {priceYear}
           {r.period.complete ? "" : ` (${r.period.label})`} · værgrunnlag {r.years?.weather ?? "—"}
@@ -2594,7 +2787,7 @@ function Result({ r, quote, stale }: { r: BusinessSummary; quote: QuoteContext; 
           )}
           <div className={s.kpis}>
             <div>
-              <span>Investering eks. mva.</span>
+              <span>{r.investment ? `Netto investering etter støtte (${r.investment.vat === "inkl" ? "inkl." : "eks."} mva.)` : "Investering eks. mva."}</span>
               <strong>{r.investmentNok == null ? "Uavklart" : kr(r.investmentNok)}</strong>
             </div>
             <div>
@@ -2747,7 +2940,11 @@ function Result({ r, quote, stale }: { r: BusinessSummary; quote: QuoteContext; 
         </details>
       )}
 
+      {r.grid && r.grid.alternatives.length > 0 && <GridResult g={r.grid} priceYear={priceYear} />}
+
       {r.battery && <BatteryResult b={r.battery} years={r.assumptions.years} discountRatePct={r.assumptions.discountRatePct} priceYear={priceYear} valid={valid} />}
+
+      {r.charger && <ChargerResult c={r.charger} years={r.assumptions.years} discountRatePct={r.assumptions.discountRatePct} valid={valid} />}
 
       <details className={s.details} open>
         <summary>Datagrunnlag og forutsetninger</summary>
@@ -2978,5 +3175,673 @@ function DayChart({ day, usable }: { day: NonNullable<BatterySummary["day"]>; us
         <span className={`${s.legend} ${s.daysoc}`} /> batterinivå · linje = spotpris.
       </figcaption>
     </figure>
+  );
+}
+
+// ---------------------------------------------------------------- nettariffer med datoversjoner (tariffregisteret 2026)
+
+const POWER_BASIS: Record<string, string> = {
+  hoeyeste_klokketime_i_maaneden: "høyeste klokketime i måneden",
+  snitt_av_tre_hoeyeste_doegnmakser_ulike_datoer: "snitt av de tre høyeste døgnmaksene (ulike datoer)",
+  maanedens_effekttopp: "månedens effekttopp",
+  paastemplet_kw_avtalt_anlegg: "påstemplet effekt i avtalen",
+  hoeyeste_time_i_hoeglast: "høyeste time i høglast (kalender mangler)",
+  maa_bekreftes_lokal_ls: "må bekreftes (høyeste time eller tre døgnmakser)",
+};
+const powerBasisText = (g: string | null | undefined) => (g ? (POWER_BASIS[g] ?? g.replaceAll("_", " ")) : "ikke oppgitt i kilden");
+const monthsText = (m: number[] | null | undefined) => (m == null ? "sommermåneder ikke oppgitt" : `sommer ${MONTHS[m[0] - 1]}–${MONTHS[m[m.length - 1] - 1]}`);
+
+type SeasonVal = { sommermaaneder: number[] | null; sommer: number | { dag: number; natt: number }; resten_av_aaret?: number | { dag: number; natt: number }; vinter?: number };
+function seasonText(v: number | SeasonVal | undefined, unit: string, d = 2) {
+  if (v == null) return "—";
+  if (typeof v === "number") return `${nf(v, d)} ${unit}`;
+  const fmt = (x: number | { dag: number; natt: number } | undefined) => (x == null ? "—" : typeof x === "number" ? nf(x, d) : `dag ${nf(x.dag, d)} / natt ${nf(x.natt, d)}`);
+  return `${fmt(v.sommer)} / ${fmt(v.resten_av_aaret ?? v.vinter)} ${unit} (${monthsText(v.sommermaaneder)})`;
+}
+
+function gridEnergyText(e: GridVersion["energiledd_uttak"]) {
+  if (e.modell === "dag_natt")
+    return `dag ${nf(e.dag_ore_per_kwh ?? 0, 2)} øre (kl. ${e.dag_fra?.slice(0, 2)}–${e.dag_til_eksklusiv?.slice(0, 2)}, ${(e.dag_gjelder ?? "").replaceAll("_", " ")}) · ellers ${nf(e.ellers_ore_per_kwh ?? 0, 2)} øre`;
+  return seasonText(e.ore_per_kwh as number | SeasonVal | undefined, "øre/kWh");
+}
+
+function gridPowerText(p: GridVersion["kapasitet_eller_effekt"]) {
+  const basis = powerBasisText(p.grunnlag);
+  if (p.modell === "ett_kapasitetstrinn" && p.trinn?.length) {
+    const t = p.trinn;
+    return `Kapasitetstrinn (${t.length} trinn, ${nf(t[0].kr_per_mnd, 2)}–${nf(t[t.length - 1].kr_per_mnd, 2)} kr/mnd) etter ${basis}${p.grenser === "oevre_inklusiv" ? "; øvre grense er med i trinnet" : p.grenser === "nedre_inklusiv" ? "; en grense hører til neste trinn" : p.grenser ? "; grensene overlapper i arket" : ""}`;
+  }
+  if (p.modell === "marginale_effektblokker" && p.blokker?.length)
+    return `Effektblokker: ${p.blokker.map((b, i) => `${i === 0 ? "0" : nf(p.blokker![i - 1].til_kw ?? 0)}–${b.til_kw == null ? "" : nf(b.til_kw)} kW ${nf(b.kr_per_kw_mnd, 2)} kr`).join(", ")} per kW/mnd, etter ${basis}`;
+  if (p.modell === "pris_ganger_kw")
+    return `${seasonText(p.kr_per_kw_mnd as number | SeasonVal | undefined, "kr/kW/mnd")}${p.maanedsfaktorer_jan_des ? ` × månedsvekt (${p.maanedsfaktorer_jan_des.map((x) => nf(x, 1)).join(" ")})` : ""}, etter ${basis}`;
+  if (p.modell === "effekt_dag_natt") return `Egen dag- og nattmaks: ${seasonText(p.kr_per_kw_mnd as SeasonVal, "kr/kW/mnd")} – sammenstillingen må avklares`;
+  return `${p.modell.replaceAll("_", " ")} – må avklares`;
+}
+
+function fixedText(f: GridVersion["fastledd"], enova: string) {
+  const base = f.kr_per_mnd != null ? `${nf(f.kr_per_mnd, 2)} kr/mnd` : f.kr_per_aar != null ? `${nf(f.kr_per_aar, 2)} kr/år` : "—";
+  return `${base}${enova === "kommer_i_tillegg" ? " + Enova 800 kr/år" : " (Enova inkludert)"}`;
+}
+
+/** «Vis satser» for en tariff fra registeret: hver prisversjon, hvordan toppen måles og kildene. */
+function GridRates({ def }: { def: GridDefinition }) {
+  return (
+    <div className={s.tablewrap} style={{ marginTop: 6 }}>
+      <table>
+        <thead>
+          <tr>
+            <th>Gjelder</th>
+            <th>Fastledd</th>
+            <th>Energiledd (uten elavgift)</th>
+            <th>Kapasitet / effekt</th>
+            <th>Status og kilde</th>
+          </tr>
+        </thead>
+        <tbody>
+          {def.versions.map((v) => (
+            <tr key={v.id}>
+              <td className={s.small} style={{ whiteSpace: "nowrap" }}>
+                {v.dekket_fra} –<br />
+                {v.dekket_til_eksklusiv ? `${v.dekket_til_eksklusiv} (ekskl.)` : "ingen nyere versjon"}
+              </td>
+              <td className={s.small}>{fixedText(v.fastledd, v.enova_800_per_aar)}</td>
+              <td className={s.small}>{gridEnergyText(v.energiledd_uttak)}</td>
+              <td className={s.small}>
+                {gridPowerText(v.kapasitet_eller_effekt)}
+                {v.kapasitet_eller_effekt.modell === "ett_kapasitetstrinn" && v.kapasitet_eller_effekt.trinn && (
+                  <details>
+                    <summary>Alle trinn</summary>
+                    {v.kapasitet_eller_effekt.trinn.map((t, i, a) => (
+                      <div key={i}>
+                        {i === 0 ? "0" : nf(a[i - 1].til_kw ?? 0)}–{t.til_kw == null ? "" : nf(t.til_kw)} kW: {nf(t.kr_per_mnd, 2)} kr/mnd
+                      </div>
+                    ))}
+                  </details>
+                )}
+              </td>
+              <td className={s.small}>
+                <span className={`${s.pill} ${v.status === "kildebelagt" ? s.st_calculated : s.st_assumed}`}>{v.status === "kildebelagt" ? "Kildebelagt" : "Må avklares"}</span>
+                {v.sperre && <div className={s.issuewarn}>{v.sperre}</div>}
+                {v.merknad && <div className={s.muted}>{v.merknad}</div>}
+                <div>
+                  {v.kilder.map((k) =>
+                    def.sources[k] ? (
+                      <a key={k} href={def.sources[k].url} target="_blank" rel="noreferrer" title={def.sources[k].tittel} style={{ marginRight: 6 }}>
+                        {k}
+                      </a>
+                    ) : (
+                      <span key={k} style={{ marginRight: 6 }}>
+                        {k}
+                      </span>
+                    ),
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className={`${s.small} ${s.muted}`} style={{ margin: "4px 0 0" }}>
+        Satser eks. mva. Energileddet er uten elavgift (kommer i tillegg etter kundens avgiftsstatus). Beregningen bruker versjonen som gjelder for hver dato. Kontrollert{" "}
+        {def.checked} (pakke {def.dataVersion}). Reaktiv effekt er ikke med. Etter {def.coveredYear} finnes ingen bekreftede satser – da brukes {def.coveredYear}-satsene og
+        resultatet merkes «Anslag basert på {def.coveredYear}-priser».
+      </p>
+    </div>
+  );
+}
+
+const TARIFF_SOURCE_LABEL: Record<TariffSource, string> = {
+  foreslått: "Foreslått fra adresse",
+  valgt: "Valgt av selger",
+  faktura: "Lagt inn fra faktura",
+  egen: "Egen tariff / scenario",
+};
+
+/** Tilknytning og forslag til tariff for et målepunkt. Et forslag velges bare når ingen tariff er valgt; et manuelt valg blir stående. */
+function TariffSuggest({
+  installerGroupId,
+  address,
+  lat,
+  lon,
+  annualKwh,
+  choice,
+  hasTariff,
+  onConnection,
+  onChoose,
+}: {
+  installerGroupId: string;
+  address: string;
+  lat: number | null;
+  lon: number | null;
+  annualKwh: number | null;
+  choice: TariffChoice & { tariffConfirmed: boolean };
+  hasTariff: boolean;
+  onConnection: (c: TariffChoice["connection"]) => void;
+  onChoose: (tariffId: string, source: TariffSource, reason: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState<TariffSuggestion | null>(null);
+  const [company, setCompany] = useState("");
+  const c = choice.connection;
+  const ask = async () => {
+    if (!address && (lat == null || lon == null) && !company) return toast.error("Legg inn adressen først, eller velg nettselskap.");
+    setBusy(true);
+    try {
+      const [code, area] = company ? company.split("|") : [null, null];
+      const r = await suggestTariff({ installerGroupId, address: address || null, lat, lon, annualKwh, level: c.level, mainFuseA: c.mainFuseA, voltageV: c.voltageV, companyCode: code, area: area || null });
+      setRes(r);
+      if (r.suggested?.tariffId && !hasTariff) {
+        onChoose(r.suggested.tariffId, "foreslått", r.suggested.reason);
+        toast.info(`Foreslått: ${r.suggested.name}`);
+      } else if (!r.candidates.length) toast.info(r.gridArea.note);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const fitLabel = { foreslått: "Foreslått", mulig: "Mulig – må bekreftes", avtale: "Krever særskilt avtale" } as const;
+  return (
+    <div className={s.subbox} style={{ marginTop: 6 }}>
+      <div className={s.inline} style={{ flexWrap: "wrap" }}>
+        <span className={s.small}>Tilknytning</span>
+        <select className={s.input} aria-label="Spenningsnivå" value={c.level ?? ""} onChange={(e) => onConnection({ ...c, level: (e.target.value || null) as TariffChoice["connection"]["level"] })}>
+          <option value="">ukjent nivå</option>
+          <option value="lavspent">lavspent</option>
+          <option value="hoeyspent">høyspent</option>
+        </select>
+        <NumField ariaLabel="Hovedsikring" value={c.mainFuseA} width={60} placeholder="sikring" suffix="A" onCommit={(v) => onConnection({ ...c, mainFuseA: v })} />
+        <select className={s.input} aria-label="Spenning" value={c.voltageV ?? ""} onChange={(e) => onConnection({ ...c, voltageV: e.target.value ? (Number(e.target.value) as 230 | 400) : null })}>
+          <option value="">spenning</option>
+          <option value="230">230 V</option>
+          <option value="400">400 V</option>
+        </select>
+        <select className={s.input} aria-label="Nettselskap" value={company} onChange={(e) => setCompany(e.target.value)} title="Tomt = finn nettselskapet fra adressen">
+          <option value="">Nettselskap fra adressen</option>
+          <option value="EL|hele_nettomraadet">Elvia</option>
+          <option value="GL|glitre_tidligere_agder_buskerud_hadeland">Glitre Nett (bl.a. Drammen, Kristiansand)</option>
+          <option value="GL|tidligere_norgesnett_fredrikstad_mfl">Glitre Nett (tidl. Norgesnett, bl.a. Fredrikstad)</option>
+          <option value="LD|hele_nettomraadet">Lede</option>
+          <option value="LI|hele_nettomraadet">Linja</option>
+          <option value="NV|hele_nettomraadet">Nordvest Nett</option>
+          <option value="ET|hele_nettomraadet">Etna Nett</option>
+          <option value="VV|hele_nettomraadet">Vevig</option>
+          <option value="FA|hele_nettomraadet">Fagne</option>
+        </select>
+        <button type="button" className={`${s.btn} ${s.small2}`} disabled={busy} onClick={ask}>
+          {busy ? "Finner …" : "Foreslå tariff"}
+        </button>
+        <Help
+          text="Finner nettselskapet fra adressen (NVEs kart over nettområder) og foreslår produkt ut fra årsforbruk, spenningsnivå og hovedsikring."
+          more="Bare entydige, ordinære treff foreslås. Særavtaler og tariffer merket «må avklares» vises, men velges aldri automatisk. Et valg du har gjort selv, endres ikke."
+        />
+      </div>
+      <div className={`${s.small} ${s.muted}`} style={{ marginTop: 4 }}>
+        <span className={`${s.pill} ${choice.tariffSource === "foreslått" ? s.st_assumed : s.st_calculated}`}>{TARIFF_SOURCE_LABEL[choice.tariffSource]}</span>{" "}
+        {choice.tariffConfirmed && <span className={`${s.pill} ${s.st_measured}`}>Bekreftet mot faktura</span>} {choice.tariffReason ?? ""}
+        {annualKwh != null && ` · årsforbruk brukt i forslaget: ${kwh(annualKwh)}`}
+      </div>
+      {res && (
+        <div className={s.small} style={{ marginTop: 6 }}>
+          <div className={s.muted}>
+            {res.municipality ? `${res.municipality}: ` : ""}
+            {res.gridArea.companies.map((x) => x.name).join(" / ") || "ingen nettselskap funnet"} · {res.gridArea.note}
+          </div>
+          {res.candidates.map((x) => (
+            <div key={`${x.productId}:${x.area}`} className={s.inline} style={{ flexWrap: "wrap", marginTop: 4 }}>
+              <span className={`${s.pill} ${x.fit === "foreslått" ? s.st_measured : s.st_assumed}`}>{fitLabel[x.fit]}</span>
+              <strong>{x.name}</strong>
+              <span className={s.muted}>{x.reasons.join(" · ")}</span>
+              {x.blocked && <span className={s.issuewarn}>{x.blocked}</span>}
+              {x.tariffId && (
+                <button type="button" className={`${s.btn} ${s.ghost} ${s.small2}`} onClick={() => onChoose(x.tariffId!, x.fit === "foreslått" ? "foreslått" : "valgt", [x.company, ...x.reasons].join(" · "))}>
+                  Velg
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Antall ladedager i et år (lokal kalender), for å vise antatt volum før beregning. */
+function chargeDays(year: number, weekdays: number[], skipHolidays: boolean) {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
+  const easter = Date.UTC(year, month - 1, day), D = 86_400_000;
+  const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
+  const hol = new Set([`${year}-01-01`, `${year}-05-01`, `${year}-05-17`, `${year}-12-25`, `${year}-12-26`, ...[-3, -2, 0, 1, 39, 49, 50].map((x) => iso(easter + x * D))]);
+  let n = 0;
+  for (let t = Date.UTC(year, 0, 1); t < Date.UTC(year + 1, 0, 1); t += D) {
+    const wd = ((new Date(t).getUTCDay() + 6) % 7) + 1;
+    if (weekdays.includes(wd) && !(skipHolidays && hol.has(iso(t)))) n++;
+  }
+  return n;
+}
+
+const DEFAULT_SALE: ChargeSale = {
+  enabled: true,
+  label: "DC-lader",
+  powerKw: 150,
+  outlets: 1,
+  volumeMode: "profil",
+  volumeKwh: null,
+  volumePct: null,
+  weekdays: [1, 2, 3, 4, 5],
+  window: [10, 12],
+  skipHolidays: false,
+  utilizationPct: 100,
+  priceNokPerKwh: 3.5,
+  priceGrowthPct: 0,
+  existingKwh: 0,
+  existingPriceNokPerKwh: null,
+  investmentNok: null,
+  opexNokPerYear: 0,
+};
+
+/** DC-lader med salg til kjøretøy: gir et eget alternativ (solceller + batteri + lader). */
+function ChargeSaleCard({
+  sale,
+  onChange,
+  inConsumption,
+  onInConsumption,
+  buildingKwh,
+  year,
+  issues,
+}: {
+  sale: ChargeSale | undefined;
+  onChange: (fn: (c: ChargeSale) => ChargeSale) => void;
+  inConsumption: boolean;
+  onInConsumption: (v: boolean) => void;
+  buildingKwh: number | null;
+  year: number;
+  issues: AnalysisIssue[];
+}) {
+  const c = sale;
+  if (!c?.enabled)
+    return (
+      <button type="button" className={`${s.btn} ${s.ghost} ${s.small2}`} style={{ marginTop: 8, marginLeft: 8 }} onClick={() => onChange((x) => ({ ...DEFAULT_SALE, ...x, enabled: true }))}>
+        Legg til DC-lader (salg av lading)
+      </button>
+    );
+  const set = (patch: Partial<ChargeSale>) => onChange((x) => ({ ...x, ...patch }));
+  const days = chargeDays(year, c.weekdays, c.skipHolidays);
+  const hours = c.window[1] > c.window[0] ? c.window[1] - c.window[0] : c.window[1] + 24 - c.window[0];
+  const maxKwh = c.powerKw * hours * days;
+  const profileKwh = maxKwh * (c.utilizationPct / 100);
+  const volume =
+    c.volumeMode === "kwh" ? c.volumeKwh : c.volumeMode === "prosent" ? (c.volumePct != null && buildingKwh != null ? (c.volumePct / 100 * buildingKwh) / (1 - c.volumePct / 100) : null) : profileKwh;
+  const share = volume != null && buildingKwh != null ? volume / (buildingKwh + volume) : null;
+  return (
+    <div className={s.batterycard}>
+      <div className={s.tariffhead}>
+        <strong>DC-lader – salg av lading til kjøretøy</strong>
+        <span className={`${s.pill} ${s.st_measured}`}>eget alternativ</span>
+        <button type="button" className={`${s.btn} ${s.ghost} ${s.danger} ${s.small2}`} onClick={() => set({ enabled: false })}>
+          Fjern
+        </button>
+      </div>
+      <p className={`${s.small} ${s.muted}`} style={{ margin: "2px 0 8px" }}>
+        Regnes som et tredje alternativ: tilbudets løsning (med batteri når tilbudet har det) pluss laderen, mot bygget uten tiltak og uten ny lading. Ladesalg og salg
+        til nettet vises hver for seg, og strømkjøp og nettleie for ladingen trekkes fra.
+      </p>
+      <div className={s.fields2}>
+        <F label="Navn" help="Vises i resultatet, f.eks. «Rolec 400 kW DC, 2 uttak».">
+          <input className={s.input} defaultValue={c.label} onBlur={(e) => e.target.value !== c.label && set({ label: e.target.value || "DC-lader" })} />
+        </F>
+        <F label="Ladeeffekt (samlet)" help="Samlet effekt laderen leverer i ladetimene, i kW. Brukes til ladeprofilen og effekttoppen." more="Eksempel: én 400 kW lader med to uttak = 400 kW samlet.">
+          <span className={s.inline}>
+            <NumField value={c.powerKw} width={70} suffix="kW," onCommit={(v) => set({ powerKw: Math.max(1, v ?? 150) })} />
+            <NumField ariaLabel="Uttak" value={c.outlets} width={44} suffix="uttak" onCommit={(v) => set({ outlets: Math.max(1, Math.round(v ?? 1)) })} />
+          </span>
+        </F>
+        <div className={s.wide}>
+          <span className={s.fieldlabel}>
+            Ladetid
+            <Help text="Når kjøretøyene lader. Ladingen fordeles jevnt i vinduet på valgte dager." more="Eksempel fra Transportformidlingen: 400 kW kl. 10–12 mandag–fredag = 261 dager og 208 800 kWh/år." />
+          </span>
+          <div className={s.inline} style={{ flexWrap: "wrap" }}>
+            <span className={s.chips} style={{ margin: 0 }}>
+              {["man", "tir", "ons", "tor", "fre", "lør", "søn"].map((dn, i) => {
+                const on = c.weekdays.includes(i + 1);
+                return (
+                  <button
+                    key={dn}
+                    type="button"
+                    aria-pressed={on}
+                    className={`${s.chip} ${on ? s.chipon : ""}`}
+                    style={{ padding: "2px 8px", fontSize: 12 }}
+                    onClick={() => set({ weekdays: on ? c.weekdays.filter((d) => d !== i + 1).length ? c.weekdays.filter((d) => d !== i + 1) : c.weekdays : [...c.weekdays, i + 1].sort() })}
+                  >
+                    {dn}
+                  </button>
+                );
+              })}
+            </span>
+            kl.
+            <NumField ariaLabel="Ladevindu fra" value={c.window[0]} width={40} onCommit={(v) => set({ window: [Math.max(0, Math.min(23, v ?? 10)), c.window[1]] })} />–
+            <NumField ariaLabel="Ladevindu til" value={c.window[1]} width={40} onCommit={(v) => set({ window: [c.window[0], Math.max(1, Math.min(24, v ?? 12))] })} />
+            <label className={s.check} style={{ fontWeight: 400, fontSize: 12 }}>
+              <input type="checkbox" checked={c.skipHolidays} onChange={(e) => set({ skipHolidays: e.target.checked })} /> ikke helligdager
+            </label>
+            <NumField ariaLabel="Utnyttelse" value={c.utilizationPct} width={50} suffix="% utnyttelse" onCommit={(v) => set({ utilizationPct: Math.max(1, Math.min(100, v ?? 100)) })} />
+          </div>
+        </div>
+        <F
+          label="Forventet ladevolum"
+          help="Hvor mye kjøretøyene lader per år. Oppgi kWh/år, en andel av samlet forbruk etter at ladingen er lagt til (bygg + lading), eller la profilen bestemme."
+          more="Andelen er ikke det samme som hvor mye av ladingen sol og batteri dekker. Eksempel: bygg 140 001 kWh + lading 208 800 kWh → ladingen er 59,86 % av 348 801 kWh."
+          hint={
+            volume != null
+              ? `Antatt ${kwh(volume)}/år${share != null ? ` = ${nf(share * 100, 2)} % av samlet forbruk ${kwh((buildingKwh ?? 0) + volume)}` : ""} · ${days} ladedager · maks ${kwh(maxKwh)}/år med ${nf(c.powerKw)} kW i ${hours} t${volume > maxKwh + 0.5 ? " – mer enn laderen rekker" : ""}`
+              : c.volumeMode === "prosent"
+                ? "Andel krever kjent årsforbruk for bygget"
+                : "Oppgi volumet"
+          }
+        >
+          <span className={s.inline}>
+            <select className={s.input} value={c.volumeMode} onChange={(e) => set({ volumeMode: e.target.value as ChargeSale["volumeMode"] })}>
+              <option value="profil">Følger ladetiden</option>
+              <option value="kwh">kWh per år</option>
+              <option value="prosent">% av samlet forbruk</option>
+            </select>
+            {c.volumeMode === "kwh" && <NumField value={c.volumeKwh} width={100} suffix="kWh/år" onCommit={(v) => set({ volumeKwh: v })} />}
+            {c.volumeMode === "prosent" && <NumField value={c.volumePct} width={60} suffix="%" onCommit={(v) => set({ volumePct: v == null ? null : Math.max(0, Math.min(99, v)) })} />}
+          </span>
+        </F>
+        <F label="Salgspris til kjøretøy" help="Det kunden tar betalt per kWh, eks. mva. Ny pris endrer inntekten og tilbakebetalingen, ikke kWh eller effekttopper.">
+          <span className={s.inline}>
+            <NumField value={c.priceNokPerKwh} width={60} suffix="kr/kWh," onCommit={(v) => set({ priceNokPerKwh: Math.max(0, v ?? 0) })} />
+            <NumField ariaLabel="Prisvekst lading" value={c.priceGrowthPct} width={50} suffix="% vekst/år" onCommit={(v) => set({ priceGrowthPct: v ?? 0 })} />
+          </span>
+        </F>
+        <F label="Laderens investering" help="Lader, installasjon og nett for laderen, eks. mva. Legges til investeringen i alternativet med lader.">
+          <NumField value={c.investmentNok} width={110} placeholder="uavklart" suffix="kr" onCommit={(v) => set({ investmentNok: v })} />
+        </F>
+        <F label="Drift av lader" help="Service, betalingsløsning, abonnement o.l. per år.">
+          <NumField value={c.opexNokPerYear} width={90} suffix="kr/år" onCommit={(v) => set({ opexNokPerYear: v ?? 0 })} />
+        </F>
+        <div className={s.wide}>
+          <label className={s.check} style={{ fontWeight: 400, fontSize: 12 }}>
+            <input type="checkbox" checked={inConsumption} onChange={(e) => onInConsumption(e.target.checked)} /> Det lades allerede, og ladingen finnes i forbruksdataene
+          </label>
+          {inConsumption && (
+            <span className={s.inline} style={{ flexWrap: "wrap", fontSize: 12 }}>
+              Lading før tiltaket
+              <NumField ariaLabel="Lading før tiltaket" value={c.existingKwh} width={90} suffix="kWh/år til" onCommit={(v) => set({ existingKwh: Math.max(0, v ?? 0) })} />
+              <NumField ariaLabel="Pris før tiltaket" value={c.existingPriceNokPerKwh} width={60} placeholder="samme" suffix="kr/kWh" onCommit={(v) => set({ existingPriceNokPerKwh: v })} />
+              <span className={s.muted}>Bare økningen legges til forbruket, og bare endringen i ladesalg regnes som gevinst.</span>
+            </span>
+          )}
+        </div>
+      </div>
+      <FieldIssues issues={issues} />
+    </div>
+  );
+}
+
+/** Nettleie før og etter per måned: fakturert kW eller trinn, nettleien og forskjellen. */
+function GridResult({ g, priceYear }: { g: GridSummary; priceYear: number }) {
+  const [alt, setAlt] = useState(g.alternatives.length - 1);
+  const a = g.alternatives[Math.min(alt, g.alternatives.length - 1)];
+  if (!a) return null;
+  const sum = (k: "before" | "after", f: keyof GridSide) => a.months.reduce((t, m) => t + (Number(m[k][f]) || 0), 0);
+  return (
+    <details className={s.details} open>
+      <summary>Nettleie før og etter, måned for måned</summary>
+      {g.alternatives.length > 1 && (
+        <div className={s.chips}>
+          {g.alternatives.map((x, i) => (
+            <button key={x.key} type="button" className={`${s.chip} ${x === a ? s.chipon : ""}`} onClick={() => setAlt(i)}>
+              {x.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {(g.shiftedFrom.length > 0 || g.estimated || g.missing.length > 0) && (
+        <div className={`${s.notice} ${g.missing.length ? s.error : s.info}`} style={{ margin: "6px 0" }}>
+          {g.shiftedFrom.length > 0 && (
+            <div>
+              <strong>Anslag basert på {g.shiftedFrom.join("/")}-priser.</strong> Tariffregisteret har ikke satser for {priceYear}.
+            </div>
+          )}
+          {g.estimated && <div>Effekttoppene bygger på en anslått forbruksprofil – besparelsen i effektleddet er anslått.</div>}
+          {g.missing.map((m) => (
+            <div key={m}>
+              <strong>Delberegning:</strong> {m} Effektleddet er ikke med i tallene under.
+            </div>
+          ))}
+        </div>
+      )}
+      <div className={s.tablewrap}>
+        <table>
+          <thead>
+            <tr>
+              <th>Måned</th>
+              <th>Fakturert før</th>
+              <th>Fakturert etter</th>
+              <th className={s.num}>Fast + Enova</th>
+              <th className={s.num}>Energiledd før → etter</th>
+              <th className={s.num}>Effekt/kapasitet før → etter</th>
+              {a.months.some((m) => m.after.innmating) && <th className={s.num}>Innmating</th>}
+              <th className={s.num}>Nettleie før</th>
+              <th className={s.num}>Nettleie etter</th>
+              <th className={s.num}>Forskjell</th>
+            </tr>
+          </thead>
+          <tbody>
+            {a.months.map((m) => {
+              const d = m.before.nettleie - m.after.nettleie;
+              return (
+                <tr key={m.month} className={d < -0.5 ? s.uprow : undefined}>
+                  <td>{m.month}</td>
+                  <td className={s.small}>{m.before.powerMissing ? "ikke beregnet" : m.before.billedLabel || (m.before.billedKw != null ? `${nf(m.before.billedKw, 1)} kW` : "—")}</td>
+                  <td className={s.small}>{m.after.powerMissing ? "ikke beregnet" : m.after.billedLabel || (m.after.billedKw != null ? `${nf(m.after.billedKw, 1)} kW` : "—")}</td>
+                  <td className={s.num}>{nf(m.before.fastledd)}</td>
+                  <td className={s.num}>
+                    {nf(m.before.energiledd)} → {nf(m.after.energiledd)}
+                  </td>
+                  <td className={s.num}>
+                    {nf(m.before.effektledd)} → {nf(m.after.effektledd)}
+                  </td>
+                  {a.months.some((x) => x.after.innmating) && <td className={s.num}>{nf(m.after.innmating)}</td>}
+                  <td className={s.num}>{kr(m.before.nettleie)}</td>
+                  <td className={s.num}>{kr(m.after.nettleie)}</td>
+                  <td className={`${s.num} ${s.strong}`}>{d >= 0 ? kr(d) : `+${kr(-d)}`}</td>
+                </tr>
+              );
+            })}
+            <tr>
+              <td className={s.strong}>Sum</td>
+              <td />
+              <td />
+              <td className={s.num}>{nf(sum("before", "fastledd"))}</td>
+              <td className={s.num}>
+                {nf(sum("before", "energiledd"))} → {nf(sum("after", "energiledd"))}
+              </td>
+              <td className={s.num}>
+                {nf(sum("before", "effektledd"))} → {nf(sum("after", "effektledd"))}
+              </td>
+              {a.months.some((m) => m.after.innmating) && <td className={s.num}>{nf(sum("after", "innmating"))}</td>}
+              <td className={`${s.num} ${s.strong}`}>{kr(a.total.before)}</td>
+              <td className={`${s.num} ${s.strong}`}>{kr(a.total.after)}</td>
+              <td className={`${s.num} ${s.strong}`}>{kr(a.total.before - a.total.after)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className={`${s.small} ${s.muted}`}>
+        Nettleie = fastledd (inkl. Enova-påslag når det kommer i tillegg) + energiledd + effekt-/kapasitetsledd{a.months.some((m) => m.after.innmating) ? " + kreditt for innmating" : ""}, eks. mva.
+        Effekten måles som {g.basis || "tariffen angir"} på samlet uttak fra nettet: bygg, lading og batterilading minus sol og batteriutlading. Elavgift ({kr(sum("before", "elavgift"))} →{" "}
+        {kr(sum("after", "elavgift"))}) og strømsalg ({kr(sum("after", "salg"))}) vises separat og er ikke med i nettleien.
+      </p>
+    </details>
+  );
+}
+
+/** Alternativet med DC-lader: ladesalg, salg til nett, kostnader og hva som står igjen. */
+function ChargerResult({ c, years, discountRatePct, valid }: { c: ChargerSummary; years: number; discountRatePct: number; valid: boolean }) {
+  const [scenario, setScenario] = useState(0);
+  const eco = c.economy?.[scenario] ?? null;
+  const sv = c.savings;
+  const supplied = c.sources.solarKwh + c.sources.batteryKwh + c.sources.gridKwh;
+  const pctOf = (x: number) => (supplied > 0 ? `${nf((x / supplied) * 100)} %` : "—");
+  return (
+    <div style={{ marginTop: 16, opacity: valid ? 1 : 0.6 }}>
+      <h3 className={s.grouphead}>{c.label}: solceller{c.base === "smart" ? ", batteri" : ""} og lader</h3>
+      <div className={s.grid}>
+        <div>
+          <table>
+            <tbody>
+              <tr>
+                <td>
+                  Ladesalg: {kwh(c.soldKwh)} × {nf(c.priceNokPerKwh, 2)} kr/kWh
+                </td>
+                <td className={`${s.num} ${s.strong}`}>{kr(c.revenueNok)}</td>
+              </tr>
+              {c.existingRevenueNok > 0 && (
+                <tr>
+                  <td>− ladesalg som fantes før tiltaket</td>
+                  <td className={s.num}>−{kr(c.existingRevenueNok)}</td>
+                </tr>
+              )}
+              <tr>
+                <td>Salg til nettet: {kwh(c.exportKwh)}</td>
+                <td className={s.num}>{kr(sv.salg)}</td>
+              </tr>
+              <tr>
+                <td>Strømkjøp (kraft) – endring</td>
+                <td className={s.num}>{kr(sv.kraft)}</td>
+              </tr>
+              <tr>
+                <td>Nettleie (energi- og effektledd) – endring</td>
+                <td className={s.num}>{kr(sv.nettleieEnergi + sv.effektledd + (sv.innmating ?? 0))}</td>
+              </tr>
+              <tr>
+                <td>Elavgift – endring</td>
+                <td className={s.num}>{kr(sv.elavgift)}</td>
+              </tr>
+              <tr>
+                <td className={s.muted}>Økte kostnader til strømkjøp, nettleie og avgifter før salgsinntekter</td>
+                <td className={s.num}>{c.costIncreaseNok >= 0 ? `−${kr(c.costIncreaseNok)}` : kr(-c.costIncreaseNok)}</td>
+              </tr>
+              {c.opex > 0 && (
+                <tr>
+                  <td>− drift (service, styring, lader)</td>
+                  <td className={s.num}>−{kr(c.opex)}</td>
+                </tr>
+              )}
+              <tr>
+                <td className={s.strong}>Samlet gevinst i analyseåret</td>
+                <td className={`${s.num} ${s.strong}`}>{kr(c.net)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className={`${s.small} ${s.muted}`}>
+            Endringene er mot bygget uten tiltak og uten ny lading (negativt = høyere kostnad). Forbruk med lading: {kwh(c.loadKwh)}.
+          </p>
+        </div>
+        <div>
+          <table>
+            <tbody>
+              <tr>
+                <td>Lading dekket direkte av sol</td>
+                <td className={s.num}>
+                  {kwh(c.sources.solarKwh)} ({pctOf(c.sources.solarKwh)})
+                </td>
+              </tr>
+              <tr>
+                <td>Lading dekket av batteriet</td>
+                <td className={s.num}>
+                  {kwh(c.sources.batteryKwh)} ({pctOf(c.sources.batteryKwh)})
+                </td>
+              </tr>
+              <tr>
+                <td>Lading kjøpt direkte fra nettet</td>
+                <td className={s.num}>
+                  {kwh(c.sources.gridKwh)} ({pctOf(c.sources.gridKwh)}) · {kr(c.sources.gridCostNok)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p className={`${s.small} ${s.muted}`}>
+            Hver time får ladingen sin forholdsmessige del av sol, batteri og nettkjøp. Batteriet kan levere både solstrøm og strøm kjøpt tidligere. Kostnaden for nettkjøpet
+            (kraft, energiledd, elavgift) er allerede med i endringene til venstre – den trekkes ikke fra to ganger. Laderen er med i effektleddet.
+          </p>
+        </div>
+      </div>
+      {eco ? (
+        <>
+          {c.economy && c.economy.length > 1 && (
+            <div className={s.chips}>
+              {c.economy.map((e, i) => (
+                <button key={e.name} type="button" className={`${s.chip} ${i === scenario ? s.chipon : ""}`} onClick={() => setScenario(i)}>
+                  {e.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className={s.kpis}>
+            <div>
+              <span>Investering inkl. lader</span>
+              <strong>{c.investmentNok == null ? "Uavklart" : kr(c.investmentNok)}</strong>
+            </div>
+            <div>
+              <span>Gevinst år 1</span>
+              <strong>{kr(eco.firstYearNet)}</strong>
+            </div>
+            <div>
+              <span>Tilbakebetaling</span>
+              <strong>{eco.paybackYears != null ? `${nf(eco.paybackYears, 1)} år` : c.investmentNok == null ? "—" : `Ikke innen ${years} år`}</strong>
+            </div>
+            <div>
+              <span>Nåverdi ({nf(discountRatePct, 2)} %)</span>
+              <strong>{eco.npv != null ? kr(eco.npv) : "—"}</strong>
+            </div>
+            <div>
+              <span>Diskontert tilbakebetaling</span>
+              <strong>{eco.discountedPaybackYears != null ? `${nf(eco.discountedPaybackYears, 1)} år` : "—"}</strong>
+            </div>
+          </div>
+          <details className={s.details}>
+            <summary>Kontantstrøm per år med lader</summary>
+            <div className={s.tablewrap}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>År</th>
+                    <th className={s.num}>Ladesalg</th>
+                    <th className={s.num}>Drift</th>
+                    <th className={s.num}>Utskifting</th>
+                    <th className={s.num}>Netto</th>
+                    <th className={s.num}>Akkumulert</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {eco.rows.map((y) => (
+                    <tr key={y.year}>
+                      <td>{y.year}</td>
+                      <td className={s.num}>{nf(y.ladeinntekt ?? 0)}</td>
+                      <td className={s.num}>−{nf(y.drift)}</td>
+                      <td className={s.num}>{y.utskifting ? `−${nf(y.utskifting)}` : ""}</td>
+                      <td className={`${s.num} ${s.strong}`}>{nf(y.netto)}</td>
+                      <td className={s.num}>{y.akkumulert == null ? "—" : nf(y.akkumulert)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className={`${s.small} ${s.muted}`}>Tilbakebetaling er regnet på kontantstrømmen år for år (ikke investering delt på gevinst i år 1).</p>
+          </details>
+        </>
+      ) : (
+        <p className={`${s.small} ${s.muted}`}>Levetidsøkonomi beregnes for et helt år.</p>
+      )}
+    </div>
   );
 }

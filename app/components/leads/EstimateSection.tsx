@@ -221,6 +221,9 @@ export default function EstimateSection({ solarData, onEstimateCreated, leadComp
             roofs={solarData.checkedRoofData}
             address={customer?.address}
             onAnalysis={setBusinessAnalysisId}
+            offerYearlyKwh={prodOverride ?? adjusted.yearlyProd ?? null}
+            offerYearlyManual={prodOverride != null}
+            supportOre={latest ? latest.result.support.amount : null}
           />
         </div>
       )}

@@ -39,6 +39,16 @@ export interface Surface {
 }
 
 export type Hours = [number, number] | null;
+
+/** Hvordan tariffen er valgt, tilknytning og avtaler for et målepunkt */
+export type TariffSource = "foreslått" | "valgt" | "faktura" | "egen";
+export interface TariffChoice {
+  tariffSource: TariffSource;
+  tariffReason: string | null;
+  connection: { level: "lavspent" | "hoeyspent" | null; mainFuseA: number | null; voltageV: 230 | 400 | null };
+  contractedKw: number | null;
+  feedIn: boolean;
+}
 export type ExportLimitMode = "ukjent" | "ingen_grense" | "grense" | "ingen_eksport";
 export interface ConsumptionSettings {
   level: 1 | 2 | 3;
@@ -47,7 +57,7 @@ export interface ConsumptionSettings {
   monthlyKwh: number[] | null;
   source?: "anslag" | "kunde" | "faktura" | "målefil" | null;
 }
-export interface OtherMeter {
+export interface OtherMeter extends TariffChoice {
   id: string;
   label: string;
   meterId: string;
@@ -93,6 +103,27 @@ export interface AnalysisIssue {
   message: string;
 }
 
+/** Salg av lading til kjøretøy (DC-lader) */
+export interface ChargeSale {
+  enabled: boolean;
+  label: string;
+  powerKw: number;
+  outlets: number;
+  volumeMode: "kwh" | "prosent" | "profil";
+  volumeKwh: number | null;
+  volumePct: number | null;
+  weekdays: number[];
+  window: [number, number];
+  skipHolidays: boolean;
+  utilizationPct: number;
+  priceNokPerKwh: number;
+  priceGrowthPct: number;
+  existingKwh: number;
+  existingPriceNokPerKwh: number | null;
+  investmentNok: number | null;
+  opexNokPerYear: number;
+}
+
 export interface BusinessSettings {
   businessType: BusinessType;
   openHours: [number, number] | null;
@@ -104,8 +135,15 @@ export interface BusinessSettings {
     | { kind: "egendefinert"; year: number; from: string; to: string };
   location: { address: string; lat: number | null; lon: number | null; priceArea: PriceArea | null; priceAreaSource: "foreslått" | "valgt" };
   consumption: ConsumptionSettings;
-  production: { source: "pvgis" | "fil"; pvgisVersion: "auto" | "v5_3" | "v6"; weatherYear: number | null; lossPct: number; surfaces: Surface[] };
-  meteringPoint: {
+  production: {
+    source: "pvgis" | "fil";
+    pvgisVersion: "auto" | "v5_3" | "v6";
+    weatherYear: number | null;
+    lossPct: number;
+    surfaces: Surface[];
+    annual?: { source: "pvgis" | "tilbud" | "manuell"; kwh: number | null; offerKwh: number | null; offerManual: boolean };
+  };
+  meteringPoint: TariffChoice & {
     id: string;
     label: string;
     meterId: string;
@@ -130,9 +168,10 @@ export interface BusinessSettings {
     vatDeductible: "ja" | "nei" | "ukjent";
     replacements: { name: string; year: number; nok: number }[];
     investment: { source: "kalkyle" | "manuell" | "uavklart"; nok: number | null };
+    support?: { source: "tilbud" | "manuell" | "ingen"; nok: number | null };
   };
   otherMeters: OtherMeter[];
-  charging: { enabled: boolean; inConsumption: boolean; meteringPointId: string | null; chargers: Charger[] };
+  charging: { enabled: boolean; inConsumption: boolean; meteringPointId: string | null; chargers: Charger[]; sale?: ChargeSale };
   battery: BatterySettings;
   scenarios: { name: string; kraftGrowthPct: number }[];
 }
@@ -216,7 +255,7 @@ export interface Tariff {
   customerGroup: string;
   validFrom: string;
   validTo: string | null;
-  definition: TariffDefinition;
+  definition: TariffDefinition | GridDefinition;
   sourceUrl: string | null;
   lastChecked: string;
   isManual: boolean;
@@ -225,6 +264,53 @@ export interface Tariff {
   parentId: string | null;
   usage: { analyses: number; locked: number } | null;
 }
+
+/** Nettariff med datoversjoner fra tariffregisteret (format «nettariff-v1»). Feltene er kildens. */
+export interface GridVersion {
+  id: string;
+  dekket_fra: string;
+  dekket_til_eksklusiv: string | null;
+  kilder: string[];
+  status: string;
+  fastledd: { kr_per_mnd?: number; kr_per_aar?: number };
+  energiledd_uttak: {
+    modell: "lik_hele_doegnet" | "sesong" | "dag_natt";
+    ore_per_kwh?: number | { sommermaaneder: number[] | null; sommer: number; resten_av_aaret?: number; vinter?: number };
+    dag_fra?: string;
+    dag_til_eksklusiv?: string;
+    dag_gjelder?: string;
+    dag_ore_per_kwh?: number;
+    ellers_ore_per_kwh?: number;
+  };
+  kapasitet_eller_effekt: {
+    modell: string;
+    grunnlag?: string | null;
+    grenser?: string | null;
+    trinn?: { til_kw: number | null; kr_per_mnd: number }[];
+    kr_per_kw_mnd?: number | { sommermaaneder: number[] | null; sommer: number | { dag: number; natt: number }; resten_av_aaret?: number | { dag: number; natt: number }; vinter?: number };
+    blokker?: { til_kw: number | null; kr_per_kw_mnd: number }[];
+    maanedsfaktorer_jan_des?: number[];
+    [k: string]: unknown;
+  };
+  enova_800_per_aar: string;
+  sperre?: string | null;
+  merknad?: string | null;
+}
+export interface GridDefinition {
+  format: "nettariff-v1";
+  dataVersion: string;
+  checked: string;
+  coveredYear: number;
+  coveredUntil: string;
+  product: { id: string; nettselskap: string; navn_i_valg: string; vilkaar: string; valgtype: string; forslagsvilkaar: Record<string, unknown> };
+  area: string;
+  areaLabel: string;
+  versions: GridVersion[];
+  sources: Record<string, { tittel: string; url: string; kontrollert?: string }>;
+  feedIn: { nettselskap: string; pluss_energiledd_ore_per_kwh?: number; bruk?: string; [k: string]: unknown }[];
+  enovaNokPerYear: number;
+}
+export const isGridDefinition = (d: unknown): d is GridDefinition => (d as { format?: string } | null)?.format === "nettariff-v1";
 
 export interface TariffDefinition {
   fixedNokPerYear: number;
@@ -245,7 +331,47 @@ export interface TariffDefinition {
   notes?: string[];
 }
 
-type Cost = { kraft: number; kraftGebyr: number; fastledd: number; energiledd: number; effektledd: number; elavgift: number; salg: number; netto: number };
+type Cost = { kraft: number; kraftGebyr: number; fastledd: number; energiledd: number; effektledd: number; elavgift: number; innmating?: number; salg: number; netto: number };
+
+export interface GridSide {
+  fastledd: number;
+  energiledd: number;
+  effektledd: number;
+  innmating: number;
+  nettleie: number;
+  elavgift: number;
+  salg: number;
+  billedKw: number | null;
+  billedLabel: string;
+  shiftedFrom: string | null;
+  powerMissing: string | null;
+}
+export interface GridSummary {
+  estimated: boolean;
+  shiftedFrom: string[];
+  missing: string[];
+  notes: string[];
+  basis: string;
+  alternatives: { key: string; name: string; months: { month: string; before: GridSide; after: GridSide }[]; total: { before: number; after: number } }[];
+}
+export interface ChargerSummary {
+  label: string;
+  base: "sol" | "grunn" | "smart";
+  soldKwh: number;
+  priceNokPerKwh: number;
+  revenueNok: number;
+  existingRevenueNok: number;
+  costIncreaseNok: number;
+  savings: Record<string, number>;
+  exportKwh: number;
+  exportNok: number;
+  loadKwh: number;
+  sources: { solarKwh: number; batteryKwh: number; gridKwh: number; gridCostNok: number };
+  opex: number;
+  net: number;
+  investmentNok: number | null;
+  economy: Economy[] | null;
+}
 type Totals = { loadKwh: number; pvKwh: number; selfKwh: number; importKwh: number; exportKwh: number; curtailedKwh: number; clippedKwh?: number; cost: Cost };
 
 /** Samme form som price_data.businessAnalysis på et lagret tilbud */
@@ -269,7 +395,7 @@ export interface BusinessSummary {
   valid?: boolean;
   before: Totals;
   after: Totals;
-  savings: { kraft: number; nettleieEnergi: number; effektledd: number; elavgift: number; fastOgGebyr: number; salg: number; total: number };
+  savings: { kraft: number; nettleieEnergi: number; effektledd: number; elavgift: number; fastOgGebyr: number; innmating?: number; salg: number; total: number };
   months: {
     month: string;
     loadKwh: number;
@@ -316,6 +442,12 @@ export interface BusinessSummary {
   meters?: { id: string; label: string; tariff: string; before: MeterTotals; after: MeterTotals; saving: number }[];
   charging?: { kwh: number; solarKwh: number; effektleddIncrease: number } | null;
   battery?: BatterySummary | null;
+  /** Tilbudssum før støtte, støtte og netto investering som brukes (nyere analyser) */
+  investment?: { grossNok: number | null; supportNok: number; netNok: number | null; supportSource: string; vat: "eks" | "inkl" } | null;
+  /** Estimert årsproduksjon brukt i analysen og kilden (nyere analyser) */
+  production?: { annualKwh: number; source: string; pvgisKwh: number | null; scaled: boolean } | null;
+  grid?: GridSummary;
+  charger?: ChargerSummary | null;
 }
 
 type MeterTotals = { loadKwh: number; pvKwh: number; selfKwh: number; importKwh: number; exportKwh: number; netto: number };
@@ -329,7 +461,7 @@ export type Economy = {
   irr: number | null;
   irrNote: string | null;
   firstYearNet: number;
-  rows: { year: number; netto: number; akkumulert: number | null; utskifting: number; drift: number }[];
+  rows: { year: number; netto: number; akkumulert: number | null; utskifting: number; drift: number; ladeinntekt?: number }[];
 };
 export interface BatteryStats {
   chargeKwh: number;
@@ -373,6 +505,8 @@ export interface QuoteContext {
   kwp: number | null;
   investmentNok: number | null;
   investmentNote?: string;
+  supportNok?: number;
+  supportProvider?: string | null;
   inverterAcKw: number | null;
   inverterNok: number | null;
   inverterNames: string[];
@@ -462,3 +596,36 @@ export const duplicateTariff = (id: string, installerGroupId: string, name?: str
 
 export const geocodeAddress = (address: string) =>
   calcRequest<{ address: string; lat: number; lon: number; municipality: string; priceArea: PriceArea | null }>(`${base}/geocode`, "POST", { address });
+
+export interface TariffCandidate {
+  productId: string;
+  area: string;
+  name: string;
+  fit: "foreslått" | "mulig" | "avtale";
+  reasons: string[];
+  blocked: string | null;
+  company: string;
+  tariffId: string | null;
+  areaNote: string | null;
+}
+export interface TariffSuggestion {
+  address: string | null;
+  municipality: string | null;
+  gridArea: { companies: { code: string; name: string; area: string | null }[]; rawNames: string[]; source: "nve" | "kommune" | "ingen" | "valgt"; note: string };
+  candidates: TariffCandidate[];
+  suggested: { tariffId: string | null; name: string; reason: string } | null;
+}
+/** Forslag til tariff for et målepunkt fra adressen (nettselskap) og årsforbruk/tilknytning (produkt). */
+export const suggestTariff = (body: {
+  installerGroupId: string;
+  address?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  annualKwh: number | null;
+  level: "lavspent" | "hoeyspent" | null;
+  mainFuseA: number | null;
+  voltageV: 230 | 400 | null;
+  companyCode?: string | null;
+  area?: string | null;
+  date?: string | null;
+}) => calcRequest<TariffSuggestion>(`${base}/tariff-suggestion`, "POST", body);
