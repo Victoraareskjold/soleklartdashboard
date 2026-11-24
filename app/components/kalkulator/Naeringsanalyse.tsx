@@ -1203,13 +1203,7 @@ export default function Naeringsanalyse({ leadId, installerGroupId, draft, kwp, 
                     <F label="Smartstyring, engangskostnad" help="Oppstart eller utstyr for styringen. Legges til investeringen i smartalternativet.">
                       <NumField value={st.battery.smartFeeOnceNok} width={90} suffix="kr" onCommit={(v) => bat({ smartFeeOnceNok: v ?? 0 })} />
                     </F>
-                    <F
-                      label="Slitasje i styringen"
-                      help="Kostnad per kWh utladet som styringen tar hensyn til, så den unngår handler som ikke dekker slitasjen."
-                      more="Brukes bare i styringen. Slitasjen føres ikke som kontantutgift – den dekkes av batteribyttet i kontantstrømmen."
-                    >
-                      <NumField value={st.battery.wearOrePerKwh} width={60} suffix="øre/kWh" onCommit={(v) => bat({ wearOrePerKwh: v ?? 0 })} />
-                    </F>
+                    {/* «Slitasje i styringen» er fjernet: Nordic Solergys styring har sin egen syklusstraff. */}
                   </div>
                 </div>
               )}
@@ -3049,8 +3043,8 @@ function BatteryResult({ b, years, discountRatePct, priceYear, valid }: { b: Bat
           <strong>Smartstyringens merverdi: {kr(b.value.smart)}</strong> utover grunnstyring, etter styringsgebyr {kr(b.value.smartFee)}.
         </li>
         <li className={s.muted}>
-          Samme styring med fasit for forbruk og sol (referanse, ikke oppnåelig i praksis): {kr(b.perfectForesightNet)} netto. Smartstyringen bruker bare priser som var kjent
-          dagen før og en enkel prognose – en representativ strategi, ikke leverandørens algoritme.
+          Smartstyringen er regnet etter Nordic Solergys beregning: en plan over 36 timer med kjente priser, forbruk og sol, og et tak for effekttoppen per måned. Planen
+          kjenner forbruk og sol på forhånd, så den viser hva styringen best kan få til. Toppene kappes bare når det lønner seg mer enn å handle på prisforskjeller.
         </li>
       </ul>
 
